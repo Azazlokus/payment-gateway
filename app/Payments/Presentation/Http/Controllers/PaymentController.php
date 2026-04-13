@@ -224,6 +224,7 @@ final class PaymentController extends Controller
             paymentId: $id,
             amountKopecks: $request->integer('amount') ?: null,
             reason: $request->input('reason', ''),
+            idempotencyKey: $request->header('Idempotency-Key'),
         ));
 
         return response()->json(new PaymentResource($result), Response::HTTP_OK);

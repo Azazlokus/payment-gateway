@@ -10,5 +10,6 @@ final readonly class RefundPaymentCommand
         public string $paymentId,
         public ?int $amountKopecks,
         public string $reason = '',
+        public ?string $idempotencyKey = null,
     ) {}
 }
