@@ -36,4 +36,8 @@ return [
         'webhook_url' => env('SLACK_WEBHOOK_URL'),
     ],
 
+    'horizon' => [
+        'allowed_ips' => env('HORIZON_ALLOWED_IPS', ''),
+    ],
+
 ];

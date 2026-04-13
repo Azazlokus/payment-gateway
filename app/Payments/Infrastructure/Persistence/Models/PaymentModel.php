@@ -35,6 +35,7 @@ final class PaymentModel extends Model
         'metadata' => 'array',
     ];
 
+    /** @return HasMany<PaymentEventModel, $this> */
     public function events(): HasMany
     {
         return $this->hasMany(PaymentEventModel::class, 'payment_id');

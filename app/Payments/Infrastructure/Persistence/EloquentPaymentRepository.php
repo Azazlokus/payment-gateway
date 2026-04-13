@@ -66,6 +66,8 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
         return $model ? $this->hydrate($model) : null;
     }
 
+    /** @param array<string, mixed> $filters
+     *  @return array{data: Payment[], total: int, per_page: int, current_page: int, last_page: int} */
     public function paginate(int $perPage, int $page, array $filters): array
     {
         $query = PaymentModel::query()->orderByDesc('created_at');
@@ -98,9 +100,7 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
         return Payment::restore(
             id: PaymentId::fromString($model->id),
             amount: Money::ofRub($model->amount),
-            status: $model->status instanceof PaymentStatus
-                                       ? $model->status
-                                       : PaymentStatus::from($model->status),
+            status: $model->status,
             description: $model->description,
             provider: $model->provider,
             idempotencyKey: $model->idempotency_key,

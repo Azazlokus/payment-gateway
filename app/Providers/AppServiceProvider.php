@@ -16,7 +16,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Horizon::auth(function ($request) {
             return app()->environment('local')
-                || in_array($request->ip(), explode(',', env('HORIZON_ALLOWED_IPS', '')));
+                || in_array($request->ip(), explode(',', config('services.horizon.allowed_ips', '')));
         });
     }
 }

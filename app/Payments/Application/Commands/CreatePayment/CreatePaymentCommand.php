@@ -14,6 +14,7 @@ final readonly class CreatePaymentCommand
         public string $returnUrl,
         public string $idempotencyKey,
         public ?int $userId = null,
+        /** @var array<string, mixed> */
         public array $metadata = [],
         public CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO,
     ) {}

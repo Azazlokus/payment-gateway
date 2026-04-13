@@ -8,21 +8,28 @@ use Illuminate\Support\Facades\Log;
 
 class PaymentLogger
 {
+    /** @param array<string, mixed> $context */
     public function info(string $message, array $context = []): void
     {
         Log::channel('payments')->info($message, $this->enrich($context));
     }
 
+    /** @param array<string, mixed> $context */
     public function error(string $message, array $context = []): void
     {
         Log::channel('payments')->error($message, $this->enrich($context));
     }
 
+    /** @param array<string, mixed> $context */
     public function warning(string $message, array $context = []): void
     {
         Log::channel('payments')->warning($message, $this->enrich($context));
     }
 
+    /**
+     * @param  array<string, mixed> $context
+     * @return array<string, mixed>
+     */
     private function enrich(array $context): array
     {
         return array_merge([

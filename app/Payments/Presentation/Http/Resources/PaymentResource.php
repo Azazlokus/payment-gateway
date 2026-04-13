@@ -15,6 +15,7 @@ final class PaymentResource extends JsonResource
         parent::__construct($dto);
     }
 
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         return [

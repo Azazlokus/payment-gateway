@@ -14,6 +14,7 @@ final readonly class ProviderResponse
         public string $status,
         public ?string $paymentMethodId = null, // ID сохранённого метода (для recurring)
         public ?int $refundAmountKopecks = null, // Заполняется для refund.* событий
+        /** @var array<string, mixed> */
         public array $rawData = [],
     ) {}
 }

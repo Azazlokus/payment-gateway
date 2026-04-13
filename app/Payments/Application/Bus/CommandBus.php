@@ -11,6 +11,7 @@ use Illuminate\Pipeline\Pipeline;
 
 final class CommandBus
 {
+    /** @var array<class-string> */
     private array $pipes = [
         ValidateCommand::class,
         LogCommand::class,

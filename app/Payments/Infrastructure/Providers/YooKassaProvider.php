@@ -103,7 +103,7 @@ final class YooKassaProvider implements PaymentProviderInterface
                 confirmationUrl: $confirmationUrl,
                 status: $response->getStatus(),
                 paymentMethodId: $paymentMethodId,
-                rawData: $response->jsonSerialize(),
+                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [], // @phpstan-ignore-line
             );
         } catch (PaymentException $e) {
             throw $e;
@@ -127,7 +127,7 @@ final class YooKassaProvider implements PaymentProviderInterface
                 confirmationUrl: '',
                 status: $response->getStatus(),
                 paymentMethodId: $response->getPaymentMethod()?->getId(),
-                rawData: $response->jsonSerialize(),
+                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [], // @phpstan-ignore-line
             );
         } catch (\Throwable $e) {
             throw new PaymentException("YooKassa getPayment failed: {$e->getMessage()}", previous: $e);
@@ -157,13 +157,17 @@ final class YooKassaProvider implements PaymentProviderInterface
                 externalId: ExternalId::fromString($response->getId()),
                 confirmationUrl: '',
                 status: $response->getStatus(),
-                rawData: $response->jsonSerialize(),
+                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [], // @phpstan-ignore-line
             );
         } catch (\Throwable $e) {
             throw new PaymentException("YooKassa refund failed: {$e->getMessage()}", previous: $e);
         }
     }
 
+    /**
+     * @param array<string, mixed>  $payload
+     * @param array<string, string> $headers
+     */
     public function verifyWebhook(array $payload, array $headers): bool
     {
         $allowedCidrs = config('payments.yookassa.webhook_ips', []);
@@ -178,6 +182,7 @@ final class YooKassaProvider implements PaymentProviderInterface
         return isset($payload['event'], $payload['object']['id']);
     }
 
+    /** @param array<string, mixed> $payload */
     public function parseWebhook(array $payload): ProviderResponse
     {
         $object = $payload['object'];
@@ -210,6 +215,7 @@ final class YooKassaProvider implements PaymentProviderInterface
 
     // ─── Private helpers ────────────────────────────────────────────────────
 
+    /** @return array<string, string> */
     private function buildConfirmation(CreatePaymentOptionsDTO $options, string $returnUrl): array
     {
         return match ($options->confirmationType) {
@@ -220,6 +226,7 @@ final class YooKassaProvider implements PaymentProviderInterface
         };
     }
 
+    /** @return array<string, mixed> */
     private function buildReceipt(CreatePaymentOptionsDTO $options, Money $amount): array
     {
         $receipt = $options->receipt;
@@ -247,7 +254,7 @@ final class YooKassaProvider implements PaymentProviderInterface
     private function isRetryable(\Throwable $e): bool
     {
         // Ретраим только на 5xx ошибки сервера YooKassa
-        if (method_exists($e, 'getCode') && $e->getCode() >= 500) {
+        if ($e->getCode() >= 500) {
             return true;
         }
 
@@ -255,6 +262,7 @@ final class YooKassaProvider implements PaymentProviderInterface
                str_contains($e->getMessage(), 'timed out');
     }
 
+    /** @param array<string> $cidrs */
     private function ipInAllowedRanges(string $ip, array $cidrs): bool
     {
         $ipLong = ip2long($ip);

@@ -20,9 +20,10 @@ final class ProcessYooKassaWebhookJob implements ShouldQueue
 
     public int $tries = 5;
 
-    /** Экспоненциальный backoff: 10s → 30s → 60s → 120s → 300s */
+    /** @var array<int, int> Экспоненциальный backoff: 10s → 30s → 60s → 120s → 300s */
     public array $backoff = [10, 30, 60, 120, 300];
 
+    /** @param array<string, mixed> $payload */
     public function __construct(
         private readonly array $payload,
     ) {}

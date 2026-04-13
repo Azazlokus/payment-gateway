@@ -1,0 +1,6 @@
+{
+    "exclude": [
+        "config/l5-swagger.php",
+        "bootstrap/cache"
+    ]
+}

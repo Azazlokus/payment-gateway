@@ -32,6 +32,7 @@ final class PaymentEventModel extends Model
         'occurred_at' => 'datetime',
     ];
 
+    /** @return BelongsTo<PaymentModel, $this> */
     public function payment(): BelongsTo
     {
         return $this->belongsTo(PaymentModel::class, 'payment_id');

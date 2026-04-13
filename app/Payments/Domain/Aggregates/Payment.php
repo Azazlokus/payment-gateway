@@ -39,11 +39,13 @@ class Payment
         private readonly string $idempotencyKey,
         private ?ExternalId $externalId = null,
         private ?string $confirmationUrl = null,
+        /** @var array<string, mixed> */
         private readonly array $metadata = [],
         private ?string $paymentMethodId = null, // ID сохранённого метода YooKassa
         private int $refundedAmountKopecks = 0,
     ) {}
 
+    /** @param array<string, mixed> $metadata */
     public static function create(
         PaymentId $id,
         Money $amount,
@@ -51,7 +53,7 @@ class Payment
         string $provider,
         string $idempotencyKey,
         array $metadata = [],
-    ) {
+    ): static {
         $payment = new self(
             id: $id,
             amount: $amount,
@@ -273,11 +275,13 @@ class Payment
         return $this->confirmationUrl;
     }
 
+    /** @return array<string, mixed> */
     public function metadata(): array
     {
         return $this->metadata;
     }
 
+    /** @param array<string, mixed> $metadata */
     public static function restore(
         PaymentId $id,
         Money $amount,

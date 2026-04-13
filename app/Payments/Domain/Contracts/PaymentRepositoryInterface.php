@@ -18,6 +18,7 @@ interface PaymentRepositoryInterface
     public function findByExternalId(string $externalId): ?Payment;
 
     /**
+     * @param  array<string, mixed> $filters
      * @return array{data: Payment[], total: int, per_page: int, current_page: int, last_page: int}
      */
     public function paginate(int $perPage, int $page, array $filters): array;

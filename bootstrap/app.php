@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -7,8 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        api: __DIR__ . '/../routes/api.php',
-        commands: __DIR__ . '/../routes/console.php',
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
@@ -21,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Payments\Domain\Exceptions\InvalidPaymentStateException $e
         ) {
             return response()->json([
-                'error'   => 'invalid_payment_state',
+                'error' => 'invalid_payment_state',
                 'message' => $e->getMessage(),
             ], Response::HTTP_CONFLICT);
         });
@@ -35,7 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 : Response::HTTP_UNPROCESSABLE_ENTITY;
 
             return response()->json([
-                'error'   => 'payment_error',
+                'error' => 'payment_error',
                 'message' => $e->getMessage(),
             ], $status);
         });

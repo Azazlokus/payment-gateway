@@ -56,6 +56,11 @@ final class RefundRequest
         return $this->status === 'pending';
     }
 
+    public function createdAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
     public function equals(self $other): bool
     {
         return $this->id->equals($other->id);

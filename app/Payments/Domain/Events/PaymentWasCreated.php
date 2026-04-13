@@ -13,6 +13,7 @@ final readonly class PaymentWasCreated extends DomainEvent
         public string $description,
         public string $provider,
         public string $idempotencyKey,
+        /** @var array<string, mixed> */
         public array $metadata = [],
     ) {
         parent::__construct();

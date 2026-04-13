@@ -25,7 +25,10 @@ interface PaymentProviderInterface
 
     public function refundPayment(ExternalId $externalId, Money $amount): ProviderResponse;
 
+    /** @param array<string, mixed> $payload
+     *  @param array<string, string> $headers */
     public function verifyWebhook(array $payload, array $headers): bool;
 
+    /** @param array<string, mixed> $payload */
     public function parseWebhook(array $payload): ProviderResponse;
 }
