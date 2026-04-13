@@ -16,9 +16,8 @@ final readonly class CancelPaymentHandler
 {
     public function __construct(
         private PaymentRepositoryInterface $repository,
-        private PaymentLogger              $logger,
-    ) {
-    }
+        private PaymentLogger $logger,
+    ) {}
 
     public function handle(CancelPaymentCommand $command): PaymentResultDTO
     {
@@ -38,7 +37,7 @@ final readonly class CancelPaymentHandler
 
             $this->logger->info('Payment cancelled', [
                 'payment_id' => $command->paymentId,
-                'reason'     => $command->reason,
+                'reason' => $command->reason,
             ]);
 
             return PaymentResultDTO::fromAggregate($payment);

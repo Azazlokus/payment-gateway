@@ -10,11 +10,10 @@ final readonly class ProviderResponse
 {
     public function __construct(
         public ExternalId $externalId,
-        public string     $confirmationUrl,
-        public string     $status,
-        public ?string    $paymentMethodId    = null, // ID сохранённого метода (для recurring)
-        public ?int       $refundAmountKopecks = null, // Заполняется для refund.* событий
-        public array      $rawData            = [],
-    ) {
-    }
+        public string $confirmationUrl,
+        public string $status,
+        public ?string $paymentMethodId = null, // ID сохранённого метода (для recurring)
+        public ?int $refundAmountKopecks = null, // Заполняется для refund.* событий
+        public array $rawData = [],
+    ) {}
 }

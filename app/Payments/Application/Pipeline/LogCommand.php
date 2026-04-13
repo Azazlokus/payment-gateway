@@ -14,15 +14,15 @@ final class LogCommand
         $start = microtime(true);
 
         Log::channel('payments')->info('Command dispatched', [
-            'command'        => class_basename($command),
+            'command' => class_basename($command),
             'correlation_id' => request()->header('X-Correlation-Id'),
         ]);
 
         $result = $next($command);
 
         Log::channel('payments')->info('Command completed', [
-            'command'        => class_basename($command),
-            'duration_ms'    => round((microtime(true) - $start) * 1000, 2),
+            'command' => class_basename($command),
+            'duration_ms' => round((microtime(true) - $start) * 1000, 2),
         ]);
 
         return $result;

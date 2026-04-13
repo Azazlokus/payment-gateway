@@ -10,10 +10,9 @@ use App\Payments\Domain\Exceptions\PaymentException;
 final readonly class Money
 {
     public function __construct(
-        private int      $amount,  // в копейках — никакого float
+        private int $amount,  // в копейках — никакого float
         private Currency $currency,
-    )
-    {
+    ) {
         if ($amount < 0) {
             throw new PaymentException('Money amount cannot be negative');
         }
@@ -40,7 +39,7 @@ final readonly class Money
 
     public function formatted(): string
     {
-        return number_format($this->amount / 100, 2, '.', '') . ' ' . $this->currency->value;
+        return number_format($this->amount / 100, 2, '.', '').' '.$this->currency->value;
     }
 
     public function equals(self $other): bool
@@ -52,6 +51,7 @@ final readonly class Money
     public function isGreaterThan(self $other): bool
     {
         $this->guardSameCurrency($other);
+
         return $this->amount > $other->amount;
     }
 

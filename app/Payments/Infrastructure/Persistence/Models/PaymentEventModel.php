@@ -10,9 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 final class PaymentEventModel extends Model
 {
     public $timestamps = false;
+
     protected $table = 'payment_events';
+
     protected $primaryKey = 'event_id';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [

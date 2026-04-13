@@ -9,20 +9,19 @@ use Symfony\Component\Uid\Ulid;
 
 final readonly class PaymentId
 {
-    private function __construct(private string $value)
-    {
-    }
+    private function __construct(private string $value) {}
 
     public static function generate(): self
     {
-        return new self((string)new Ulid());
+        return new self((string) new Ulid);
     }
 
     public static function fromString(string $value): self
     {
-        if (!Ulid::isValid($value)) {
+        if (! Ulid::isValid($value)) {
             throw new InvalidArgumentException("Invalid PaymentId: {$value}");
         }
+
         return new self($value);
     }
 

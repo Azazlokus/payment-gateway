@@ -4,8 +4,8 @@ return [
     'default' => env('PAYMENT_PROVIDER', 'yookassa'),
 
     'yookassa' => [
-        'shop_id'     => env('YOOKASSA_SHOP_ID'),
-        'secret_key'  => env('YOOKASSA_SECRET_KEY'),
+        'shop_id' => env('YOOKASSA_SHOP_ID'),
+        'secret_key' => env('YOOKASSA_SECRET_KEY'),
         'webhook_ips' => [
             '185.71.76.0/27',
             '185.71.77.0/27',

@@ -18,10 +18,9 @@ final readonly class RefundPaymentHandler
 {
     public function __construct(
         private PaymentRepositoryInterface $repository,
-        private PaymentProviderInterface   $provider,
-        private PaymentLogger              $logger,
-    ) {
-    }
+        private PaymentProviderInterface $provider,
+        private PaymentLogger $logger,
+    ) {}
 
     public function handle(RefundPaymentCommand $command): PaymentResultDTO
     {
@@ -50,7 +49,7 @@ final readonly class RefundPaymentHandler
                 ->log('payment.refunded');
 
             $this->logger->info('Payment refunded', [
-                'payment_id'    => $command->paymentId,
+                'payment_id' => $command->paymentId,
                 'refund_amount' => $refundAmount->formatted(),
             ]);
 

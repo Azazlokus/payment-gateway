@@ -9,28 +9,27 @@ use App\Payments\Domain\Aggregates\Payment;
 final readonly class PaymentResultDTO
 {
     public function __construct(
-        public string  $paymentId,
-        public string  $status,
-        public int     $amount,
-        public string  $currency,
+        public string $paymentId,
+        public string $status,
+        public int $amount,
+        public string $currency,
         public ?string $confirmationUrl,
         public ?string $externalId,
         public ?string $paymentMethodId = null,
-        public int     $refundedAmount = 0,
-    ) {
-    }
+        public int $refundedAmount = 0,
+    ) {}
 
     public static function fromAggregate(Payment $payment): self
     {
         return new self(
-            paymentId:       $payment->id()->toString(),
-            status:          $payment->status()->value,
-            amount:          $payment->amount()->amount(),
-            currency:        $payment->amount()->currency()->value,
+            paymentId: $payment->id()->toString(),
+            status: $payment->status()->value,
+            amount: $payment->amount()->amount(),
+            currency: $payment->amount()->currency()->value,
             confirmationUrl: $payment->confirmationUrl(),
-            externalId:      $payment->externalId()?->toString(),
+            externalId: $payment->externalId()?->toString(),
             paymentMethodId: $payment->paymentMethodId(),
-            refundedAmount:  $payment->refundedAmountKopecks(),
+            refundedAmount: $payment->refundedAmountKopecks(),
         );
     }
 }

@@ -11,4 +11,3 @@ parameters:
         - app/Http
         - app/Models
 
-    checkMissingIterableValueType: false

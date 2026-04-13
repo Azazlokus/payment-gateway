@@ -18,12 +18,12 @@ final class PaymentResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'               => $this->dto->paymentId,
-            'status'           => $this->dto->status,
-            'amount'           => $this->dto->amount,
-            'currency'         => $this->dto->currency,
-            'confirmation_url'  => $this->dto->confirmationUrl,
-            'external_id'       => $this->dto->externalId,
+            'id' => $this->dto->paymentId,
+            'status' => $this->dto->status,
+            'amount' => $this->dto->amount,
+            'currency' => $this->dto->currency,
+            'confirmation_url' => $this->dto->confirmationUrl,
+            'external_id' => $this->dto->externalId,
             'payment_method_id' => $this->dto->paymentMethodId,
         ];
     }

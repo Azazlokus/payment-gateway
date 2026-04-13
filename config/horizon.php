@@ -85,8 +85,8 @@ return [
 
     'waits' => [
         'redis:payments-critical' => 30,
-        'redis:payments'          => 60,
-        'redis:default'           => 120,
+        'redis:payments' => 60,
+        'redis:default' => 120,
     ],
 
     /*
@@ -101,12 +101,12 @@ return [
     */
 
     'trim' => [
-        'recent'        => 60,
-        'pending'       => 60,
-        'completed'     => 60,
+        'recent' => 60,
+        'pending' => 60,
+        'completed' => 60,
         'recent_failed' => 10080,
-        'failed'        => 10080,
-        'monitored'     => 10080,
+        'failed' => 10080,
+        'monitored' => 10080,
     ],
 
     /*
@@ -134,7 +134,7 @@ return [
 
     'metrics' => [
         'trim_snapshots' => [
-            'job'   => 24,
+            'job' => 24,
             'queue' => 24,
         ],
     ],
@@ -178,37 +178,37 @@ return [
 
     'defaults' => [
         'supervisor-payments-critical' => [
-            'connection'  => 'redis',
-            'queue'       => ['payments-critical'],
-            'balance'     => 'auto',
+            'connection' => 'redis',
+            'queue' => ['payments-critical'],
+            'balance' => 'auto',
             'minProcesses' => 2,
             'maxProcesses' => 10,
-            'tries'       => 3,
-            'backoff'     => [10, 30, 60],
-            'timeout'     => 60,
-            'memory'      => 128,
+            'tries' => 3,
+            'backoff' => [10, 30, 60],
+            'timeout' => 60,
+            'memory' => 128,
         ],
         'supervisor-payments' => [
-            'connection'  => 'redis',
-            'queue'       => ['payments'],
-            'balance'     => 'auto',
+            'connection' => 'redis',
+            'queue' => ['payments'],
+            'balance' => 'auto',
             'minProcesses' => 1,
             'maxProcesses' => 5,
-            'tries'       => 3,
-            'backoff'     => [30, 60, 120],
-            'timeout'     => 90,
-            'memory'      => 128,
+            'tries' => 3,
+            'backoff' => [30, 60, 120],
+            'timeout' => 90,
+            'memory' => 128,
         ],
         'supervisor-default' => [
-            'connection'  => 'redis',
-            'queue'       => ['default'],
-            'balance'     => 'simple',
+            'connection' => 'redis',
+            'queue' => ['default'],
+            'balance' => 'simple',
             'minProcesses' => 1,
             'maxProcesses' => 3,
-            'tries'       => 3,
-            'backoff'     => 60,
-            'timeout'     => 60,
-            'memory'      => 128,
+            'tries' => 3,
+            'backoff' => 60,
+            'timeout' => 60,
+            'memory' => 128,
         ],
     ],
 

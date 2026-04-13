@@ -6,6 +6,4 @@ namespace App\Payments\Domain\Exceptions;
 
 use RuntimeException;
 
-class PaymentException extends RuntimeException
-{
-}
+class PaymentException extends RuntimeException {}

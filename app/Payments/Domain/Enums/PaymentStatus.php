@@ -6,14 +6,14 @@ namespace App\Payments\Domain\Enums;
 
 enum PaymentStatus: string
 {
-    case Pending   = 'Pending';
+    case Pending = 'Pending';
     case Succeeded = 'Succeeded';
     case Cancelled = 'Cancelled';
-    case Refunded  = 'Refunded';
+    case Refunded = 'Refunded';
 
     public function isTerminal(): bool
     {
-        return match($this) {
+        return match ($this) {
             self::Succeeded, self::Cancelled, self::Refunded => true,
             self::Pending => false,
         };

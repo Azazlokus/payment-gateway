@@ -9,6 +9,5 @@ final readonly class CancelPaymentCommand
     public function __construct(
         public string $paymentId,
         public string $reason = 'Отменено пользователем',
-    ) {
-    }
+    ) {}
 }

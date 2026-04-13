@@ -8,15 +8,18 @@ final readonly class PaymentWasCreated extends DomainEvent
 {
     public function __construct(
         public string $paymentId,
-        public int    $amount,
+        public int $amount,
         public string $currency,
         public string $description,
         public string $provider,
         public string $idempotencyKey,
-        public array  $metadata = [],
+        public array $metadata = [],
     ) {
         parent::__construct();
     }
 
-    public function eventName(): string { return 'payment.created'; }
+    public function eventName(): string
+    {
+        return 'payment.created';
+    }
 }

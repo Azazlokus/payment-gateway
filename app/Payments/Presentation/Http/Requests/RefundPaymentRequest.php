@@ -16,8 +16,8 @@ final class RefundPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount'  => ['sometimes', 'integer', 'min:100'],
-            'reason'  => ['sometimes', 'string', 'max:255'],
+            'amount' => ['sometimes', 'integer', 'min:100'],
+            'reason' => ['sometimes', 'string', 'max:255'],
         ];
     }
 }

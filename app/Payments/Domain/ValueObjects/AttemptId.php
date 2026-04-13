@@ -9,9 +9,7 @@ use InvalidArgumentException;
 
 final readonly class AttemptId
 {
-    private function __construct(private string $value)
-    {
-    }
+    private function __construct(private string $value) {}
 
     public static function generate(): self
     {

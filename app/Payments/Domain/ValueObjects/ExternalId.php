@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Payments\Domain\ValueObjects;
 
@@ -6,9 +8,7 @@ use InvalidArgumentException;
 
 final readonly class ExternalId
 {
-    private function __construct(private string $value)
-    {
-    }
+    private function __construct(private string $value) {}
 
     public static function fromString(string $value): self
     {

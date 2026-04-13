@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
+use App\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use App\Payments\Infrastructure\Persistence\EloquentPaymentRepository;
 use App\Payments\Infrastructure\Providers\YooKassaProvider;
@@ -30,7 +31,7 @@ class PaymentServiceProvider extends ServiceProvider
                         logger: app(PaymentLogger::class),
                     ),
                     default => throw new \InvalidArgumentException(
-                        'Unknown payment provider: ' . config('payments.default')
+                        'Unknown payment provider: '.config('payments.default')
                     ),
                 };
             }
@@ -43,7 +44,7 @@ class PaymentServiceProvider extends ServiceProvider
     {
         $this->app['router']->aliasMiddleware(
             'correlation',
-            \App\Payments\Infrastructure\Observability\CorrelationIdMiddleware::class,
+            CorrelationIdMiddleware::class,
         );
     }
 }

@@ -14,11 +14,17 @@ use Mockery;
 use Mockery\MockInterface;
 use Tests\TestCase;
 use YooKassa\Client;
+use YooKassa\Model\Payment\Confirmation\ConfirmationRedirect;
+use YooKassa\Model\Payment\Payment;
+use YooKassa\Request\Payments\CreatePaymentResponse;
+use YooKassa\Request\Refunds\CreateRefundResponse;
 
 class YooKassaProviderTest extends TestCase
 {
     private MockInterface $yooKassaClient;
+
     private YooKassaProvider $provider;
+
     private MockInterface $logger;
 
     protected function setUp(): void
@@ -34,10 +40,10 @@ class YooKassaProviderTest extends TestCase
         $this->logger->shouldReceive('warning')->andReturnNull()->byDefault();
 
         $this->provider = new YooKassaProvider(
-            shopId:    '100500',
+            shopId: '100500',
             secretKey: 'test_secret',
-            logger:    $this->logger,
-            client:    $this->yooKassaClient,
+            logger: $this->logger,
+            client: $this->yooKassaClient,
         );
     }
 
@@ -48,12 +54,12 @@ class YooKassaProviderTest extends TestCase
 
     public function test_create_payment_returns_provider_response(): void
     {
-        $confirmation = Mockery::mock(\YooKassa\Model\Payment\Confirmation\ConfirmationRedirect::class);
+        $confirmation = Mockery::mock(ConfirmationRedirect::class);
         $confirmation->shouldReceive('getConfirmationUrl')
             ->once()
             ->andReturn('https://yookassa.ru/checkout/payments/abc123');
 
-        $response = Mockery::mock(\YooKassa\Request\Payments\CreatePaymentResponse::class);
+        $response = Mockery::mock(CreatePaymentResponse::class);
         $response->shouldReceive('getId')->andReturn('22d65900-000f-5000-a000-10d000000000');
         $response->shouldReceive('getStatus')->andReturn('pending');
         $response->shouldReceive('getConfirmation')->andReturn($confirmation);
@@ -63,8 +69,7 @@ class YooKassaProviderTest extends TestCase
         $this->yooKassaClient->shouldReceive('createPayment')
             ->once()
             ->with(
-                Mockery::on(fn($params) =>
-                    $params['amount']['value'] === '100.00' &&
+                Mockery::on(fn ($params) => $params['amount']['value'] === '100.00' &&
                     $params['amount']['currency'] === 'RUB' &&
                     $params['confirmation']['type'] === 'redirect' &&
                     $params['description'] === 'Test payment' &&
@@ -75,10 +80,10 @@ class YooKassaProviderTest extends TestCase
             ->andReturn($response);
 
         $result = $this->provider->createPayment(
-            paymentId:      'internal-uuid-123',
-            amount:         Money::ofRub(10000),
-            description:    'Test payment',
-            returnUrl:      'https://example.com/return',
+            paymentId: 'internal-uuid-123',
+            amount: Money::ofRub(10000),
+            description: 'Test payment',
+            returnUrl: 'https://example.com/return',
             idempotencyKey: 'idempotency-key-1',
         );
 
@@ -96,24 +101,24 @@ class YooKassaProviderTest extends TestCase
 
         $this->logger->shouldReceive('error')->once()->with(
             'YooKassa: ошибка создания платежа',
-            Mockery::on(fn($ctx) => str_contains($ctx['error'], 'Network error'))
+            Mockery::on(fn ($ctx) => str_contains($ctx['error'], 'Network error'))
         );
 
         $this->expectException(PaymentException::class);
         $this->expectExceptionMessageMatches('/YooKassa createPayment failed/');
 
         $this->provider->createPayment(
-            paymentId:      'internal-uuid-123',
-            amount:         Money::ofRub(50000),
-            description:    'Test',
-            returnUrl:      'https://example.com/return',
+            paymentId: 'internal-uuid-123',
+            amount: Money::ofRub(50000),
+            description: 'Test',
+            returnUrl: 'https://example.com/return',
             idempotencyKey: 'idempotency-key-2',
         );
     }
 
     public function test_get_payment_returns_provider_response(): void
     {
-        $response = Mockery::mock(\YooKassa\Model\Payment\Payment::class);
+        $response = Mockery::mock(Payment::class);
         $response->shouldReceive('getId')->andReturn('22d65900-000f-5000-a000-10d000000000');
         $response->shouldReceive('getStatus')->andReturn('succeeded');
         $response->shouldReceive('getPaymentMethod')->andReturnNull()->byDefault();
@@ -125,7 +130,7 @@ class YooKassaProviderTest extends TestCase
             ->andReturn($response);
 
         $externalId = ExternalId::fromString('22d65900-000f-5000-a000-10d000000000');
-        $result      = $this->provider->getPayment($externalId);
+        $result = $this->provider->getPayment($externalId);
 
         $this->assertInstanceOf(ProviderResponse::class, $result);
         $this->assertSame('succeeded', $result->status);
@@ -146,7 +151,7 @@ class YooKassaProviderTest extends TestCase
 
     public function test_refund_payment_returns_provider_response(): void
     {
-        $response = Mockery::mock(\YooKassa\Request\Refunds\CreateRefundResponse::class);
+        $response = Mockery::mock(CreateRefundResponse::class);
         $response->shouldReceive('getId')->andReturn('refund-id-abc');
         $response->shouldReceive('getStatus')->andReturn('succeeded');
         $response->shouldReceive('jsonSerialize')->andReturn(['id' => 'refund-id-abc', 'status' => 'succeeded']);
@@ -154,8 +159,7 @@ class YooKassaProviderTest extends TestCase
         $this->yooKassaClient->shouldReceive('createRefund')
             ->once()
             ->with(
-                Mockery::on(fn($params) =>
-                    $params['payment_id'] === '22d65900-000f-5000-a000-10d000000000' &&
+                Mockery::on(fn ($params) => $params['payment_id'] === '22d65900-000f-5000-a000-10d000000000' &&
                     $params['amount']['value'] === '100.00' &&
                     $params['amount']['currency'] === 'RUB'
                 ),
@@ -165,7 +169,7 @@ class YooKassaProviderTest extends TestCase
 
         $result = $this->provider->refundPayment(
             externalId: ExternalId::fromString('22d65900-000f-5000-a000-10d000000000'),
-            amount:     Money::ofRub(10000),
+            amount: Money::ofRub(10000),
         );
 
         $this->assertInstanceOf(ProviderResponse::class, $result);
@@ -184,14 +188,14 @@ class YooKassaProviderTest extends TestCase
 
         $this->provider->refundPayment(
             externalId: ExternalId::fromString('22d65900-000f-5000-a000-10d000000000'),
-            amount:     Money::ofRub(10000),
+            amount: Money::ofRub(10000),
         );
     }
 
     public function test_verify_webhook_returns_true_for_valid_payload(): void
     {
         $payload = [
-            'event'  => 'payment.succeeded',
+            'event' => 'payment.succeeded',
             'object' => ['id' => '22d65900-000f-5000-a000-10d000000000', 'status' => 'succeeded'],
         ];
 
@@ -222,9 +226,9 @@ class YooKassaProviderTest extends TestCase
     public function test_parse_webhook_returns_provider_response(): void
     {
         $payload = [
-            'event'  => 'payment.succeeded',
+            'event' => 'payment.succeeded',
             'object' => [
-                'id'     => '22d65900-000f-5000-a000-10d000000000',
+                'id' => '22d65900-000f-5000-a000-10d000000000',
                 'status' => 'succeeded',
                 'amount' => ['value' => '100.00', 'currency' => 'RUB'],
             ],
@@ -240,10 +244,10 @@ class YooKassaProviderTest extends TestCase
 
     public function test_money_amount_is_correctly_converted_to_rubles(): void
     {
-        $confirmation = Mockery::mock(\YooKassa\Model\Payment\Confirmation\ConfirmationRedirect::class);
+        $confirmation = Mockery::mock(ConfirmationRedirect::class);
         $confirmation->shouldReceive('getConfirmationUrl')->andReturn('https://example.com');
 
-        $response = Mockery::mock(\YooKassa\Request\Payments\CreatePaymentResponse::class);
+        $response = Mockery::mock(CreatePaymentResponse::class);
         $response->shouldReceive('getId')->andReturn('ext-id');
         $response->shouldReceive('getStatus')->andReturn('pending');
         $response->shouldReceive('getConfirmation')->andReturn($confirmation);
@@ -253,16 +257,16 @@ class YooKassaProviderTest extends TestCase
         $this->yooKassaClient->shouldReceive('createPayment')
             ->once()
             ->with(
-                Mockery::on(fn($params) => $params['amount']['value'] === '999.99'),
+                Mockery::on(fn ($params) => $params['amount']['value'] === '999.99'),
                 Mockery::any()
             )
             ->andReturn($response);
 
         $this->provider->createPayment(
-            paymentId:      'uuid',
-            amount:         Money::ofRub(99999),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'uuid',
+            amount: Money::ofRub(99999),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'key',
         );
     }

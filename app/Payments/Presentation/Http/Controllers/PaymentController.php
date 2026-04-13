@@ -14,7 +14,6 @@ use App\Payments\Application\DTOs\PaymentResultDTO;
 use App\Payments\Application\DTOs\ReceiptDTO;
 use App\Payments\Application\DTOs\ReceiptItemDTO;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
-use App\Payments\Domain\Exceptions\PaymentException;
 use App\Payments\Domain\ValueObjects\PaymentId;
 use App\Payments\Presentation\Http\Requests\CreatePaymentRequest;
 use App\Payments\Presentation\Http\Requests\RefundPaymentRequest;
@@ -29,10 +28,9 @@ use Symfony\Component\HttpFoundation\Response;
 final class PaymentController extends Controller
 {
     public function __construct(
-        private readonly CommandBus                 $bus,
+        private readonly CommandBus $bus,
         private readonly PaymentRepositoryInterface $repository,
-    ) {
-    }
+    ) {}
 
     #[OA\Get(
         path: '/payments',
@@ -57,24 +55,24 @@ final class PaymentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $perPage = min((int) $request->query('per_page', 15), 100);
-        $page    = max((int) $request->query('page', 1), 1);
+        $page = max((int) $request->query('page', 1), 1);
         $filters = array_filter([
-            'status'    => $request->query('status'),
+            'status' => $request->query('status'),
             'from_date' => $request->query('from_date'),
-            'to_date'   => $request->query('to_date'),
+            'to_date' => $request->query('to_date'),
         ]);
 
         $result = $this->repository->paginate($perPage, $page, $filters);
 
         return response()->json([
-            'data'         => array_map(
-                fn($payment) => (new PaymentResource(PaymentResultDTO::fromAggregate($payment)))->resolve(),
+            'data' => array_map(
+                fn ($payment) => (new PaymentResource(PaymentResultDTO::fromAggregate($payment)))->resolve(),
                 $result['data']
             ),
-            'total'        => $result['total'],
-            'per_page'     => $result['per_page'],
+            'total' => $result['total'],
+            'per_page' => $result['per_page'],
             'current_page' => $result['current_page'],
-            'last_page'    => $result['last_page'],
+            'last_page' => $result['last_page'],
         ], Response::HTTP_OK);
     }
 
@@ -124,13 +122,13 @@ final class PaymentController extends Controller
     public function create(CreatePaymentRequest $request): JsonResponse
     {
         $result = $this->bus->dispatch(new CreatePaymentCommand(
-            amountKopecks:  $request->integer('amount'),
-            description:    $request->string('description')->toString(),
-            returnUrl:      $request->string('return_url')->toString(),
+            amountKopecks: $request->integer('amount'),
+            description: $request->string('description')->toString(),
+            returnUrl: $request->string('return_url')->toString(),
             idempotencyKey: $request->header('Idempotency-Key') ?? (string) Str::uuid(),
-            userId:         $request->user()?->id,
-            metadata:       $request->input('metadata', []),
-            options:        $this->buildOptions($request),
+            userId: $request->user()?->id,
+            metadata: $request->input('metadata', []),
+            options: $this->buildOptions($request),
         ));
 
         return response()->json(new PaymentResource($result), Response::HTTP_CREATED);
@@ -191,7 +189,7 @@ final class PaymentController extends Controller
     {
         $result = $this->bus->dispatch(new CancelPaymentCommand(
             paymentId: $id,
-            reason:    request()->input('reason', 'Отменено пользователем'),
+            reason: request()->input('reason', 'Отменено пользователем'),
         ));
 
         return response()->json(new PaymentResource($result), Response::HTTP_OK);
@@ -223,9 +221,9 @@ final class PaymentController extends Controller
     public function refund(string $id, RefundPaymentRequest $request): JsonResponse
     {
         $result = $this->bus->dispatch(new RefundPaymentCommand(
-            paymentId:     $id,
+            paymentId: $id,
             amountKopecks: $request->integer('amount') ?: null,
-            reason:        $request->input('reason', ''),
+            reason: $request->input('reason', ''),
         ));
 
         return response()->json(new PaymentResource($result), Response::HTTP_OK);
@@ -258,13 +256,13 @@ final class PaymentController extends Controller
         $receipt = null;
         if ($request->has('receipt')) {
             $receiptData = $request->input('receipt');
-            $items       = array_map(fn(array $item) => new ReceiptItemDTO(
-                description:    $item['description'],
-                quantity:       (float) $item['quantity'],
-                amountKopecks:  (int) $item['amount'],
-                vatCode:        (int) $item['vat_code'],
+            $items = array_map(fn (array $item) => new ReceiptItemDTO(
+                description: $item['description'],
+                quantity: (float) $item['quantity'],
+                amountKopecks: (int) $item['amount'],
+                vatCode: (int) $item['vat_code'],
                 paymentSubject: $item['payment_subject'] ?? 'commodity',
-                paymentMode:    $item['payment_mode'] ?? 'full_payment',
+                paymentMode: $item['payment_mode'] ?? 'full_payment',
             ), $receiptData['items'] ?? []);
 
             $receipt = new ReceiptDTO(
@@ -275,11 +273,11 @@ final class PaymentController extends Controller
         }
 
         return new CreatePaymentOptionsDTO(
-            receipt:            $receipt,
-            confirmationType:   $request->input('confirmation_type', 'redirect'),
-            paymentMethodType:  $request->input('payment_method_type'),
-            savePaymentMethod:  (bool) $request->input('save_payment_method', false),
-            paymentMethodId:    $request->input('payment_method_id'),
+            receipt: $receipt,
+            confirmationType: $request->input('confirmation_type', 'redirect'),
+            paymentMethodType: $request->input('payment_method_type'),
+            savePaymentMethod: (bool) $request->input('save_payment_method', false),
+            paymentMethodId: $request->input('payment_method_id'),
         );
     }
 }

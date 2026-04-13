@@ -14,6 +14,7 @@ final class PaymentModel extends Model
     use HasUlids;
 
     protected $table = 'payments';
+
     protected $fillable = [
         'id',
         'idempotency_key',

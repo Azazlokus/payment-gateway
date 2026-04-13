@@ -8,6 +8,7 @@ use App\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Payments\Domain\Contracts\ProviderResponse;
 use App\Payments\Domain\ValueObjects\ExternalId;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
@@ -23,9 +24,9 @@ class CreatePaymentTest extends TestCase
         $this->mock(PaymentProviderInterface::class, function ($mock) use ($externalId, $confirmationUrl, $status) {
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldReceive('createPayment')->andReturn(new ProviderResponse(
-                externalId:      ExternalId::fromString($externalId),
+                externalId: ExternalId::fromString($externalId),
                 confirmationUrl: $confirmationUrl,
-                status:          $status,
+                status: $status,
             ));
         });
     }
@@ -35,9 +36,9 @@ class CreatePaymentTest extends TestCase
         $this->mockProvider();
 
         $response = $this->postJson('/api/payments', [
-            'amount'      => 10000,
+            'amount' => 10000,
             'description' => 'Test order',
-            'return_url'  => 'https://example.com/success',
+            'return_url' => 'https://example.com/success',
         ]);
 
         $response->assertStatus(Response::HTTP_CREATED)
@@ -52,12 +53,12 @@ class CreatePaymentTest extends TestCase
     {
         $this->mockProvider();
 
-        $key = (string) \Illuminate\Support\Str::uuid();
+        $key = (string) Str::uuid();
 
         $first = $this->postJson('/api/payments', [
-            'amount'      => 10000,
+            'amount' => 10000,
             'description' => 'Test order',
-            'return_url'  => 'https://example.com/success',
+            'return_url' => 'https://example.com/success',
         ], ['Idempotency-Key' => $key]);
 
         $first->assertStatus(Response::HTTP_CREATED);
@@ -70,9 +71,9 @@ class CreatePaymentTest extends TestCase
         });
 
         $second = $this->postJson('/api/payments', [
-            'amount'      => 10000,
+            'amount' => 10000,
             'description' => 'Test order',
-            'return_url'  => 'https://example.com/success',
+            'return_url' => 'https://example.com/success',
         ], ['Idempotency-Key' => $key]);
 
         $second->assertStatus(Response::HTTP_CREATED)
@@ -90,9 +91,9 @@ class CreatePaymentTest extends TestCase
     public function test_validation_rejects_non_https_return_url(): void
     {
         $response = $this->postJson('/api/payments', [
-            'amount'      => 10000,
+            'amount' => 10000,
             'description' => 'Test',
-            'return_url'  => 'http://example.com/success',
+            'return_url' => 'http://example.com/success',
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
@@ -102,9 +103,9 @@ class CreatePaymentTest extends TestCase
     public function test_validation_rejects_amount_below_minimum(): void
     {
         $response = $this->postJson('/api/payments', [
-            'amount'      => 50,
+            'amount' => 50,
             'description' => 'Test',
-            'return_url'  => 'https://example.com/success',
+            'return_url' => 'https://example.com/success',
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
@@ -132,9 +133,9 @@ class CreatePaymentTest extends TestCase
 
         // Create a payment first
         $this->postJson('/api/payments', [
-            'amount'      => 10000,
+            'amount' => 10000,
             'description' => 'Test order',
-            'return_url'  => 'https://example.com/success',
+            'return_url' => 'https://example.com/success',
         ]);
 
         $response = $this->getJson('/api/payments');

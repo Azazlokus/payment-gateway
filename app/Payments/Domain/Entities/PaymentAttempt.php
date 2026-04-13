@@ -12,20 +12,22 @@ use App\Payments\Domain\ValueObjects\Money;
 final class PaymentAttempt
 {
     private PaymentStatus $status;
+
     private ?ExternalId $externalId;
+
     private ?string $failureReason;
+
     private \DateTimeImmutable $createdAt;
 
     public function __construct(
         private readonly AttemptId $id,
-        private readonly Money     $amount,
-        private readonly string    $provider,
-    )
-    {
+        private readonly Money $amount,
+        private readonly string $provider,
+    ) {
         $this->status = PaymentStatus::Pending;
         $this->externalId = null;
         $this->failureReason = null;
-        $this->createdAt = new \DateTimeImmutable();
+        $this->createdAt = new \DateTimeImmutable;
     }
 
     public function markSucceeded(ExternalId $externalId): void

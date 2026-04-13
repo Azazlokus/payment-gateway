@@ -8,6 +8,5 @@ final readonly class SyncPaymentCommand
 {
     public function __construct(
         public string $paymentId,
-    ) {
-    }
+    ) {}
 }

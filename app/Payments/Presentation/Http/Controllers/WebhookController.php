@@ -17,9 +17,8 @@ final class WebhookController extends Controller
 {
     public function __construct(
         private readonly PaymentProviderInterface $provider,
-        private readonly PaymentLogger            $logger,
-    ) {
-    }
+        private readonly PaymentLogger $logger,
+    ) {}
 
     #[OA\Post(
         path: '/webhook/yookassa',
@@ -51,9 +50,9 @@ final class WebhookController extends Controller
     {
         $payload = $request->all();
 
-        if (!$this->provider->verifyWebhook($payload, $request->headers->all())) {
+        if (! $this->provider->verifyWebhook($payload, $request->headers->all())) {
             $this->logger->warning('Webhook rejected', [
-                'ip'    => $request->ip(),
+                'ip' => $request->ip(),
                 'event' => $payload['event'] ?? 'unknown',
             ]);
 

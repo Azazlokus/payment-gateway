@@ -18,30 +18,29 @@ final class ProcessYooKassaWebhookJob implements ShouldQueue
 {
     use Queueable;
 
-    public int   $tries = 5;
+    public int $tries = 5;
 
     /** Экспоненциальный backoff: 10s → 30s → 60s → 120s → 300s */
     public array $backoff = [10, 30, 60, 120, 300];
 
     public function __construct(
         private readonly array $payload,
-    ) {
-    }
+    ) {}
 
     public function handle(
-        PaymentProviderInterface   $provider,
+        PaymentProviderInterface $provider,
         PaymentRepositoryInterface $repository,
-        PaymentLogger              $logger,
+        PaymentLogger $logger,
     ): void {
         $providerResponse = $provider->parseWebhook($this->payload);
-        $event            = $this->payload['event'] ?? '';
+        $event = $this->payload['event'] ?? '';
 
         $payment = $repository->findByExternalId($providerResponse->externalId->toString());
 
         if ($payment === null) {
             $logger->warning('Webhook job: payment not found', [
                 'external_id' => $providerResponse->externalId->toString(),
-                'event'       => $event,
+                'event' => $event,
             ]);
 
             return;
@@ -51,9 +50,9 @@ final class ProcessYooKassaWebhookJob implements ShouldQueue
             match ($event) {
                 'payment.succeeded' => $payment->markAsSucceeded($providerResponse->externalId),
 
-                'payment.canceled'  => $payment->cancel('Cancelled by YooKassa'),
+                'payment.canceled' => $payment->cancel('Cancelled by YooKassa'),
 
-                'refund.succeeded'  => $payment->refund(
+                'refund.succeeded' => $payment->refund(
                     $providerResponse->refundAmountKopecks !== null
                         ? Money::ofRub($providerResponse->refundAmountKopecks)
                         : $payment->amount()
@@ -69,13 +68,13 @@ final class ProcessYooKassaWebhookJob implements ShouldQueue
                 ->log('webhook.processed');
 
             $logger->info('Webhook job processed', [
-                'event'      => $event,
+                'event' => $event,
                 'payment_id' => $payment->id()->toString(),
             ]);
         } catch (InvalidPaymentStateException $e) {
             // Идемпотентность: платёж уже в нужном статусе — не ретраим
             $logger->info('Webhook job: payment already in terminal status (skipped)', [
-                'event'      => $event,
+                'event' => $event,
                 'payment_id' => $payment->id()->toString(),
             ]);
         }
@@ -87,14 +86,14 @@ final class ProcessYooKassaWebhookJob implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        $event      = $this->payload['event'] ?? 'unknown';
+        $event = $this->payload['event'] ?? 'unknown';
         $externalId = $this->payload['object']['id'] ?? 'unknown';
 
         logger()->critical('Webhook processing permanently failed', [
-            'event'       => $event,
+            'event' => $event,
             'external_id' => $externalId,
-            'error'       => $exception->getMessage(),
-            'payload'     => $this->payload,
+            'error' => $exception->getMessage(),
+            'payload' => $this->payload,
         ]);
 
         $slackUrl = config('services.slack.webhook_url');
@@ -103,7 +102,7 @@ final class ProcessYooKassaWebhookJob implements ShouldQueue
             Http::post($slackUrl, [
                 'text' => sprintf(
                     ':x: *Webhook failed* after %d attempts'
-                    . "\nEvent: `%s`\nExternal ID: `%s`\nError: `%s`",
+                    ."\nEvent: `%s`\nExternal ID: `%s`\nError: `%s`",
                     $this->tries,
                     $event,
                     $externalId,

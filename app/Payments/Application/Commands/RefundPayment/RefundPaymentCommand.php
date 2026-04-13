@@ -7,9 +7,8 @@ namespace App\Payments\Application\Commands\RefundPayment;
 final readonly class RefundPaymentCommand
 {
     public function __construct(
-        public string  $paymentId,
-        public ?int    $amountKopecks,
-        public string  $reason = '',
-    ) {
-    }
+        public string $paymentId,
+        public ?int $amountKopecks,
+        public string $reason = '',
+    ) {}
 }

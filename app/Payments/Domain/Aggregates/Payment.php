@@ -1,10 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Payments\Domain\Aggregates;
 
 use App\Payments\Domain\Entities\PaymentAttempt;
 use App\Payments\Domain\Entities\RefundRequest;
-use App\Payments\Domain\Enums\Currency;
 use App\Payments\Domain\Enums\PaymentStatus;
 use App\Payments\Domain\Events\DomainEvent;
 use App\Payments\Domain\Events\PaymentWasCancelled;
@@ -22,6 +23,7 @@ class Payment
 {
     /** @var DomainEvent[] */
     private array $domainEvents = [];
+
     /** @var PaymentAttempt[] */
     private array $attempts = [];
 
@@ -30,29 +32,26 @@ class Payment
 
     private function __construct(
         private readonly PaymentId $id,
-        private Money              $amount,
-        private PaymentStatus      $status,
-        private readonly string    $description,
-        private readonly string    $provider,
-        private readonly string    $idempotencyKey,
-        private ?ExternalId        $externalId = null,
-        private ?string            $confirmationUrl = null,
-        private readonly array     $metadata = [],
-        private ?string            $paymentMethodId = null, // ID сохранённого метода YooKassa
-        private int                $refundedAmountKopecks = 0,
-    )
-    {
-    }
+        private Money $amount,
+        private PaymentStatus $status,
+        private readonly string $description,
+        private readonly string $provider,
+        private readonly string $idempotencyKey,
+        private ?ExternalId $externalId = null,
+        private ?string $confirmationUrl = null,
+        private readonly array $metadata = [],
+        private ?string $paymentMethodId = null, // ID сохранённого метода YooKassa
+        private int $refundedAmountKopecks = 0,
+    ) {}
 
     public static function create(
         PaymentId $id,
-        Money     $amount,
-        string    $description,
-        string    $provider,
-        string    $idempotencyKey,
-        array     $metadata = [],
-    )
-    {
+        Money $amount,
+        string $description,
+        string $provider,
+        string $idempotencyKey,
+        array $metadata = [],
+    ) {
         $payment = new self(
             id: $id,
             amount: $amount,
@@ -86,6 +85,7 @@ class Payment
         );
 
         $this->attempts[] = $attempt;
+
         return $attempt;
     }
 
@@ -102,7 +102,7 @@ class Payment
         // Бизнес-правило: только один pending-рефанд одновременно
         $hasPending = array_any(
             $this->refundRequests,
-            fn(RefundRequest $r) => $r->isPending()
+            fn (RefundRequest $r) => $r->isPending()
         );
 
         if ($hasPending) {
@@ -176,7 +176,7 @@ class Payment
         if ($newRefundedTotal > $this->amount->amount()) {
             throw new InvalidPaymentStateException(
                 "Refund would exceed payment amount: already refunded {$this->refundedAmountKopecks}, "
-                . "trying to refund {$refundAmount->amount()} more, total {$this->amount->amount()}"
+                ."trying to refund {$refundAmount->amount()} more, total {$this->amount->amount()}"
             );
         }
 
@@ -188,7 +188,7 @@ class Payment
         }
 
         $this->recordEvent(new PaymentWasRefunded(
-            paymentId:    $this->id->toString(),
+            paymentId: $this->id->toString(),
             refundAmount: $refundAmount->amount(),
         ));
     }
@@ -200,7 +200,7 @@ class Payment
 
     public function assignExternalData(ExternalId $externalId, string $confirmationUrl, ?string $paymentMethodId = null): void
     {
-        $this->externalId      = $externalId;
+        $this->externalId = $externalId;
         $this->confirmationUrl = $confirmationUrl;
         $this->paymentMethodId = $paymentMethodId;
     }
@@ -220,6 +220,7 @@ class Payment
     {
         $events = $this->domainEvents;
         $this->domainEvents = [];
+
         return $events;
     }
 
@@ -278,29 +279,29 @@ class Payment
     }
 
     public static function restore(
-        PaymentId     $id,
-        Money         $amount,
+        PaymentId $id,
+        Money $amount,
         PaymentStatus $status,
-        string        $description,
-        string        $provider,
-        string        $idempotencyKey,
-        ?ExternalId   $externalId = null,
-        ?string       $confirmationUrl = null,
-        array         $metadata = [],
-        ?string       $paymentMethodId = null,
-        int           $refundedAmountKopecks = 0,
+        string $description,
+        string $provider,
+        string $idempotencyKey,
+        ?ExternalId $externalId = null,
+        ?string $confirmationUrl = null,
+        array $metadata = [],
+        ?string $paymentMethodId = null,
+        int $refundedAmountKopecks = 0,
     ): self {
         return new self(
-            id:                    $id,
-            amount:                $amount,
-            status:                $status,
-            description:           $description,
-            provider:              $provider,
-            idempotencyKey:        $idempotencyKey,
-            externalId:            $externalId,
-            confirmationUrl:       $confirmationUrl,
-            metadata:              $metadata,
-            paymentMethodId:       $paymentMethodId,
+            id: $id,
+            amount: $amount,
+            status: $status,
+            description: $description,
+            provider: $provider,
+            idempotencyKey: $idempotencyKey,
+            externalId: $externalId,
+            confirmationUrl: $confirmationUrl,
+            metadata: $metadata,
+            paymentMethodId: $paymentMethodId,
             refundedAmountKopecks: $refundedAmountKopecks,
         );
     }

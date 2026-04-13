@@ -18,38 +18,38 @@ final class CreatePaymentRequest extends FormRequest
     {
         return [
             // Основные поля
-            'amount'      => ['required', 'integer', 'min:100'],
+            'amount' => ['required', 'integer', 'min:100'],
             'description' => ['required', 'string', 'max:255'],
-            'return_url'  => ['required', 'url:https'],
-            'metadata'    => ['sometimes', 'array'],
+            'return_url' => ['required', 'url:https'],
+            'metadata' => ['sometimes', 'array'],
 
             // Метод оплаты и тип подтверждения
             'payment_method_type' => ['sometimes', 'string', Rule::in([
                 'bank_card', 'yoo_money', 'sbp', 'sberbank', 'tinkoff_bank', 'cash',
             ])],
-            'confirmation_type'   => ['sometimes', 'string', Rule::in(['redirect', 'embedded', 'qr', 'mobile_application'])],
+            'confirmation_type' => ['sometimes', 'string', Rule::in(['redirect', 'embedded', 'qr', 'mobile_application'])],
             'save_payment_method' => ['sometimes', 'boolean'],
 
             // Recurring: списание по сохранённому методу (без редиректа)
-            'payment_method_id'   => ['sometimes', 'string'],
+            'payment_method_id' => ['sometimes', 'string'],
 
             // Чек (54-ФЗ) — обязателен если указан хотя бы один item
-            'receipt'                           => ['sometimes', 'array'],
-            'receipt.customer.email'            => [
+            'receipt' => ['sometimes', 'array'],
+            'receipt.customer.email' => [
                 'nullable', 'email',
-                Rule::requiredIf(fn() => $this->has('receipt') && !$this->filled('receipt.customer.phone')),
+                Rule::requiredIf(fn () => $this->has('receipt') && ! $this->filled('receipt.customer.phone')),
             ],
-            'receipt.customer.phone'            => [
+            'receipt.customer.phone' => [
                 'nullable', 'string',
-                Rule::requiredIf(fn() => $this->has('receipt') && !$this->filled('receipt.customer.email')),
+                Rule::requiredIf(fn () => $this->has('receipt') && ! $this->filled('receipt.customer.email')),
             ],
-            'receipt.items'                     => ['required_with:receipt', 'array', 'min:1'],
-            'receipt.items.*.description'       => ['required', 'string', 'max:128'],
-            'receipt.items.*.quantity'          => ['required', 'numeric', 'min:0.001'],
-            'receipt.items.*.amount'            => ['required', 'integer', 'min:1'],
-            'receipt.items.*.vat_code'          => ['required', 'integer', Rule::in([1, 2, 3, 4, 5, 6])],
-            'receipt.items.*.payment_subject'   => ['sometimes', 'string'],
-            'receipt.items.*.payment_mode'      => ['sometimes', 'string'],
+            'receipt.items' => ['required_with:receipt', 'array', 'min:1'],
+            'receipt.items.*.description' => ['required', 'string', 'max:128'],
+            'receipt.items.*.quantity' => ['required', 'numeric', 'min:0.001'],
+            'receipt.items.*.amount' => ['required', 'integer', 'min:1'],
+            'receipt.items.*.vat_code' => ['required', 'integer', Rule::in([1, 2, 3, 4, 5, 6])],
+            'receipt.items.*.payment_subject' => ['sometimes', 'string'],
+            'receipt.items.*.payment_mode' => ['sometimes', 'string'],
         ];
     }
 }

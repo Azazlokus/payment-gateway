@@ -13,12 +13,12 @@ interface PaymentProviderInterface
     public function name(): string;
 
     public function createPayment(
-        string                  $paymentId,
-        Money                   $amount,
-        string                  $description,
-        string                  $returnUrl,
-        string                  $idempotencyKey,
-        CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO(),
+        string $paymentId,
+        Money $amount,
+        string $description,
+        string $returnUrl,
+        string $idempotencyKey,
+        CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO,
     ): ProviderResponse;
 
     public function getPayment(ExternalId $externalId): ProviderResponse;

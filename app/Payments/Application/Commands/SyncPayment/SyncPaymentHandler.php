@@ -18,10 +18,9 @@ final readonly class SyncPaymentHandler
 {
     public function __construct(
         private PaymentRepositoryInterface $repository,
-        private PaymentProviderInterface   $provider,
-        private PaymentLogger              $logger,
-    ) {
-    }
+        private PaymentProviderInterface $provider,
+        private PaymentLogger $logger,
+    ) {}
 
     public function handle(SyncPaymentCommand $command): PaymentResultDTO
     {
@@ -39,15 +38,15 @@ final readonly class SyncPaymentHandler
             $providerResponse = $this->provider->getPayment($payment->externalId());
 
             $this->logger->info('Syncing payment status', [
-                'payment_id'      => $command->paymentId,
+                'payment_id' => $command->paymentId,
                 'provider_status' => $providerResponse->status,
             ]);
 
             try {
                 match ($providerResponse->status) {
                     'succeeded' => $payment->markAsSucceeded($payment->externalId()),
-                    'canceled'  => $payment->cancel('Cancelled by provider'),
-                    default     => null,
+                    'canceled' => $payment->cancel('Cancelled by provider'),
+                    default => null,
                 };
             } catch (InvalidPaymentStateException) {
                 // параллельный запрос уже обновил

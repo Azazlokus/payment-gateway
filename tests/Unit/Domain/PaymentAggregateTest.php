@@ -23,21 +23,22 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
     private function makePayment(int $kopecks = 10_000): Payment
     {
         return Payment::create(
-            id:             PaymentId::generate(),
-            amount:         Money::ofRub($kopecks),
-            description:    'Test payment',
-            provider:       'yookassa',
-            idempotencyKey: 'idem-' . uniqid(),
+            id: PaymentId::generate(),
+            amount: Money::ofRub($kopecks),
+            description: 'Test payment',
+            provider: 'yookassa',
+            idempotencyKey: 'idem-'.uniqid(),
         );
     }
 
     private function makeSucceededPayment(int $kopecks = 10_000): Payment
     {
-        $payment    = $this->makePayment($kopecks);
+        $payment = $this->makePayment($kopecks);
         $externalId = ExternalId::fromString('22d65900-000f-5000-a000-10d000000099');
         $payment->pullDomainEvents(); // сбрасываем созданные события
         $payment->markAsSucceeded($externalId);
         $payment->pullDomainEvents();
+
         return $payment;
     }
 
@@ -53,7 +54,7 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
     public function test_create_records_payment_was_created_event(): void
     {
         $payment = $this->makePayment(5_000);
-        $events  = $payment->pullDomainEvents();
+        $events = $payment->pullDomainEvents();
 
         $this->assertCount(1, $events);
         $this->assertInstanceOf(PaymentWasCreated::class, $events[0]);
@@ -73,7 +74,7 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
 
     public function test_mark_as_succeeded_transitions_to_succeeded(): void
     {
-        $payment    = $this->makePayment();
+        $payment = $this->makePayment();
         $externalId = ExternalId::fromString('22d65900-000f-5000-a000-10d000000099');
         $payment->pullDomainEvents();
 
@@ -85,7 +86,7 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
 
     public function test_mark_as_succeeded_records_event(): void
     {
-        $payment    = $this->makePayment();
+        $payment = $this->makePayment();
         $externalId = ExternalId::fromString('22d65900-000f-5000-a000-10d000000099');
         $payment->pullDomainEvents();
 
@@ -98,7 +99,7 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
 
     public function test_mark_as_succeeded_throws_when_already_terminal(): void
     {
-        $payment    = $this->makePayment();
+        $payment = $this->makePayment();
         $externalId = ExternalId::fromString('22d65900-000f-5000-a000-10d000000099');
         $payment->markAsSucceeded($externalId);
 
@@ -233,7 +234,7 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
 
     public function test_assign_external_data_stores_values(): void
     {
-        $payment    = $this->makePayment();
+        $payment = $this->makePayment();
         $externalId = ExternalId::fromString('22d65900-000f-5000-a000-10d000000099');
 
         $payment->assignExternalData($externalId, 'https://pay.example.com', 'pm_abc');
@@ -248,12 +249,12 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
     public function test_restore_sets_refunded_amount(): void
     {
         $payment = Payment::restore(
-            id:                    PaymentId::generate(),
-            amount:                Money::ofRub(10_000),
-            status:                PaymentStatus::Succeeded,
-            description:           'Restored payment',
-            provider:              'yookassa',
-            idempotencyKey:        'key-restore',
+            id: PaymentId::generate(),
+            amount: Money::ofRub(10_000),
+            status: PaymentStatus::Succeeded,
+            description: 'Restored payment',
+            provider: 'yookassa',
+            idempotencyKey: 'key-restore',
             refundedAmountKopecks: 3_000,
         );
 
@@ -264,11 +265,11 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
     public function test_restore_does_not_record_events(): void
     {
         $payment = Payment::restore(
-            id:             PaymentId::generate(),
-            amount:         Money::ofRub(10_000),
-            status:         PaymentStatus::Pending,
-            description:    'Restored',
-            provider:       'yookassa',
+            id: PaymentId::generate(),
+            amount: Money::ofRub(10_000),
+            status: PaymentStatus::Pending,
+            description: 'Restored',
+            provider: 'yookassa',
             idempotencyKey: 'key-restore-2',
         );
 

@@ -67,7 +67,7 @@ class MoneyTest extends TestCase
 
     public function test_is_greater_than(): void
     {
-        $big   = Money::ofRub(10_000);
+        $big = Money::ofRub(10_000);
         $small = Money::ofRub(5_000);
 
         $this->assertTrue($big->isGreaterThan($small));

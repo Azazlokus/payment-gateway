@@ -25,14 +25,14 @@ class WebhookTest extends TestCase
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldReceive('verifyWebhook')->andReturn(true);
             $mock->shouldReceive('createPayment')->andReturn(new ProviderResponse(
-                externalId:      ExternalId::fromString($this->externalId),
+                externalId: ExternalId::fromString($this->externalId),
                 confirmationUrl: 'https://yookassa.ru/checkout/test',
-                status:          'pending',
+                status: 'pending',
             ));
             $mock->shouldReceive('parseWebhook')->andReturn(new ProviderResponse(
-                externalId:      ExternalId::fromString($this->externalId),
+                externalId: ExternalId::fromString($this->externalId),
                 confirmationUrl: '',
-                status:          'succeeded',
+                status: 'succeeded',
             ));
         });
     }
@@ -51,9 +51,9 @@ class WebhookTest extends TestCase
         $this->mockProviderAccept();
 
         $response = $this->postJson('/api/webhook/yookassa', [
-            'event'  => 'payment.succeeded',
+            'event' => 'payment.succeeded',
             'object' => [
-                'id'     => $this->externalId,
+                'id' => $this->externalId,
                 'status' => 'succeeded',
             ],
         ]);
@@ -69,7 +69,7 @@ class WebhookTest extends TestCase
         $this->mockProviderReject();
 
         $response = $this->postJson('/api/webhook/yookassa', [
-            'event'  => 'payment.succeeded',
+            'event' => 'payment.succeeded',
             'object' => ['id' => $this->externalId, 'status' => 'succeeded'],
         ]);
 
@@ -82,7 +82,7 @@ class WebhookTest extends TestCase
         $this->mockProviderReject();
 
         $this->postJson('/api/webhook/yookassa', [
-            'event'  => 'payment.succeeded',
+            'event' => 'payment.succeeded',
             'object' => ['id' => $this->externalId, 'status' => 'succeeded'],
         ]);
 

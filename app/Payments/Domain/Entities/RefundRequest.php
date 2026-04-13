@@ -10,15 +10,15 @@ use App\Payments\Domain\ValueObjects\RefundId;
 final class RefundRequest
 {
     private string $status = 'pending';
+
     private \DateTimeImmutable $createdAt;
 
     public function __construct(
         private readonly RefundId $id,
-        private readonly Money    $amount,
-        private readonly string   $reason,
-    )
-    {
-        $this->createdAt = new \DateTimeImmutable();
+        private readonly Money $amount,
+        private readonly string $reason,
+    ) {
+        $this->createdAt = new \DateTimeImmutable;
     }
 
     public function approve(): void

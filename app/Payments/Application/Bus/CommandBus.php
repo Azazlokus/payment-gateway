@@ -17,9 +17,7 @@ final class CommandBus
         EnforceIdempotency::class,
     ];
 
-    public function __construct(private readonly Pipeline $pipeline)
-    {
-    }
+    public function __construct(private readonly Pipeline $pipeline) {}
 
     public function dispatch(object $command): mixed
     {
@@ -29,7 +27,7 @@ final class CommandBus
         return $this->pipeline
             ->send($command)
             ->through($this->pipes)
-            ->then(fn(object $cmd) => $handler->handle($cmd));
+            ->then(fn (object $cmd) => $handler->handle($cmd));
     }
 
     private function resolveHandler(object $command): string

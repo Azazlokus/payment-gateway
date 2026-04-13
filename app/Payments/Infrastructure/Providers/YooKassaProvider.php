@@ -12,6 +12,7 @@ use App\Payments\Domain\Exceptions\PaymentException;
 use App\Payments\Domain\ValueObjects\ExternalId;
 use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
+use Illuminate\Support\Str;
 use YooKassa\Client;
 
 final class YooKassaProvider implements PaymentProviderInterface
@@ -19,12 +20,12 @@ final class YooKassaProvider implements PaymentProviderInterface
     private readonly Client $client;
 
     public function __construct(
-        private readonly string        $shopId,
-        private readonly string        $secretKey,
+        private readonly string $shopId,
+        private readonly string $secretKey,
         private readonly PaymentLogger $logger,
-        ?Client                        $client = null,
+        ?Client $client = null,
     ) {
-        $this->client = $client ?? new Client();
+        $this->client = $client ?? new Client;
         $this->client->setAuth((int) $this->shopId, $this->secretKey);
     }
 
@@ -34,30 +35,30 @@ final class YooKassaProvider implements PaymentProviderInterface
     }
 
     public function createPayment(
-        string                  $paymentId,
-        Money                   $amount,
-        string                  $description,
-        string                  $returnUrl,
-        string                  $idempotencyKey,
-        CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO(),
+        string $paymentId,
+        Money $amount,
+        string $description,
+        string $returnUrl,
+        string $idempotencyKey,
+        CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO,
     ): ProviderResponse {
         try {
             $this->logger->info('YooKassa: создание платежа', [
-                'payment_id'      => $paymentId,
-                'amount'          => $amount->formatted(),
+                'payment_id' => $paymentId,
+                'amount' => $amount->formatted(),
                 'idempotency_key' => $idempotencyKey,
-                'save_method'     => $options->savePaymentMethod,
+                'save_method' => $options->savePaymentMethod,
             ]);
 
             $payload = [
                 'amount' => [
-                    'value'    => number_format($amount->amount() / 100, 2, '.', ''),
+                    'value' => number_format($amount->amount() / 100, 2, '.', ''),
                     'currency' => $amount->currency()->value,
                 ],
-                'description'          => $description,
-                'metadata'             => ['internal_payment_id' => $paymentId],
-                'capture'              => true,
-                'save_payment_method'  => $options->savePaymentMethod,
+                'description' => $description,
+                'metadata' => ['internal_payment_id' => $paymentId],
+                'capture' => true,
+                'save_payment_method' => $options->savePaymentMethod,
             ];
 
             // Recurring: используем сохранённый метод — без подтверждения
@@ -77,15 +78,15 @@ final class YooKassaProvider implements PaymentProviderInterface
 
             $response = retry(
                 times: 3,
-                callback: fn() => $this->client->createPayment($payload, $idempotencyKey),
+                callback: fn () => $this->client->createPayment($payload, $idempotencyKey),
                 sleepMilliseconds: 500,
-                when: fn(\Throwable $e) => $this->isRetryable($e),
+                when: fn (\Throwable $e) => $this->isRetryable($e),
             );
 
             $this->logger->info('YooKassa: платёж создан', [
-                'payment_id'  => $paymentId,
+                'payment_id' => $paymentId,
                 'external_id' => $response->getId(),
-                'status'      => $response->getStatus(),
+                'status' => $response->getStatus(),
             ]);
 
             $paymentMethodId = null;
@@ -98,18 +99,18 @@ final class YooKassaProvider implements PaymentProviderInterface
                 : ($response->getConfirmation()?->getConfirmationUrl() ?? '');
 
             return new ProviderResponse(
-                externalId:      ExternalId::fromString($response->getId()),
+                externalId: ExternalId::fromString($response->getId()),
                 confirmationUrl: $confirmationUrl,
-                status:          $response->getStatus(),
+                status: $response->getStatus(),
                 paymentMethodId: $paymentMethodId,
-                rawData:         $response->jsonSerialize(),
+                rawData: $response->jsonSerialize(),
             );
         } catch (PaymentException $e) {
             throw $e;
         } catch (\Throwable $e) {
             $this->logger->error('YooKassa: ошибка создания платежа', [
                 'payment_id' => $paymentId,
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             throw new PaymentException("YooKassa createPayment failed: {$e->getMessage()}", previous: $e);
@@ -122,11 +123,11 @@ final class YooKassaProvider implements PaymentProviderInterface
             $response = $this->client->getPaymentInfo($externalId->toString());
 
             return new ProviderResponse(
-                externalId:      ExternalId::fromString($response->getId()),
+                externalId: ExternalId::fromString($response->getId()),
                 confirmationUrl: '',
-                status:          $response->getStatus(),
+                status: $response->getStatus(),
                 paymentMethodId: $response->getPaymentMethod()?->getId(),
-                rawData:         $response->jsonSerialize(),
+                rawData: $response->jsonSerialize(),
             );
         } catch (\Throwable $e) {
             throw new PaymentException("YooKassa getPayment failed: {$e->getMessage()}", previous: $e);
@@ -138,25 +139,25 @@ final class YooKassaProvider implements PaymentProviderInterface
         try {
             $response = retry(
                 times: 3,
-                callback: fn() => $this->client->createRefund(
+                callback: fn () => $this->client->createRefund(
                     [
                         'payment_id' => $externalId->toString(),
-                        'amount'     => [
-                            'value'    => number_format($amount->amount() / 100, 2, '.', ''),
+                        'amount' => [
+                            'value' => number_format($amount->amount() / 100, 2, '.', ''),
                             'currency' => $amount->currency()->value,
                         ],
                     ],
-                    (string) \Illuminate\Support\Str::uuid(),
+                    (string) Str::uuid(),
                 ),
                 sleepMilliseconds: 500,
-                when: fn(\Throwable $e) => $this->isRetryable($e),
+                when: fn (\Throwable $e) => $this->isRetryable($e),
             );
 
             return new ProviderResponse(
-                externalId:      ExternalId::fromString($response->getId()),
+                externalId: ExternalId::fromString($response->getId()),
                 confirmationUrl: '',
-                status:          $response->getStatus(),
-                rawData:         $response->jsonSerialize(),
+                status: $response->getStatus(),
+                rawData: $response->jsonSerialize(),
             );
         } catch (\Throwable $e) {
             throw new PaymentException("YooKassa refund failed: {$e->getMessage()}", previous: $e);
@@ -166,10 +167,11 @@ final class YooKassaProvider implements PaymentProviderInterface
     public function verifyWebhook(array $payload, array $headers): bool
     {
         $allowedCidrs = config('payments.yookassa.webhook_ips', []);
-        $requestIp    = request()->ip();
+        $requestIp = request()->ip();
 
-        if (!empty($allowedCidrs) && !$this->ipInAllowedRanges($requestIp, $allowedCidrs)) {
+        if (! empty($allowedCidrs) && ! $this->ipInAllowedRanges($requestIp, $allowedCidrs)) {
             $this->logger->warning('YooKassa: webhook с неизвестного IP', ['ip' => $requestIp]);
+
             return false;
         }
 
@@ -179,7 +181,7 @@ final class YooKassaProvider implements PaymentProviderInterface
     public function parseWebhook(array $payload): ProviderResponse
     {
         $object = $payload['object'];
-        $event  = $payload['event'] ?? '';
+        $event = $payload['event'] ?? '';
 
         // Для refund.* событий object['id'] — это ID рефанда, а не платежа.
         // Платёж нужно искать по object['payment_id'].
@@ -189,20 +191,20 @@ final class YooKassaProvider implements PaymentProviderInterface
                 : null;
 
             return new ProviderResponse(
-                externalId:          ExternalId::fromString($object['payment_id']),
-                confirmationUrl:     '',
-                status:              $object['status'],
+                externalId: ExternalId::fromString($object['payment_id']),
+                confirmationUrl: '',
+                status: $object['status'],
                 refundAmountKopecks: $kopecks,
-                rawData:             $payload,
+                rawData: $payload,
             );
         }
 
         return new ProviderResponse(
-            externalId:      ExternalId::fromString($object['id']),
+            externalId: ExternalId::fromString($object['id']),
             confirmationUrl: '',
-            status:          $object['status'],
+            status: $object['status'],
             paymentMethodId: $object['payment_method']['id'] ?? null,
-            rawData:         $payload,
+            rawData: $payload,
         );
     }
 
@@ -227,16 +229,16 @@ final class YooKassaProvider implements PaymentProviderInterface
             'phone' => $receipt->phone,
         ]);
 
-        $items = array_map(fn(ReceiptItemDTO $item) => [
-            'description'     => $item->description,
-            'quantity'        => $item->quantity,
-            'amount'          => [
-                'value'    => number_format($item->amountKopecks / 100, 2, '.', ''),
+        $items = array_map(fn (ReceiptItemDTO $item) => [
+            'description' => $item->description,
+            'quantity' => $item->quantity,
+            'amount' => [
+                'value' => number_format($item->amountKopecks / 100, 2, '.', ''),
                 'currency' => $amount->currency()->value,
             ],
-            'vat_code'        => $item->vatCode,
+            'vat_code' => $item->vatCode,
             'payment_subject' => $item->paymentSubject,
-            'payment_mode'    => $item->paymentMode,
+            'payment_mode' => $item->paymentMode,
         ], $receipt->items);
 
         return ['customer' => $customer, 'items' => $items];
@@ -262,10 +264,11 @@ final class YooKassaProvider implements PaymentProviderInterface
         }
 
         foreach ($cidrs as $cidr) {
-            if (!str_contains($cidr, '/')) {
+            if (! str_contains($cidr, '/')) {
                 if (ip2long($cidr) === $ipLong) {
                     return true;
                 }
+
                 continue;
             }
 

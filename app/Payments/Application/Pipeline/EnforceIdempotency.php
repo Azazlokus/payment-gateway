@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Payments\Application\Pipeline;
 
 use App\Payments\Application\Commands\CreatePayment\CreatePaymentCommand;
-use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Payments\Application\DTOs\PaymentResultDTO;
+use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use Closure;
 
 final readonly class EnforceIdempotency

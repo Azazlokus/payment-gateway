@@ -48,6 +48,4 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'message', type: 'string', example: 'Payment not found: 01HV9Z7BKQE4GNKR2XQVP0M8T'),
     ]
 )]
-class ApiDocController
-{
-}
+class ApiDocController {}
