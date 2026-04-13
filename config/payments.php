@@ -4,8 +4,8 @@ return [
     'default' => env('PAYMENT_PROVIDER', 'yookassa'),
 
     'yookassa' => [
-        'shop_id' => env('YOOKASSA_SHOP_ID'),
-        'secret_key' => env('YOOKASSA_SECRET_KEY'),
+        'shop_id'     => env('YOOKASSA_SHOP_ID'),
+        'secret_key'  => env('YOOKASSA_SECRET_KEY'),
         'webhook_ips' => [
             '185.71.76.0/27',
             '185.71.77.0/27',
@@ -13,6 +13,17 @@ return [
             '77.75.156.11',
             '77.75.156.35',
             '77.75.154.128/25',
+        ],
+    ],
+
+    'robokassa' => [
+        'login'       => env('ROBOKASSA_LOGIN'),
+        'password1'   => env('ROBOKASSA_PASSWORD1'),
+        'password2'   => env('ROBOKASSA_PASSWORD2'),
+        'is_test'     => env('ROBOKASSA_IS_TEST', true),
+        'webhook_ips' => [
+            '185.26.103.0/24',
+            '185.60.211.0/24',
         ],
     ],
 ];

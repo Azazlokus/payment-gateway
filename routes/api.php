@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Payments\Presentation\Http\Controllers\HealthController;
 use App\Payments\Presentation\Http\Controllers\PaymentController;
+use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
 use App\Payments\Presentation\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -49,3 +50,11 @@ Route::middleware(['correlation'])->group(function () {
  */
 Route::post('/webhook/yookassa', [WebhookController::class, 'yookassa'])
     ->name('webhook.yookassa');
+
+/*
+ * Webhook от Robokassa (ResultURL)
+ * Принимает form POST. IP-фильтрация — внутри RobokassaProvider::verifyWebhook().
+ * Ответ — plain text "OK{InvId}", иначе Robokassa будет повторять запросы.
+ */
+Route::post('/webhook/robokassa', [RobokassaWebhookController::class, 'handle'])
+    ->name('webhook.robokassa');

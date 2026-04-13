@@ -23,27 +23,30 @@ final class WebhookController extends Controller
     #[OA\Post(
         path: '/webhook/yookassa',
         summary: 'Webhook от YooKassa',
-        description: 'Принимает уведомления от YooKassa об изменении статуса платежа. Доступен только с IP-адресов YooKassa.',
+        description: <<<'TEXT'
+            Принимает JSON-уведомления от YooKassa об изменении статуса платежа или возврата.
+
+            **Поддерживаемые события:**
+            - `payment.succeeded` — платёж прошёл успешно
+            - `payment.canceled` — платёж отменён
+            - `refund.succeeded` — возврат подтверждён
+
+            **Безопасность:**
+            - IP-фильтрация по официальным CIDR YooKassa
+            - Обработка асинхронна: вебхук ставит задачу в очередь Horizon (Redis) и возвращает `200` немедленно
+            - Exponential backoff: 10s → 30s → 60s → 120s → 300s (5 попыток)
+            - При исчерпании попыток — критический лог + алерт в Slack
+            TEXT,
         tags: ['Webhook'],
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'event', type: 'string', example: 'payment.succeeded', enum: ['payment.succeeded', 'payment.canceled', 'refund.succeeded']),
-                    new OA\Property(
-                        property: 'object',
-                        type: 'object',
-                        properties: [
-                            new OA\Property(property: 'id', type: 'string', example: '22d65900-000f-5000-a000-10d000000000'),
-                            new OA\Property(property: 'status', type: 'string', example: 'succeeded'),
-                        ]
-                    ),
-                ]
-            )
+            content: new OA\JsonContent(ref: '#/components/schemas/YooKassaWebhookPayload')
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Webhook обработан'),
-            new OA\Response(response: 403, description: 'Запрос с неразрешённого IP'),
+            new OA\Response(response: 200, description: 'Webhook принят и поставлен в очередь', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'message', type: 'string', example: 'ok')]
+            )),
+            new OA\Response(response: 403, description: 'Запрос с неразрешённого IP или без нужных полей'),
         ]
     )]
     public function yookassa(Request $request): JsonResponse
@@ -52,7 +55,7 @@ final class WebhookController extends Controller
 
         if (! $this->provider->verifyWebhook($payload, $request->headers->all())) {
             $this->logger->warning('Webhook rejected', [
-                'ip' => $request->ip(),
+                'ip'    => $request->ip(),
                 'event' => $payload['event'] ?? 'unknown',
             ]);
 

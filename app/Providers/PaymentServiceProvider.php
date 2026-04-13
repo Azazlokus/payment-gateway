@@ -9,6 +9,7 @@ use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use App\Payments\Infrastructure\Persistence\EloquentPaymentRepository;
+use App\Payments\Infrastructure\Providers\RobokassaProvider;
 use App\Payments\Infrastructure\Providers\YooKassaProvider;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,17 +22,28 @@ class PaymentServiceProvider extends ServiceProvider
             EloquentPaymentRepository::class,
         );
 
+        $this->app->singleton(RobokassaProvider::class, function () {
+            return new RobokassaProvider(
+                login:     config('payments.robokassa.login'),
+                password1: config('payments.robokassa.password1'),
+                password2: config('payments.robokassa.password2'),
+                isTest:    (bool) config('payments.robokassa.is_test', true),
+                logger:    app(PaymentLogger::class),
+            );
+        });
+
         $this->app->singleton(
             PaymentProviderInterface::class,
             function () {
                 return match (config('payments.default')) {
                     'yookassa' => new YooKassaProvider(
-                        shopId: config('payments.yookassa.shop_id'),
+                        shopId:    config('payments.yookassa.shop_id'),
                         secretKey: config('payments.yookassa.secret_key'),
-                        logger: app(PaymentLogger::class),
+                        logger:    app(PaymentLogger::class),
                     ),
+                    'robokassa' => app(RobokassaProvider::class),
                     default => throw new \InvalidArgumentException(
-                        'Unknown payment provider: '.config('payments.default')
+                        'Unknown payment provider: ' . config('payments.default')
                     ),
                 };
             }
