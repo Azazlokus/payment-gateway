@@ -9,7 +9,9 @@ use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use App\Payments\Infrastructure\Persistence\EloquentPaymentRepository;
+use App\Payments\Infrastructure\Providers\AlfaBankProvider;
 use App\Payments\Infrastructure\Providers\RobokassaProvider;
+use App\Payments\Infrastructure\Providers\SbpProvider;
 use App\Payments\Infrastructure\Providers\YooKassaProvider;
 use Illuminate\Support\ServiceProvider;
 
@@ -32,6 +34,25 @@ class PaymentServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->singleton(SbpProvider::class, function () {
+            return new SbpProvider(
+                merchantId:     config('payments.sbp.merchant_id'),
+                apiKey:         config('payments.sbp.api_key'),
+                webhookSecret:  config('payments.sbp.webhook_secret'),
+                baseUrl:        config('payments.sbp.base_url'),
+                logger:         app(PaymentLogger::class),
+            );
+        });
+
+        $this->app->singleton(AlfaBankProvider::class, function () {
+            return new AlfaBankProvider(
+                login:    config('payments.alfabank.login'),
+                password: config('payments.alfabank.password'),
+                baseUrl:  config('payments.alfabank.base_url'),
+                logger:   app(PaymentLogger::class),
+            );
+        });
+
         $this->app->singleton(
             PaymentProviderInterface::class,
             function () {
@@ -42,6 +63,8 @@ class PaymentServiceProvider extends ServiceProvider
                         logger:    app(PaymentLogger::class),
                     ),
                     'robokassa' => app(RobokassaProvider::class),
+                    'sbp'       => app(SbpProvider::class),
+                    'alfabank'  => app(AlfaBankProvider::class),
                     default => throw new \InvalidArgumentException(
                         'Unknown payment provider: ' . config('payments.default')
                     ),

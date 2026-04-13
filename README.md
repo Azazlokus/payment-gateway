@@ -387,9 +387,49 @@ http://localhost:8000/api
 | Возвраты | ✅ |
 | Polling статуса | ❌ (только вебхуки) |
 
+### СБП
+
+Интеграция через банк-эквайер с НСПК-совместимым API. Платёж — динамический QR-код.
+
+**Настройка:** Получить `merchant_id`, `api_key` и `webhook_secret` у банка-партнёра. Настроить URL вебхука: `https://yourdomain.com/api/webhook/sbp`.
+
+| Возможность | Поддержка |
+|---|---|
+| Подтверждение | QR-код / deep link (`https://qr.nspk.ru/...`) |
+| Рекуррентные платежи | ❌ |
+| Возвраты | ✅ |
+| Polling статуса | ✅ |
+
+> `confirmation_url` в ответе содержит QR-payload — строку для рендеринга QR-кода или deep link для мобильных приложений.
+
+### Альфа-Банк
+
+Интернет-эквайринг Альфа-Банка. Тестовый стенд: `https://alfa.rbsuat.com/payment/rest`.
+
+**Настройка:** Получить `login` и `password` в личном кабинете. Настроить URL вебхука: `https://yourdomain.com/api/webhook/alfabank`.
+
+| Возможность | Поддержка |
+|---|---|
+| Методы оплаты | Банковские карты |
+| Типы подтверждения | `redirect` |
+| Рекуррентные платежи | ❌ |
+| Возвраты | ✅ |
+| Polling статуса | ✅ |
+
 ---
 
 ## Вебхуки
+
+### Сравнительная таблица провайдеров
+
+| Провайдер | Подтверждение | Возвраты | Polling | Вебхук формат | Верификация |
+|---|---|---|---|---|---|
+| YooKassa | redirect / embedded / qr / mobile | ✅ частичные | ✅ | JSON | IP CIDR |
+| Robokassa | redirect | ✅ | ❌ | Form POST | IP + MD5 |
+| СБП | QR / deep link | ✅ | ✅ | JSON | HMAC заголовок |
+| Альфа-Банк | redirect | ✅ | ✅ | Form POST | Поля payload |
+
+---
 
 ### YooKassa — `POST /api/webhook/yookassa`
 
@@ -407,6 +447,18 @@ http://localhost:8000/api
 **Формат:** `application/x-www-form-urlencoded`  
 **Верификация:** IP-фильтрация + MD5-подпись (`Password#2`)  
 **Ответ:** Plain-text `OK{InvId}` (обязательно, иначе Robokassa повторит запрос)
+
+### СБП — `POST /api/webhook/sbp`
+
+**Формат:** JSON  
+**Верификация:** заголовок `X-Api-Key` сверяется с `SBP_WEBHOOK_SECRET`  
+**Статусы:** `PAID` → Succeeded, `CANCELLED` / `EXPIRED` → Cancelled
+
+### Альфа-Банк — `POST /api/webhook/alfabank`
+
+**Формат:** `application/x-www-form-urlencoded`  
+**Верификация:** наличие полей `mdOrder` и `operation`  
+**Операции:** `deposited` → Succeeded, `refunded` → Refunded, `reversed` / `declinedByTimeout` → Cancelled
 
 ### Надёжность
 

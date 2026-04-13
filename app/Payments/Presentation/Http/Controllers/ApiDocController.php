@@ -111,6 +111,38 @@ use OpenApi\Attributes as OA;
     ]
 )]
 
+// ─── SBP webhook schemas ─────────────────────────────────────────────────────
+
+#[OA\Schema(
+    schema: 'SbpWebhookPayload',
+    description: 'JSON-вебхук от банка-эквайера СБП',
+    required: ['qrId', 'status'],
+    properties: [
+        new OA\Property(property: 'transactionId', type: 'string', description: 'ID транзакции в банке', example: 'txn-abc123'),
+        new OA\Property(property: 'qrId', type: 'string', description: 'ID QR-кода (external_id платежа)', example: 'AS1000123456789'),
+        new OA\Property(property: 'status', type: 'string', enum: ['PAID', 'CANCELLED', 'EXPIRED'], example: 'PAID'),
+        new OA\Property(property: 'amount', type: 'object', properties: [
+            new OA\Property(property: 'value', type: 'integer', description: 'Сумма в копейках', example: 10000),
+            new OA\Property(property: 'currency', type: 'string', example: 'RUB'),
+        ]),
+        new OA\Property(property: 'order', type: 'string', description: 'Внутренний ULID платежа', example: '01HV9Z7BKQE4GNKR2XQVP0M8T'),
+    ]
+)]
+
+// ─── AlfaBank webhook schemas ─────────────────────────────────────────────────
+
+#[OA\Schema(
+    schema: 'AlfaBankWebhookPayload',
+    description: 'Form POST уведомление от Альфа-Банка',
+    required: ['mdOrder', 'operation'],
+    properties: [
+        new OA\Property(property: 'mdOrder', type: 'string', description: 'ID заказа в Альфа-Банке (external_id)', example: 'a1b2c3d4-...'),
+        new OA\Property(property: 'operation', type: 'string', enum: ['deposited', 'refunded', 'reversed', 'declinedByTimeout'], example: 'deposited'),
+        new OA\Property(property: 'orderNumber', type: 'string', description: 'Внутренний ULID платежа', example: '01HV9Z7BKQE4GNKR2XQVP0M8T'),
+        new OA\Property(property: 'status', type: 'integer', description: '1 = успех, 0 = ошибка', example: 1),
+    ]
+)]
+
 // ─── Robokassa webhook schemas ────────────────────────────────────────────────
 
 #[OA\Schema(

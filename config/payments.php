@@ -26,4 +26,18 @@ return [
             '185.60.211.0/24',
         ],
     ],
+
+    'sbp' => [
+        'merchant_id'    => env('SBP_MERCHANT_ID'),
+        'api_key'        => env('SBP_API_KEY'),
+        'webhook_secret' => env('SBP_WEBHOOK_SECRET'),
+        'base_url'       => env('SBP_BASE_URL', 'https://api.nspk.ru/sbp/v1/merchant-integrations'),
+    ],
+
+    'alfabank' => [
+        'login'    => env('ALFABANK_LOGIN'),
+        'password' => env('ALFABANK_PASSWORD'),
+        'base_url' => env('ALFABANK_BASE_URL', 'https://pay.alfabank.ru/payment/rest'),
+        'is_test'  => env('ALFABANK_IS_TEST', true),
+    ],
 ];

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Payments\Presentation\Http\Controllers\HealthController;
 use App\Payments\Presentation\Http\Controllers\PaymentController;
+use App\Payments\Presentation\Http\Controllers\AlfaBankWebhookController;
 use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
+use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
 use App\Payments\Presentation\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -58,3 +60,17 @@ Route::post('/webhook/yookassa', [WebhookController::class, 'yookassa'])
  */
 Route::post('/webhook/robokassa', [RobokassaWebhookController::class, 'handle'])
     ->name('webhook.robokassa');
+
+/*
+ * Webhook от СБП (банк-эквайер)
+ * JSON POST. Верификация — заголовок X-Api-Key.
+ */
+Route::post('/webhook/sbp', [SbpWebhookController::class, 'handle'])
+    ->name('webhook.sbp');
+
+/*
+ * Webhook от Альфа-Банка
+ * Form POST. Верификация — наличие обязательных полей (mdOrder, operation).
+ */
+Route::post('/webhook/alfabank', [AlfaBankWebhookController::class, 'handle'])
+    ->name('webhook.alfabank');
