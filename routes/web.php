@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// SPA — все маршруты кроме /api/* отдаём Vue Router
+Route::get('/{any?}', fn () => view('spa'))
+    ->where('any', '^(?!api).*$')
+    ->name('spa');

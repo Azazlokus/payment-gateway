@@ -15,11 +15,13 @@ use Illuminate\Support\Facades\Http;
 
 final class AlfaBankProvider implements PaymentProviderInterface
 {
+    /** @param array<string> $webhookIps */
     public function __construct(
         private readonly string $login,
         private readonly string $password,
         private readonly string $baseUrl,
         private readonly PaymentLogger $logger,
+        private readonly array $webhookIps = [],
     ) {}
 
     public function name(): string
@@ -146,6 +148,16 @@ final class AlfaBankProvider implements PaymentProviderInterface
      */
     public function verifyWebhook(array $payload, array $headers): bool
     {
+        if (! empty($this->webhookIps)) {
+            $requestIp = request()->ip();
+
+            if (! $this->ipInAllowedRanges($requestIp, $this->webhookIps)) {
+                $this->logger->warning('Альфа-Банк: webhook с неизвестного IP', ['ip' => $requestIp]);
+
+                return false;
+            }
+        }
+
         // Альфа-Банк не присылает криптографическую подпись.
         // Минимальная проверка: ожидаемые поля присутствуют.
         return isset($payload['mdOrder'], $payload['operation']);
@@ -196,5 +208,34 @@ final class AlfaBankProvider implements PaymentProviderInterface
 
         return str_contains($e->getMessage(), 'cURL error') ||
                str_contains($e->getMessage(), 'timed out');
+    }
+
+    /** @param array<string> $cidrs */
+    private function ipInAllowedRanges(string $ip, array $cidrs): bool
+    {
+        $ipLong = ip2long($ip);
+
+        if ($ipLong === false) {
+            return false;
+        }
+
+        foreach ($cidrs as $cidr) {
+            if (! str_contains($cidr, '/')) {
+                if (ip2long($cidr) === $ipLong) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            [$network, $prefix] = explode('/', $cidr, 2);
+            $mask = ~((1 << (32 - (int) $prefix)) - 1);
+
+            if (($ipLong & $mask) === (ip2long($network) & $mask)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

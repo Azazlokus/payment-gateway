@@ -59,10 +59,11 @@ class PaymentServiceProvider extends ServiceProvider
 
         $this->app->singleton(AlfaBankProvider::class, function () {
             return new AlfaBankProvider(
-                login:    config('payments.alfabank.login'),
-                password: config('payments.alfabank.password'),
-                baseUrl:  config('payments.alfabank.base_url'),
-                logger:   $this->app->make(PaymentLogger::class),
+                login:      config('payments.alfabank.login'),
+                password:   config('payments.alfabank.password'),
+                baseUrl:    config('payments.alfabank.base_url'),
+                logger:     $this->app->make(PaymentLogger::class),
+                webhookIps: config('payments.alfabank.webhook_ips', []),
             );
         });
 

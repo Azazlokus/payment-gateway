@@ -35,10 +35,15 @@ return [
     ],
 
     'alfabank' => [
-        'login'    => env('ALFABANK_LOGIN'),
-        'password' => env('ALFABANK_PASSWORD'),
-        'base_url' => env('ALFABANK_BASE_URL', 'https://pay.alfabank.ru/payment/rest'),
-        'is_test'  => env('ALFABANK_IS_TEST', true),
+        'login'       => env('ALFABANK_LOGIN'),
+        'password'    => env('ALFABANK_PASSWORD'),
+        'base_url'    => env('ALFABANK_BASE_URL', 'https://pay.alfabank.ru/payment/rest'),
+        'is_test'     => env('ALFABANK_IS_TEST', true),
+        'webhook_ips' => [
+            '84.204.0.0/16',
+            '212.48.16.0/20',
+            '195.98.79.0/24',
+        ],
     ],
 
     'cloudpayments' => [

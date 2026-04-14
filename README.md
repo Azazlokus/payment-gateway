@@ -21,18 +21,23 @@ REST API платёжного шлюза на Laravel 13 с поддержкой
 
 ## Возможности
 
-- Создание платежей через **YooKassa** и **Robokassa**
+- Создание платежей через **5 провайдеров**: YooKassa, Robokassa, CloudPayments, СБП, Альфа-Банк
 - Частичные и полные **возвраты** с кумулятивным трекингом суммы
 - **Рекуррентные платежи** (YooKassa): сохранение метода оплаты и списание без редиректа
 - **Чеки 54-ФЗ** (YooKassa): передача позиций, налоговых кодов, данных покупателя
+- **QR-коды СБП**: динамические QR через НСПК API
 - **Идемпотентность** создания и возврата по заголовку `Idempotency-Key`
 - Асинхронная обработка вебхуков с экспоненциальным backoff (Horizon + Redis)
 - Полный **audit trail** через `spatie/laravel-activitylog`
 - Structured logging с Correlation ID на каждый запрос
-- IP-фильтрация вебхуков по официальным CIDR провайдеров
+- IP-фильтрация вебхуков по официальным CIDR провайдеров (YooKassa, Robokassa, Альфа-Банк)
+- HMAC-SHA256 верификация вебхуков (CloudPayments) и X-Api-Key (СБП)
+- Исходящие уведомления (outbound webhooks) с HMAC-подписью
 - Алерты в **Slack** при исчерпании попыток обработки вебхука
+- **Prometheus метрики** + **Grafana** дашборды через Docker Compose
 - Swagger UI / OpenAPI 3.0 документация
 - **PHPStan level 6** + **Laravel Pint** в CI
+- **Vue 3 SPA** фронтенд: дашборд платежей, создание, детали, рефанды
 
 ---
 
@@ -44,10 +49,12 @@ REST API платёжного шлюза на Laravel 13 с поддержкой
 | База данных | PostgreSQL 16 |
 | Очереди / кэш | Redis 7, Laravel Horizon |
 | Веб-сервер | Nginx (reverse proxy) |
+| Фронтенд | Vue 3, Vite, Tailwind CSS |
 | Документация | l5-swagger (OpenAPI 3.0) |
 | Тесты | PHPUnit 11 |
 | Статический анализ | PHPStan level 6 (Larastan) |
 | Стиль кода | Laravel Pint |
+| Observability | Prometheus + Grafana |
 | Контейнеры | Docker, Docker Compose |
 
 ---
