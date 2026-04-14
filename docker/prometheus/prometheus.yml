@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'payment-gateway'
+    metrics_path: '/api/metrics'
+    static_configs:
+      - targets: ['nginx:80']
+    # In production, restrict /api/metrics via nginx IP whitelist or bearer_token_file

@@ -40,4 +40,9 @@ return [
         'base_url' => env('ALFABANK_BASE_URL', 'https://pay.alfabank.ru/payment/rest'),
         'is_test'  => env('ALFABANK_IS_TEST', true),
     ],
+
+    'cloudpayments' => [
+        'public_id'  => env('CLOUDPAYMENTS_PUBLIC_ID'),
+        'api_secret' => env('CLOUDPAYMENTS_API_SECRET'),
+    ],
 ];

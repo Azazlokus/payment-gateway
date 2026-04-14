@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
+use App\Payments\Application\PaymentProviderRegistry;
 use App\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Payments\Domain\Contracts\ProviderResponse;
 use App\Payments\Domain\ValueObjects\ExternalId;
@@ -45,7 +46,7 @@ class RefundPaymentTest extends TestCase
     private function mockRefundProvider(?ProviderResponse $response = null): void
     {
         $externalId = $this->externalId;
-        $this->mock(PaymentProviderInterface::class, function ($mock) use ($externalId, $response) {
+        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) use ($externalId, $response) {
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldReceive('refundPayment')->andReturn($response ?? new ProviderResponse(
                 externalId: ExternalId::fromString($externalId),
@@ -53,6 +54,9 @@ class RefundPaymentTest extends TestCase
                 status: 'succeeded',
             ));
         });
+
+        // Register the mock into the registry so the handler resolves it by name
+        $this->app->make(PaymentProviderRegistry::class)->register($mockProvider);
     }
 
     // ─── Full refund ─────────────────────────────────────────────────────────
@@ -153,9 +157,10 @@ class RefundPaymentTest extends TestCase
             'metadata' => [],
         ]);
 
-        $this->mock(PaymentProviderInterface::class, function ($mock) {
+        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) {
             $mock->shouldReceive('name')->andReturn('yookassa');
         });
+        $this->app->make(PaymentProviderRegistry::class)->register($mockProvider);
 
         $response = $this->postJson("/api/payments/{$id}/refund");
 
@@ -180,7 +185,7 @@ class RefundPaymentTest extends TestCase
         $key = (string) Str::uuid();
 
         // Провайдер должен быть вызван только один раз
-        $this->mock(PaymentProviderInterface::class, function ($mock) {
+        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) {
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldReceive('refundPayment')->once()->andReturn(new ProviderResponse(
                 externalId: ExternalId::fromString($this->externalId),
@@ -188,6 +193,7 @@ class RefundPaymentTest extends TestCase
                 status: 'succeeded',
             ));
         });
+        $this->app->make(PaymentProviderRegistry::class)->register($mockProvider);
 
         $first = $this->postJson("/api/payments/{$id}/refund", [], ['Idempotency-Key' => $key]);
         $first->assertStatus(Response::HTTP_OK)->assertJsonPath('status', 'Refunded');
@@ -203,7 +209,7 @@ class RefundPaymentTest extends TestCase
     {
         $id = $this->createSucceededPayment(10000);
 
-        $this->mock(PaymentProviderInterface::class, function ($mock) {
+        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) {
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldReceive('refundPayment')->twice()->andReturn(new ProviderResponse(
                 externalId: ExternalId::fromString($this->externalId),
@@ -211,6 +217,7 @@ class RefundPaymentTest extends TestCase
                 status: 'succeeded',
             ));
         });
+        $this->app->make(PaymentProviderRegistry::class)->register($mockProvider);
 
         $this->postJson("/api/payments/{$id}/refund", ['amount' => 4000], ['Idempotency-Key' => (string) Str::uuid()])
             ->assertStatus(Response::HTTP_OK)

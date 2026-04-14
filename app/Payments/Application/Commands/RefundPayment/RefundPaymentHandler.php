@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Payments\Application\Commands\RefundPayment;
 
 use App\Payments\Application\DTOs\PaymentResultDTO;
-use App\Payments\Domain\Contracts\PaymentProviderInterface;
+use App\Payments\Application\PaymentProviderRegistry;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Payments\Domain\Exceptions\PaymentException;
 use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Domain\ValueObjects\PaymentId;
+use App\Payments\Infrastructure\Observability\MetricsService;
+use App\Payments\Infrastructure\Observability\NotificationService;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -19,26 +21,27 @@ final readonly class RefundPaymentHandler
 {
     public function __construct(
         private PaymentRepositoryInterface $repository,
-        private PaymentProviderInterface $provider,
+        private PaymentProviderRegistry $registry,
         private PaymentLogger $logger,
+        private MetricsService $metrics,
+        private NotificationService $notifications,
     ) {}
 
     public function handle(RefundPaymentCommand $command): PaymentResultDTO
     {
-        // Idempotency: если этот ключ уже обрабатывался — вернуть текущее состояние платежа
         if ($command->idempotencyKey !== null) {
             $cacheKey = "refund_idem:{$command->idempotencyKey}";
-            $processedPaymentId = Cache::get($cacheKey);
+            $cached   = Cache::get($cacheKey);
 
-            if ($processedPaymentId !== null) {
-                $cached = $this->repository->findById(PaymentId::fromString($processedPaymentId));
-                if ($cached !== null) {
+            if ($cached !== null) {
+                $payment = $this->repository->findById(PaymentId::fromString($cached));
+                if ($payment !== null) {
                     $this->logger->info('Refund idempotency hit', [
                         'idempotency_key' => $command->idempotencyKey,
-                        'payment_id' => $processedPaymentId,
+                        'payment_id'      => $cached,
                     ]);
 
-                    return PaymentResultDTO::fromAggregate($cached);
+                    return PaymentResultDTO::fromAggregate($payment);
                 }
             }
         }
@@ -54,11 +57,12 @@ final readonly class RefundPaymentHandler
                 throw new PaymentException('Payment has no external ID, cannot refund');
             }
 
+            $provider     = $this->registry->resolve($payment->provider());
             $refundAmount = $command->amountKopecks !== null
                 ? Money::ofRub($command->amountKopecks)
                 : $payment->amount();
 
-            $this->provider->refundPayment($payment->externalId(), $refundAmount);
+            $provider->refundPayment($payment->externalId(), $refundAmount);
 
             $payment->refund($refundAmount);
             $this->repository->save($payment);
@@ -67,17 +71,25 @@ final readonly class RefundPaymentHandler
                 ->withProperties(['payment_id' => $command->paymentId, 'refund_amount' => $refundAmount->formatted()])
                 ->log('payment.refunded');
 
+            $this->metrics->paymentRefunded($payment->provider(), $refundAmount->amount());
+
             $this->logger->info('Payment refunded', [
-                'payment_id' => $command->paymentId,
+                'payment_id'    => $command->paymentId,
                 'refund_amount' => $refundAmount->formatted(),
+                'provider'      => $payment->provider(),
             ]);
 
             return PaymentResultDTO::fromAggregate($payment);
         });
 
-        // Сохраняем idempotency-ключ после успешного выполнения
         if ($command->idempotencyKey !== null) {
             Cache::put("refund_idem:{$command->idempotencyKey}", $command->paymentId, now()->addDay());
+        }
+
+        // Уведомление клиента — вне транзакции, сбой не откатывает рефанд
+        $payment = $this->repository->findById(PaymentId::fromString($command->paymentId));
+        if ($payment !== null) {
+            $this->notifications->notify($result, $payment->metadata());
         }
 
         return $result;

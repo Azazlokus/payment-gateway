@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Payments\Presentation\Http\Controllers\HealthController;
 use App\Payments\Presentation\Http\Controllers\PaymentController;
 use App\Payments\Presentation\Http\Controllers\AlfaBankWebhookController;
+use App\Payments\Presentation\Http\Controllers\CloudPaymentsWebhookController;
+use App\Payments\Presentation\Http\Controllers\MetricsController;
 use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
 use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
 use App\Payments\Presentation\Http\Controllers\WebhookController;
@@ -74,3 +76,18 @@ Route::post('/webhook/sbp', [SbpWebhookController::class, 'handle'])
  */
 Route::post('/webhook/alfabank', [AlfaBankWebhookController::class, 'handle'])
     ->name('webhook.alfabank');
+
+/*
+ * Webhook от CloudPayments
+ * JSON POST. Верификация — Content-HMAC (HMAC-SHA256 тела запроса).
+ * Ответ — JSON {code: 0} (успех) или {code: 13} (отклонение).
+ */
+Route::post('/webhook/cloudpayments', [CloudPaymentsWebhookController::class, 'handle'])
+    ->name('webhook.cloudpayments');
+
+/*
+ * Prometheus-метрики для Grafana/Alertmanager
+ * В production защитить через IP-whitelist или bearer token на уровне nginx/ingress.
+ */
+Route::get('/metrics', MetricsController::class)
+    ->name('metrics');

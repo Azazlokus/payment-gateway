@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Payments\Application\Commands\SyncPayment;
 
 use App\Payments\Application\DTOs\PaymentResultDTO;
-use App\Payments\Domain\Contracts\PaymentProviderInterface;
+use App\Payments\Application\PaymentProviderRegistry;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Payments\Domain\Exceptions\InvalidPaymentStateException;
 use App\Payments\Domain\Exceptions\PaymentException;
@@ -18,7 +18,7 @@ final readonly class SyncPaymentHandler
 {
     public function __construct(
         private PaymentRepositoryInterface $repository,
-        private PaymentProviderInterface $provider,
+        private PaymentProviderRegistry $registry,
         private PaymentLogger $logger,
     ) {}
 
@@ -35,7 +35,8 @@ final readonly class SyncPaymentHandler
                 return PaymentResultDTO::fromAggregate($payment);
             }
 
-            $providerResponse = $this->provider->getPayment($payment->externalId());
+            $provider         = $this->registry->resolve($payment->provider());
+            $providerResponse = $provider->getPayment($payment->externalId());
 
             $this->logger->info('Syncing payment status', [
                 'payment_id' => $command->paymentId,

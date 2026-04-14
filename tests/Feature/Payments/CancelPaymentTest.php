@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
+use App\Payments\Application\PaymentProviderRegistry;
 use App\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Payments\Domain\Contracts\ProviderResponse;
 use App\Payments\Domain\ValueObjects\ExternalId;
@@ -130,7 +131,7 @@ class CancelPaymentTest extends TestCase
         // Добавляем external_id чтобы sync пошёл в провайдер
         PaymentModel::where('id', $id)->update(['external_id' => $this->externalId]);
 
-        $this->mock(PaymentProviderInterface::class, function ($mock) {
+        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) {
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldReceive('getPayment')->andReturn(new ProviderResponse(
                 externalId: ExternalId::fromString($this->externalId),
@@ -138,6 +139,7 @@ class CancelPaymentTest extends TestCase
                 status: 'succeeded',
             ));
         });
+        $this->app->make(PaymentProviderRegistry::class)->register($mockProvider);
 
         $this->postJson("/api/payments/{$id}/sync")
             ->assertStatus(Response::HTTP_OK)

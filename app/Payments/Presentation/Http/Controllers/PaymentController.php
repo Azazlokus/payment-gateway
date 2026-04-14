@@ -121,14 +121,21 @@ final class PaymentController extends Controller
     )]
     public function create(CreatePaymentRequest $request): JsonResponse
     {
+        $metadata = $request->input('metadata', []);
+
+        if ($request->filled('notification_url')) {
+            $metadata['notification_url'] = $request->input('notification_url');
+        }
+
         $result = $this->bus->dispatch(new CreatePaymentCommand(
             amountKopecks: $request->integer('amount'),
             description: $request->string('description')->toString(),
             returnUrl: $request->string('return_url')->toString(),
             idempotencyKey: $request->header('Idempotency-Key') ?? (string) Str::uuid(),
             userId: $request->user()?->id,
-            metadata: $request->input('metadata', []),
+            metadata: $metadata,
             options: $this->buildOptions($request),
+            provider: $request->input('provider'),
         ));
 
         return response()->json(new PaymentResource($result), Response::HTTP_CREATED);

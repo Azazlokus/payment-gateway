@@ -23,6 +23,12 @@ final class CreatePaymentRequest extends FormRequest
             'description' => ['required', 'string', 'max:255'],
             'return_url' => ['required', 'url:https'],
             'metadata' => ['sometimes', 'array'],
+            'notification_url' => ['sometimes', 'url:https'],
+
+            // Выбор провайдера (опционально, иначе — дефолтный из конфига)
+            'provider' => ['sometimes', 'string', Rule::in([
+                'yookassa', 'robokassa', 'sbp', 'alfabank', 'cloudpayments',
+            ])],
 
             // Метод оплаты и тип подтверждения
             'payment_method_type' => ['sometimes', 'string', Rule::in([
