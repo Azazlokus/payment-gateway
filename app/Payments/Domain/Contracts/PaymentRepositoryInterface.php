@@ -22,4 +22,12 @@ interface PaymentRepositoryInterface
      * @return array{data: Payment[], total: int, per_page: int, current_page: int, last_page: int}
      */
     public function paginate(int $perPage, int $page, array $filters): array;
+
+    /**
+     * Returns a lazy cursor over all payments matching filters, for streaming export.
+     *
+     * @param  array<string, mixed> $filters
+     * @return iterable<Payment>
+     */
+    public function cursor(array $filters): iterable;
 }

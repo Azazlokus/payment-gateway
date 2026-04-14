@@ -149,6 +149,28 @@ class CreatePaymentTest extends TestCase
             ->assertJsonPath('current_page', 1);
     }
 
+    public function test_lists_payments_filtered_by_provider(): void
+    {
+        $this->mockProvider();
+
+        // Create a payment through the API (provider = yookassa from mock)
+        $this->postJson('/api/payments', [
+            'amount'      => 10000,
+            'description' => 'Test order',
+            'return_url'  => 'https://example.com/success',
+        ]);
+
+        // Filter by matching provider
+        $this->getJson('/api/payments?provider=yookassa')
+            ->assertStatus(200)
+            ->assertJsonPath('total', 1);
+
+        // Filter by non-matching provider
+        $this->getJson('/api/payments?provider=robokassa')
+            ->assertStatus(200)
+            ->assertJsonPath('total', 0);
+    }
+
     public function test_health_check_returns_ok(): void
     {
         $response = $this->getJson('/api/health');

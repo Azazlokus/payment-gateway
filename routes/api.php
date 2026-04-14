@@ -27,6 +27,10 @@ Route::middleware(['correlation'])->group(function () {
     Route::get('/payments', [PaymentController::class, 'index'])
         ->middleware('throttle:60,1');
 
+    // Экспорт платежей в CSV (стриминг, строгий лимит)
+    Route::get('/payments/export', [PaymentController::class, 'export'])
+        ->middleware('throttle:10,1');
+
     // Создание платежа — строгий лимит для защиты от спама
     Route::post('/payments', [PaymentController::class, 'create'])
         ->middleware('throttle:30,1');
@@ -42,8 +46,14 @@ Route::middleware(['correlation'])->group(function () {
         Route::post('/refund', [PaymentController::class, 'refund'])
             ->middleware('throttle:30,1');
 
+        Route::post('/retry', [PaymentController::class, 'retry'])
+            ->middleware('throttle:10,1');
+
         Route::post('/sync', [PaymentController::class, 'sync'])
             ->middleware('throttle:30,1');
+
+        Route::post('/resync', [PaymentController::class, 'resync'])
+            ->middleware('throttle:10,1');
     });
 });
 

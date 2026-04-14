@@ -76,6 +76,10 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
             $query->where('status', $filters['status']);
         }
 
+        if (! empty($filters['provider'])) {
+            $query->where('provider', $filters['provider']);
+        }
+
         if (! empty($filters['from_date'])) {
             $query->whereDate('created_at', '>=', $filters['from_date']);
         }
@@ -93,6 +97,33 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
             'current_page' => $paginator->currentPage(),
             'last_page' => $paginator->lastPage(),
         ];
+    }
+
+    /** @param array<string, mixed> $filters
+     *  @return iterable<Payment> */
+    public function cursor(array $filters): iterable
+    {
+        $query = PaymentModel::query()->orderByDesc('created_at');
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['provider'])) {
+            $query->where('provider', $filters['provider']);
+        }
+
+        if (! empty($filters['from_date'])) {
+            $query->whereDate('created_at', '>=', $filters['from_date']);
+        }
+
+        if (! empty($filters['to_date'])) {
+            $query->whereDate('created_at', '<=', $filters['to_date']);
+        }
+
+        foreach ($query->cursor() as $model) {
+            yield $this->hydrate($model);
+        }
     }
 
     private function hydrate(PaymentModel $model): Payment

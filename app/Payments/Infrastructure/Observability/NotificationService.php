@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Http;
  * Отправляет HTTP POST на notification_url из метаданных платежа
  * после каждого изменения статуса.
  */
-final class NotificationService
+class NotificationService
 {
     public function __construct(
         private readonly PaymentLogger $logger,

@@ -8,11 +8,13 @@ use App\Payments\Application\Bus\CommandBus;
 use App\Payments\Application\Commands\CancelPayment\CancelPaymentCommand;
 use App\Payments\Application\Commands\CreatePayment\CreatePaymentCommand;
 use App\Payments\Application\Commands\RefundPayment\RefundPaymentCommand;
+use App\Payments\Application\Commands\RetryPayment\RetryPaymentCommand;
 use App\Payments\Application\Commands\SyncPayment\SyncPaymentCommand;
 use App\Payments\Application\DTOs\CreatePaymentOptionsDTO;
 use App\Payments\Application\DTOs\PaymentResultDTO;
 use App\Payments\Application\DTOs\ReceiptDTO;
 use App\Payments\Application\DTOs\ReceiptItemDTO;
+use App\Payments\Infrastructure\Observability\NotificationService;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Payments\Domain\ValueObjects\PaymentId;
 use App\Payments\Presentation\Http\Requests\CreatePaymentRequest;
@@ -30,6 +32,7 @@ final class PaymentController extends Controller
     public function __construct(
         private readonly CommandBus $bus,
         private readonly PaymentRepositoryInterface $repository,
+        private readonly NotificationService $notifications,
     ) {}
 
     #[OA\Get(
@@ -39,6 +42,7 @@ final class PaymentController extends Controller
         tags: ['Payments'],
         parameters: [
             new OA\Parameter(name: 'status', in: 'query', required: false, description: 'Фильтр по статусу', schema: new OA\Schema(type: 'string', enum: ['Pending', 'Succeeded', 'Cancelled', 'Refunded'])),
+            new OA\Parameter(name: 'provider', in: 'query', required: false, description: 'Фильтр по провайдеру', schema: new OA\Schema(type: 'string', enum: ['yookassa', 'robokassa', 'cloudpayments', 'sbp', 'alfabank'])),
             new OA\Parameter(name: 'from_date', in: 'query', required: false, description: 'Дата от (Y-m-d)', schema: new OA\Schema(type: 'string', format: 'date', example: '2024-01-01')),
             new OA\Parameter(name: 'to_date', in: 'query', required: false, description: 'Дата до (Y-m-d)', schema: new OA\Schema(type: 'string', format: 'date', example: '2024-12-31')),
             new OA\Parameter(name: 'per_page', in: 'query', required: false, description: 'Размер страницы (1-100)', schema: new OA\Schema(type: 'integer', default: 15, minimum: 1, maximum: 100)),
@@ -57,9 +61,10 @@ final class PaymentController extends Controller
         $perPage = min((int) $request->query('per_page', 15), 100);
         $page = max((int) $request->query('page', 1), 1);
         $filters = array_filter([
-            'status' => $request->query('status'),
+            'status'    => $request->query('status'),
+            'provider'  => $request->query('provider'),
             'from_date' => $request->query('from_date'),
-            'to_date' => $request->query('to_date'),
+            'to_date'   => $request->query('to_date'),
         ]);
 
         $result = $this->repository->paginate($perPage, $page, $filters);
@@ -255,6 +260,120 @@ final class PaymentController extends Controller
         $result = $this->bus->dispatch(new SyncPaymentCommand(paymentId: $id));
 
         return response()->json(new PaymentResource($result), Response::HTTP_OK);
+    }
+
+    #[OA\Get(
+        path: '/payments/export',
+        summary: 'Экспорт платежей в CSV',
+        description: 'Стримит CSV-файл со всеми платежами, удовлетворяющими фильтрам. Поддерживает те же фильтры, что и GET /payments.',
+        tags: ['Payments'],
+        parameters: [
+            new OA\Parameter(name: 'status',    in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'provider',  in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'from_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'to_date',   in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'CSV-файл', content: new OA\MediaType(mediaType: 'text/csv')),
+        ]
+    )]
+    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $filters = array_filter([
+            'status'    => $request->query('status'),
+            'provider'  => $request->query('provider'),
+            'from_date' => $request->query('from_date'),
+            'to_date'   => $request->query('to_date'),
+        ]);
+
+        $filename = 'payments-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($filters) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, ['id', 'status', 'provider', 'amount', 'currency', 'description', 'external_id', 'created_at']);
+
+            foreach ($this->repository->cursor($filters) as $payment) {
+                fputcsv($handle, [
+                    $payment->id()->toString(),
+                    $payment->status()->value,
+                    $payment->provider(),
+                    $payment->amount()->amount(),
+                    $payment->amount()->currency()->value,
+                    $payment->description(),
+                    $payment->externalId()?->toString() ?? '',
+                    '',
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    #[OA\Post(
+        path: '/payments/{id}/retry',
+        summary: 'Повторить отменённый платёж',
+        description: 'Создаёт новый платёж с теми же параметрами, что у отменённого. Работает только для платежей в статусе `Cancelled`.',
+        tags: ['Payments'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['return_url'],
+                properties: [
+                    new OA\Property(property: 'return_url', type: 'string', format: 'uri', example: 'https://example.com/success'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Новый платёж создан', content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/PaymentResponse')])),
+            new OA\Response(response: 404, description: 'Платёж не найден'),
+            new OA\Response(response: 409, description: 'Платёж не в статусе Cancelled'),
+        ]
+    )]
+    public function retry(string $id, Request $request): JsonResponse
+    {
+        $result = $this->bus->dispatch(new RetryPaymentCommand(
+            paymentId:      $id,
+            returnUrl:      (string) $request->input('return_url', ''),
+            idempotencyKey: $request->header('Idempotency-Key') ?? (string) Str::uuid(),
+        ));
+
+        return response()->json(new PaymentResource($result), Response::HTTP_CREATED);
+    }
+
+    #[OA\Post(
+        path: '/payments/{id}/resync',
+        summary: 'Повторно отправить исходящее уведомление',
+        description: 'Повторно отправляет POST-уведомление на `notification_url` из метаданных платежа. Полезно когда эндпоинт клиента временно не отвечал.',
+        tags: ['Payments'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Уведомление отправлено (или notification_url не задан)'),
+            new OA\Response(response: 404, description: 'Платёж не найден'),
+        ]
+    )]
+    public function resync(string $id): JsonResponse
+    {
+        try {
+            $paymentId = PaymentId::fromString($id);
+        } catch (\InvalidArgumentException) {
+            return response()->json(['error' => 'not_found', 'message' => 'Payment not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $payment = $this->repository->findById($paymentId);
+
+        if ($payment === null) {
+            return response()->json(['error' => 'not_found', 'message' => 'Payment not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->notifications->notify(PaymentResultDTO::fromAggregate($payment), $payment->metadata());
+
+        return response()->json(['message' => 'Notification dispatched'], Response::HTTP_OK);
     }
 
     // ─── Private helpers ────────────────────────────────────────────────────
