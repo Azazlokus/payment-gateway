@@ -268,19 +268,17 @@ class CloudPaymentsProviderTest extends TestCase
 
     public function test_verify_webhook_returns_true_with_valid_hmac(): void
     {
-        $body = json_encode(['TransactionId' => 12345, 'Status' => 'Completed']);
-        $hmac = base64_encode(hash_hmac('sha256', $body, $this->apiSecret, true));
+        $payload = ['TransactionId' => 12345, 'Status' => 'Completed'];
+        $body    = json_encode($payload);
+        $hmac    = base64_encode(hash_hmac('sha256', (string) $body, $this->apiSecret, true));
 
-        // Подменяем содержимое тела запроса через fake-запрос
-        $this->app->bind(\Illuminate\Http\Request::class, function () use ($body, $hmac) {
-            $request = \Illuminate\Http\Request::create('/webhook/cloudpayments', 'POST', [], [], [], [], $body);
-            $request->headers->set('Content-HMAC', $hmac);
-
-            return $request;
-        });
+        // Подменяем request() так чтобы getContent() возвращал нужное тело
+        $request = \Illuminate\Http\Request::create('/webhook/cloudpayments', 'POST', [], [], [], [], (string) $body);
+        $request->headers->set('Content-HMAC', $hmac);
+        $this->app->instance('request', $request);
 
         $result = $this->provider->verifyWebhook(
-            ['TransactionId' => 12345, 'Status' => 'Completed'],
+            $payload,
             ['content-hmac' => [$hmac]],
         );
 

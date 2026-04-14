@@ -123,7 +123,8 @@ class PaymentLoggerTest extends TestCase
 
     public function test_correlation_id_included_from_request_header(): void
     {
-        $this->withHeaders(['X-Correlation-Id' => 'trace-abc-123']);
+        // Set header directly on the current request instance
+        request()->headers->set('X-Correlation-Id', 'trace-abc-123');
 
         Log::shouldReceive('channel')->andReturnSelf();
         Log::shouldReceive('info')

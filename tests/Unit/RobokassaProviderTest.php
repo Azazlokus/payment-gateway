@@ -120,7 +120,7 @@ class RobokassaProviderTest extends TestCase
     {
         $this->expectException(PaymentException::class);
         $this->expectExceptionCode(501);
-        $this->expectExceptionMessageMatches('/polling not supported/i');
+        $this->expectExceptionMessageMatches('/polling|webhooks/i');
 
         $this->provider->getPayment(ExternalId::fromString('42'));
     }

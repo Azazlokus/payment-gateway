@@ -44,9 +44,7 @@ class NotificationServiceTest extends TestCase
             'amount'         => 50000,
             'currency'       => 'RUB',
             'externalId'     => 'ext-001',
-            'confirmationUrl' => '',
-            'provider'       => 'yookassa',
-            'metadata'       => [],
+            'confirmationUrl' => null,
         ], $overrides));
     }
 

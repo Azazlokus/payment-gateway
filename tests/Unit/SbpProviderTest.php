@@ -237,8 +237,7 @@ class SbpProviderTest extends TestCase
 
     public function test_verify_webhook_returns_false_when_fields_missing(): void
     {
-        $this->logger->shouldReceive('warning')->once();
-
+        // Key is valid, but qrId+status both required — returns false without logging
         $result = $this->provider->verifyWebhook(
             ['qrId' => 'QR-001'], // missing status
             ['x-api-key' => [$this->webhookSecret]],

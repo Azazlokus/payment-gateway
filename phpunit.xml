@@ -32,6 +32,20 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
-        <env name="LOG_CHANNEL" value="stderr"/>
+        <env name="LOG_CHANNEL" value="null"/>
+        <env name="LOG_PAYMENTS_STACK" value="null"/>
+        <!-- Payment providers (dummy test values) -->
+        <env name="YOOKASSA_SHOP_ID" value="test_shop"/>
+        <env name="YOOKASSA_SECRET_KEY" value="test_secret"/>
+        <env name="ROBOKASSA_LOGIN" value="test_login"/>
+        <env name="ROBOKASSA_PASSWORD1" value="test_pass1"/>
+        <env name="ROBOKASSA_PASSWORD2" value="test_pass2"/>
+        <env name="SBP_MERCHANT_ID" value="test_merchant"/>
+        <env name="SBP_API_KEY" value="test_api_key"/>
+        <env name="SBP_WEBHOOK_SECRET" value="test_webhook_secret"/>
+        <env name="ALFABANK_LOGIN" value="test_login"/>
+        <env name="ALFABANK_PASSWORD" value="test_password"/>
+        <env name="CLOUDPAYMENTS_PUBLIC_ID" value="pk_test"/>
+        <env name="CLOUDPAYMENTS_API_SECRET" value="test_api_secret"/>
     </php>
 </phpunit>

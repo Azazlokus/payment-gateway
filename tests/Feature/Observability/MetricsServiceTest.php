@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit;
+namespace Tests\Feature\Observability;
 
 use App\Payments\Infrastructure\Observability\MetricsService;
 use Illuminate\Support\Facades\Redis;
@@ -15,6 +15,13 @@ class MetricsServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        try {
+            Redis::ping();
+        } catch (\Throwable) {
+            $this->markTestSkipped('Redis is not available in this environment.');
+        }
+
         $this->metrics = new MetricsService;
         // Очищаем метрики перед каждым тестом
         $keys = Redis::keys('metrics:*');

@@ -123,6 +123,19 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        'payments' => [
+            'driver'   => 'stack',
+            'channels' => explode(',', env('LOG_PAYMENTS_STACK', 'payments_file')),
+        ],
+
+        'payments_file' => [
+            'driver' => 'daily',
+            'path'   => storage_path('logs/payments.log'),
+            'level'  => env('LOG_LEVEL', 'debug'),
+            'days'   => 14,
+            'replace_placeholders' => true,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],

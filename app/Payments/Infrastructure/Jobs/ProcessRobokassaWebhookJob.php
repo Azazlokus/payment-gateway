@@ -35,7 +35,17 @@ final class ProcessRobokassaWebhookJob implements ShouldQueue
         $internalId = (string) ($this->payload['Shp_paymentId'] ?? '');
         $invId      = (string) ($this->payload['InvId'] ?? '');
 
-        $payment = $repository->findById(PaymentId::fromString($internalId));
+        try {
+            $paymentId = PaymentId::fromString($internalId);
+        } catch (\InvalidArgumentException) {
+            $logger->warning('Robokassa webhook job: invalid payment id format', [
+                'shp_payment_id' => $internalId,
+            ]);
+
+            return;
+        }
+
+        $payment = $repository->findById($paymentId);
 
         if ($payment === null) {
             $logger->warning('Robokassa webhook job: payment not found', [

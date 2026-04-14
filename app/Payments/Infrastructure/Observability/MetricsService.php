@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Redis;
  *
  * Ключи Redis: metrics:{metric_name}:{label1=val1}:{label2=val2}
  */
-final class MetricsService
+class MetricsService
 {
     private const PREFIX = 'metrics:';
 

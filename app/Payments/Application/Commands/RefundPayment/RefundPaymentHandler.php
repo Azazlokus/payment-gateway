@@ -54,7 +54,7 @@ final readonly class RefundPaymentHandler
             }
 
             if ($payment->externalId() === null) {
-                throw new PaymentException('Payment has no external ID, cannot refund');
+                throw new PaymentException('Payment has no external ID, cannot refund', Response::HTTP_CONFLICT);
             }
 
             $provider     = $this->registry->resolve($payment->provider());

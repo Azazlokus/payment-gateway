@@ -21,6 +21,15 @@ class AlfaBankWebhookTest extends TestCase
 
     private string $mdOrder = 'alfa-order-uuid-0001';
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Override the AlfaBankProvider singleton with empty webhook_ips so 127.0.0.1 is allowed
+        config(['payments.alfabank.webhook_ips' => []]);
+        $this->app->forgetInstance(\App\Payments\Infrastructure\Providers\AlfaBankProvider::class);
+    }
+
     private function createPayment(string $status = 'Pending', string $externalId = ''): string
     {
         $id = PaymentId::generate()->toString();
