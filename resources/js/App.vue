@@ -20,6 +20,13 @@
           >
             Создать
           </router-link>
+          <router-link
+            to="/metrics"
+            class="text-sm text-gray-600 hover:text-gray-900"
+            active-class="text-blue-600 font-medium"
+          >
+            Метрики
+          </router-link>
         </div>
       </div>
     </nav>

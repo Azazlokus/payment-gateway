@@ -19,7 +19,7 @@ use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Domain\ValueObjects\PaymentId;
 use App\Payments\Domain\ValueObjects\RefundId;
 
-class Payment
+final class Payment
 {
     /** @var DomainEvent[] */
     private array $domainEvents = [];

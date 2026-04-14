@@ -110,7 +110,7 @@ final class RobokassaProvider implements PaymentProviderInterface
 
     /**
      * @param array<string, mixed>  $payload
-     * @param array<string, string> $headers
+     * @param array<string, list<string|null>> $headers
      */
     public function verifyWebhook(array $payload, array $headers): bool
     {

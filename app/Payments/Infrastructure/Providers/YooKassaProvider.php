@@ -103,7 +103,7 @@ final class YooKassaProvider implements PaymentProviderInterface
                 confirmationUrl: $confirmationUrl,
                 status: $response->getStatus(),
                 paymentMethodId: $paymentMethodId,
-                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [], // @phpstan-ignore-line
+                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
             );
         } catch (PaymentException $e) {
             throw $e;
@@ -127,7 +127,7 @@ final class YooKassaProvider implements PaymentProviderInterface
                 confirmationUrl: '',
                 status: $response->getStatus(),
                 paymentMethodId: $response->getPaymentMethod()?->getId(),
-                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [], // @phpstan-ignore-line
+                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
             );
         } catch (\Throwable $e) {
             throw new PaymentException("YooKassa getPayment failed: {$e->getMessage()}", previous: $e);
@@ -157,7 +157,7 @@ final class YooKassaProvider implements PaymentProviderInterface
                 externalId: ExternalId::fromString($response->getId()),
                 confirmationUrl: '',
                 status: $response->getStatus(),
-                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [], // @phpstan-ignore-line
+                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
             );
         } catch (\Throwable $e) {
             throw new PaymentException("YooKassa refund failed: {$e->getMessage()}", previous: $e);
@@ -166,7 +166,7 @@ final class YooKassaProvider implements PaymentProviderInterface
 
     /**
      * @param array<string, mixed>  $payload
-     * @param array<string, string> $headers
+     * @param array<string, list<string|null>> $headers
      */
     public function verifyWebhook(array $payload, array $headers): bool
     {

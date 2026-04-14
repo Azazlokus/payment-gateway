@@ -63,8 +63,10 @@ final class AlfaBankProvider implements PaymentProviderInterface
 
         $data = $response->json();
 
-        if (! empty($data['errorCode']) && $data['errorCode'] !== '0') {
-            throw new PaymentException("Альфа-Банк: {$data['errorMessage']} (код {$data['errorCode']})");
+        $errorCode = (string) ($data['errorCode'] ?? '');
+        if ($errorCode !== '' && $errorCode !== '0') {
+            $errorMessage = (string) ($data['errorMessage'] ?? 'Unknown error');
+            throw new PaymentException("Альфа-Банк: {$errorMessage} (код {$errorCode})");
         }
 
         $orderId = $data['orderId'] ?? throw new PaymentException('Альфа-Банк: ответ не содержит orderId');
@@ -125,8 +127,10 @@ final class AlfaBankProvider implements PaymentProviderInterface
 
         $data = $response->json();
 
-        if (! empty($data['errorCode']) && $data['errorCode'] !== '0') {
-            throw new PaymentException("Альфа-Банк: ошибка возврата: {$data['errorMessage']} (код {$data['errorCode']})");
+        $errorCode = (string) ($data['errorCode'] ?? '');
+        if ($errorCode !== '' && $errorCode !== '0') {
+            $errorMessage = (string) ($data['errorMessage'] ?? 'Unknown error');
+            throw new PaymentException("Альфа-Банк: ошибка возврата: {$errorMessage} (код {$errorCode})");
         }
 
         $this->logger->info('Альфа-Банк: возврат выполнен', [
@@ -144,7 +148,7 @@ final class AlfaBankProvider implements PaymentProviderInterface
 
     /**
      * @param array<string, mixed>  $payload
-     * @param array<string, string> $headers
+     * @param array<string, list<string|null>> $headers
      */
     public function verifyWebhook(array $payload, array $headers): bool
     {

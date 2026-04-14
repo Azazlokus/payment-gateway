@@ -87,7 +87,9 @@ Route::post('/webhook/cloudpayments', [CloudPaymentsWebhookController::class, 'h
 
 /*
  * Prometheus-метрики для Grafana/Alertmanager
- * В production защитить через IP-whitelist или bearer token на уровне nginx/ingress.
+ * Throttle: 60 запросов/мин. В production дополнительно защитить через
+ * IP-whitelist или bearer token на уровне nginx/ingress.
  */
 Route::get('/metrics', MetricsController::class)
+    ->middleware('throttle:60,1')
     ->name('metrics');

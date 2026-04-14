@@ -72,6 +72,39 @@
           />
         </div>
 
+        <!-- Рекуррентные платежи (только YooKassa) -->
+        <div v-if="form.provider === 'yookassa'" class="border border-blue-100 rounded-xl p-4 bg-blue-50 space-y-3">
+          <p class="text-xs font-semibold text-blue-700 uppercase tracking-wide">Рекуррентные платежи (YooKassa)</p>
+
+          <div class="flex items-center gap-3">
+            <input
+              id="save_method"
+              v-model="form.save_payment_method"
+              type="checkbox"
+              class="rounded border-gray-300 text-blue-600"
+            />
+            <label for="save_method" class="text-sm text-gray-700">
+              Сохранить метод оплаты для будущих списаний
+            </label>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Payment Method ID
+              <span class="text-gray-400 font-normal">(для списания без редиректа)</span>
+            </label>
+            <input
+              v-model="form.payment_method_id"
+              type="text"
+              placeholder="pm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            />
+            <p class="text-xs text-gray-400 mt-1">
+              Если указан — платёж списывается без редиректа (рекуррентное списание)
+            </p>
+          </div>
+        </div>
+
         <!-- Notification URL (опционально) -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -133,6 +166,8 @@ const form = ref({
   currency: 'RUB',
   description: '',
   return_url: '',
+  save_payment_method: false,
+  payment_method_id: '',
 });
 const amountRubles = ref('');
 const notificationUrl = ref('');
@@ -151,9 +186,14 @@ async function submit() {
   submitting.value = true;
 
   const payload = {
-    ...form.value,
-    amount: Math.round(parseFloat(amountRubles.value) * 100),
-    metadata: notificationUrl.value ? { notification_url: notificationUrl.value } : {},
+    provider:     form.value.provider,
+    currency:     form.value.currency,
+    description:  form.value.description,
+    return_url:   form.value.return_url,
+    amount:       Math.round(parseFloat(amountRubles.value) * 100),
+    metadata:     notificationUrl.value ? { notification_url: notificationUrl.value } : {},
+    ...(form.value.save_payment_method && { save_payment_method: true }),
+    ...(form.value.payment_method_id   && { payment_method_id: form.value.payment_method_id }),
   };
 
   try {
