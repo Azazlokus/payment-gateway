@@ -8,8 +8,9 @@ use App\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
 use App\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
 use App\CryptoPayments\Domain\Contracts\PriceOracleInterface;
 use App\CryptoPayments\Domain\Enums\CryptoAsset;
+use App\CryptoPayments\Domain\Enums\DepositMode;
+use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
 use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
-use App\CryptoPayments\Domain\ValueObjects\TonAddress;
 use App\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry;
 use App\CryptoPayments\Infrastructure\Observability\CryptoMetricsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,8 +30,9 @@ class CryptoDepositTest extends TestCase
         $mockClient = $this->mock(BlockchainClientInterface::class);
         $mockClient->shouldReceive('network')->andReturn('ton');
         $mockClient->shouldReceive('supportedAssets')->andReturn([CryptoAsset::TON]);
+        $mockClient->shouldReceive('depositMode')->andReturn(DepositMode::Memo);
         $mockClient->shouldReceive('masterDepositAddress')
-            ->andReturn(TonAddress::fromString(self::MASTER_ADDRESS));
+            ->andReturn(CryptoAddress::fromString(self::MASTER_ADDRESS));
 
         $mockRegistry = $this->mock(BlockchainClientRegistry::class);
         $mockRegistry->shouldReceive('getForAsset')->andReturn($mockClient);
@@ -140,7 +142,7 @@ class CryptoDepositTest extends TestCase
         $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-005',
             'fiat_amount_kopecks' => 5000,
-            'asset'               => 'BTC',
+            'asset'               => 'INVALID_ASSET',
         ]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);

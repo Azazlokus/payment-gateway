@@ -13,7 +13,7 @@ REST API платёжного шлюза на Laravel 13 с поддержкой
 - [API v1](#api-v1)
 - [Провайдеры](#провайдеры)
 - [Вебхуки](#вебхуки)
-- [Крипто-депозиты (TON / USDT-TON)](#крипто-депозиты-ton--usdt-ton)
+- [Крипто-депозиты (TON / USDT-TON / TRX / USDT-TRC20 / BTC)](#крипто-депозиты)
 - [Диспуты и чарджбэки](#диспуты-и-чарджбэки)
 - [Очереди и Horizon](#очереди-и-horizon)
 - [Observability](#observability)
@@ -33,7 +33,7 @@ REST API платёжного шлюза на Laravel 13 с поддержкой
 - **QR-коды СБП**: динамические QR через НСПК API
 - **3-D Secure**: событие `PaymentRequiresThreeDSecure`, поля `three_ds_required` / `three_ds_challenge_url`
 - **Диспуты / чарджбэки**: агрегат `Dispute` со статусами Filed → Won / Lost
-- **Крипто-депозиты** (TON / USDT-TON): приём оплаты в блокчейне TON, поллинг через TonCenter API
+- **Крипто-депозиты** (TON / USDT-TON / TRX / USDT-TRC20 / BTC): приём оплаты в 3 блокчейнах, только бесплатные API
 - **Идемпотентность** создания и возврата по заголовку `Idempotency-Key`
 - Асинхронная обработка вебхуков (Horizon + Redis), 5 попыток с экспоненциальным backoff
 - Structured logging с Correlation ID, audit trail через `spatie/laravel-activitylog`
@@ -262,13 +262,16 @@ SBP_WEBHOOK_SECRET=your_secret
 ALFABANK_LOGIN=your_login
 ALFABANK_PASSWORD=your_password
 
-# TON / Крипто-депозиты
-TON_MASTER_ADDRESS=UQA...           # адрес для приёма депозитов
-TON_API_KEY=                        # TonCenter API key (опционально, выше лимиты)
-TON_API_URL=https://toncenter.com/api/v2
-TON_API_V3_URL=https://toncenter.com/api/v3
+# Крипто-депозиты
+CRYPTO_DEPOSIT_TTL_MINUTES=20
+
+TON_MASTER_ADDRESS=UQA...           # единый адрес для TON / USDT-TON
+TON_API_KEY=                        # TonCenter API key (опционально)
 TON_USDT_JETTON_MASTER=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs
-TON_DEPOSIT_TTL_MINUTES=20
+
+BTC_DEPOSIT_ADDRESSES=bc1q...       # через запятую
+TRON_DEPOSIT_ADDRESSES=T...         # через запятую
+TRONGRID_API_KEY=                   # TronGrid API key (опционально)
 
 # Observability
 SLACK_WEBHOOK_URL=https://hooks.slack.com/...
@@ -505,18 +508,39 @@ CSV-экспорт платежей (streaming). Throttle: 10 запросов/�
 
 ---
 
-## Крипто-депозиты (TON / USDT-TON)
+## Крипто-депозиты
 
-Приём криптовалютных платежей без кастодиального кошелька — клиент переводит средства напрямую на ваш адрес.
+Приём криптовалютных платежей без кастодиального кошелька — клиент переводит средства напрямую на ваш адрес.  
+Поддерживаются **5 активов** в 3 блокчейнах. Все используемые API — **полностью бесплатные**, без платных операций.
+
+### Поддерживаемые активы и API
+
+| Актив | Блокчейн | API (бесплатно) | Режим |
+|---|---|---|---|
+| **TON** | TON | TonCenter v2 `/getTransactions` | Единый адрес + числовой memo |
+| **USDT-TON** | TON | TonCenter v3 `/jetton/transfers` | Единый адрес + числовой memo |
+| **TRX** | TRON | TronGrid `/v1/accounts/{addr}/transactions` | Пул уникальных адресов |
+| **USDT-TRC20** | TRON | TronGrid `/v1/accounts/{addr}/transactions/trc20` | Пул уникальных адресов |
+| **BTC** | Bitcoin | mempool.space `/address/{addr}/txs` | Пул уникальных адресов |
+
+### Режимы депозита
+
+**Memo-режим (TON / USDT-TON)**
+- Один мастер-адрес для всех клиентов
+- Каждый депозит получает уникальный числовой `memo` (комментарий к переводу)
+- Клиент обязан указать memo — иначе платёж невозможно идентифицировать
+
+**UniqueAddress-режим (BTC / TRX / USDT-TRC20)**
+- Пул адресов, настраиваемый через `.env` (через запятую)
+- Каждому активному депозиту назначается свободный адрес из пула
+- Memo не требуется — идентификация по адресу
 
 ### Как это работает
 
-1. `POST /api/v1/crypto/deposits` → создаётся депозит с уникальным `memo` (числовой комментарий) и TTL 20 мин
-2. Клиент переводит указанную сумму на `depositAddress` с комментарием `memo`
-3. `PollCryptoDepositsJob` каждые 15 сек опрашивает TonCenter API
-   - **TON**: `/getTransactions` (v2) — читает `in_msg.value` + комментарий
-   - **USDT-TON**: `/jetton/transfers` (v3) — парсит Jetton-перевод без декодирования BOC
-4. При совпадении memo+сумма — депозит подтверждается, событие `DepositConfirmed` уходит в `CryptoDepositToPaymentAdapter`
+1. `POST /api/v1/crypto/deposits` → создаётся депозит с TTL `CRYPTO_DEPOSIT_TTL_MINUTES` (по умолчанию 20 мин)
+2. Клиент переводит указанную сумму на `depositAddress` (+ `memo` для TON-сетей)
+3. `PollCryptoDepositsJob` каждые 15 сек опрашивает соответствующий блокчейн-API
+4. При обнаружении входящей транзакции — депозит подтверждается, событие `DepositConfirmed` уходит в `CryptoDepositToPaymentAdapter`
 
 ### Статусы депозита
 
@@ -529,11 +553,22 @@ awaiting ──→ confirmed
 ### Конфигурация
 
 ```dotenv
-TON_MASTER_ADDRESS=UQA...          # ваш адрес-накопитель в TON
-TON_API_KEY=                       # ключ TonCenter (опционально)
-TON_DEPOSIT_TTL_MINUTES=20
+CRYPTO_DEPOSIT_TTL_MINUTES=20
+
+# TON / USDT-TON (TonCenter, бесплатный tier: 1 req/s)
+TON_MASTER_ADDRESS=UQA...
+TON_API_KEY=                       # опционально, увеличивает лимиты
 TON_USDT_JETTON_MASTER=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs
+
+# Bitcoin (mempool.space, полностью бесплатно, без ключа)
+BTC_DEPOSIT_ADDRESSES=bc1q...,bc1q...
+
+# TRON / USDT-TRC20 (TronGrid, бесплатно)
+TRON_DEPOSIT_ADDRESSES=T...,T...
+TRONGRID_API_KEY=                  # опционально, увеличивает лимиты
 ```
+
+> **Масштабирование**: для обслуживания большего числа одновременных депозитов в BTC/TRON просто добавьте больше адресов в переменные `BTC_DEPOSIT_ADDRESSES` / `TRON_DEPOSIT_ADDRESSES`.
 
 ---
 

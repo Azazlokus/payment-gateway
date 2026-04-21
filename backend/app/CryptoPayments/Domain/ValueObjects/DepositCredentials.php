@@ -7,8 +7,8 @@ namespace App\CryptoPayments\Domain\ValueObjects;
 final readonly class DepositCredentials
 {
     public function __construct(
-        public TonAddress $depositAddress,
-        public Memo $memo,
+        public CryptoAddress $depositAddress,
+        public ?Memo $memo,
         public string $qrPayload,
     ) {}
 }

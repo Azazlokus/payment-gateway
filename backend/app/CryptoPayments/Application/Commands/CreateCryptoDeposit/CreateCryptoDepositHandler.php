@@ -8,7 +8,8 @@ use App\CryptoPayments\Application\DTOs\CryptoDepositResultDTO;
 use App\CryptoPayments\Domain\Aggregates\CryptoDeposit;
 use App\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
 use App\CryptoPayments\Domain\Contracts\PriceOracleInterface;
-use App\CryptoPayments\Domain\Enums\CryptoAsset;
+use App\CryptoPayments\Domain\Enums\DepositMode;
+use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
 use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
 use App\CryptoPayments\Domain\ValueObjects\Memo;
 use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
@@ -17,6 +18,7 @@ use App\CryptoPayments\Infrastructure\Observability\CryptoMetricsService;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 final readonly class CreateCryptoDepositHandler
 {
@@ -31,9 +33,9 @@ final readonly class CreateCryptoDepositHandler
     public function handle(CreateCryptoDepositCommand $command): CryptoDepositResultDTO
     {
         $this->logger->info('Creating crypto deposit', [
-            'payment_id'         => $command->paymentId,
+            'payment_id'          => $command->paymentId,
             'fiat_amount_kopecks' => $command->fiatAmountKopecks,
-            'asset'              => $command->asset->value,
+            'asset'               => $command->asset->value,
         ]);
 
         return DB::transaction(function () use ($command): CryptoDepositResultDTO {
@@ -42,17 +44,29 @@ final readonly class CreateCryptoDepositHandler
                 $command->asset,
             );
 
-            $expectedAmount = match ($command->asset) {
-                CryptoAsset::TON      => NativeCryptoAmount::ofNanotons($cryptoUnits),
-                CryptoAsset::USDT_TON => NativeCryptoAmount::ofMicroUsdt($cryptoUnits),
-            };
+            $expectedAmount = NativeCryptoAmount::of($cryptoUnits, $command->asset);
 
-            $client         = $this->blockchain->getForAsset($command->asset);
-            $depositAddress = $client->masterDepositAddress();
-            $memo           = Memo::generate();
-
-            $ttlMinutes = (int) config('crypto.ton.deposit_ttl_minutes', 20);
+            $client     = $this->blockchain->getForAsset($command->asset);
+            $ttlMinutes = (int) config('crypto.deposit_ttl_minutes', 20);
             $expiresAt  = new DateTimeImmutable("+{$ttlMinutes} minutes");
+
+            if ($client->depositMode() === DepositMode::Memo) {
+                $depositAddress = $client->masterDepositAddress();
+                $memo           = Memo::generate();
+            } else {
+                $usedAddresses  = $this->deposits->findActiveAddressesByNetwork($client->network());
+                $pool           = $client->depositAddressPool();
+                $available      = array_filter($pool, fn (string $addr) => ! in_array($addr, $usedAddresses, true));
+
+                if (empty($available)) {
+                    throw new RuntimeException(
+                        "No available deposit addresses for {$command->asset->value}. Please add more addresses to the pool."
+                    );
+                }
+
+                $depositAddress = CryptoAddress::fromString(reset($available));
+                $memo           = null;
+            }
 
             $deposit = CryptoDeposit::create(
                 id: CryptoDepositId::generate(),
@@ -73,7 +87,7 @@ final readonly class CreateCryptoDepositHandler
                 'deposit_id' => $deposit->id()->toString(),
                 'payment_id' => $command->paymentId,
                 'asset'      => $command->asset->value,
-                'memo'       => $memo->toString(),
+                'memo'       => $memo?->toString(),
             ]);
 
             return CryptoDepositResultDTO::fromAggregate($deposit);

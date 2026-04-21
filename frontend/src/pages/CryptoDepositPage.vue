@@ -18,8 +18,17 @@
             required
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="TON">TON</option>
-            <option value="USDT_TON">USDT-TON</option>
+            <optgroup label="TON">
+              <option value="TON">TON</option>
+              <option value="USDT_TON">USDT-TON (TRC-20 на TON)</option>
+            </optgroup>
+            <optgroup label="TRON">
+              <option value="TRX">TRX</option>
+              <option value="USDT_TRC20">USDT-TRC20</option>
+            </optgroup>
+            <optgroup label="Bitcoin">
+              <option value="BTC">BTC</option>
+            </optgroup>
           </select>
         </div>
 
@@ -114,7 +123,7 @@
           </div>
         </div>
 
-        <div>
+        <div v-if="deposit.memo">
           <p class="text-xs text-gray-500 mb-1 uppercase tracking-wide">Комментарий / Memo</p>
           <div class="flex items-center gap-2">
             <code class="flex-1 text-lg font-mono bg-gray-50 border border-gray-200 rounded px-3 py-2 text-center tracking-widest">
@@ -136,7 +145,7 @@
           <a
             :href="deposit.qrPayload"
             class="text-xs text-blue-600 hover:underline"
-          >Открыть в кошельке TON</a>
+          >Открыть в кошельке</a>
         </div>
       </div>
 
@@ -200,6 +209,9 @@ let pollTimer = null;
 const assetLabel = computed(() => ({
   TON: 'TON',
   USDT_TON: 'USDT',
+  TRX: 'TRX',
+  USDT_TRC20: 'USDT',
+  BTC: 'BTC',
 })[deposit.value?.asset] ?? '');
 
 // Google Charts QR — no install needed, pure URL

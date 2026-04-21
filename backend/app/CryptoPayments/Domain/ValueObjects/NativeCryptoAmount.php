@@ -14,6 +14,11 @@ final readonly class NativeCryptoAmount
         private CryptoAsset $asset,
     ) {}
 
+    public static function of(int $units, CryptoAsset $asset): self
+    {
+        return new self($units, $asset);
+    }
+
     public static function ofNanotons(int $units): self
     {
         return new self($units, CryptoAsset::TON);
@@ -22,6 +27,21 @@ final readonly class NativeCryptoAmount
     public static function ofMicroUsdt(int $units): self
     {
         return new self($units, CryptoAsset::USDT_TON);
+    }
+
+    public static function ofSatoshis(int $units): self
+    {
+        return new self($units, CryptoAsset::BTC);
+    }
+
+    public static function ofSunUnits(int $units): self
+    {
+        return new self($units, CryptoAsset::TRX);
+    }
+
+    public static function ofMicroUsdtTrc20(int $units): self
+    {
+        return new self($units, CryptoAsset::USDT_TRC20);
     }
 
     public function units(): int
@@ -34,16 +54,10 @@ final readonly class NativeCryptoAmount
         return $this->asset;
     }
 
-    /**
-     * Returns a human-readable string representation.
-     * TON: 9 decimal places (nanotons → TON)
-     * USDT_TON: 6 decimal places (microUSDT → USDT)
-     */
     public function humanReadable(): string
     {
         $decimals = $this->asset->decimals();
         $divisor  = 10 ** $decimals;
-
         $whole    = intdiv($this->units, $divisor);
         $fraction = abs($this->units % $divisor);
 

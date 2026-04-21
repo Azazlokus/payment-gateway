@@ -25,4 +25,11 @@ interface CryptoDepositRepositoryInterface
      * @return CryptoDeposit[]
      */
     public function findExpired(): array;
+
+    /**
+     * Returns deposit_address strings for all active (Awaiting/Detected) deposits on a given network.
+     *
+     * @return string[]
+     */
+    public function findActiveAddressesByNetwork(string $network): array;
 }

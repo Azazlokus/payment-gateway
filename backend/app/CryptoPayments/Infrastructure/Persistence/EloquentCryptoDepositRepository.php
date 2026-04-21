@@ -8,10 +8,10 @@ use App\CryptoPayments\Domain\Aggregates\CryptoDeposit;
 use App\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
 use App\CryptoPayments\Domain\Enums\CryptoAsset;
 use App\CryptoPayments\Domain\Enums\CryptoDepositStatus;
+use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
 use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
 use App\CryptoPayments\Domain\ValueObjects\Memo;
 use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
-use App\CryptoPayments\Domain\ValueObjects\TonAddress;
 use App\CryptoPayments\Domain\ValueObjects\TxHash;
 use App\CryptoPayments\Infrastructure\Persistence\Models\CryptoDepositModel;
 use App\Payments\Infrastructure\Persistence\Models\PaymentEventModel;
@@ -31,7 +31,7 @@ final class EloquentCryptoDepositRepository implements CryptoDepositRepositoryIn
                 'actual_units'        => $deposit->actualAmount()?->units(),
                 'fiat_amount_kopecks' => $deposit->fiatAmountKopecks(),
                 'deposit_address'     => $deposit->depositAddress()->toString(),
-                'memo'                => $deposit->memo()->toString(),
+                'memo'                => $deposit->memo()?->toString(),
                 'tx_hash'             => $deposit->txHash()?->toString(),
                 'expires_at'          => $deposit->expiresAt()->format('Y-m-d H:i:s'),
                 'created_at_ts'       => $deposit->createdAtTimestamp(),
@@ -87,6 +87,18 @@ final class EloquentCryptoDepositRepository implements CryptoDepositRepositoryIn
         return array_map(fn (CryptoDepositModel $m) => $this->hydrate($m), $models);
     }
 
+    /** @return string[] */
+    public function findActiveAddressesByNetwork(string $network): array
+    {
+        $assets      = array_filter(CryptoAsset::cases(), fn (CryptoAsset $a) => $a->network() === $network);
+        $assetValues = array_map(fn (CryptoAsset $a) => $a->value, $assets);
+
+        return CryptoDepositModel::whereIn('asset', $assetValues)
+            ->whereIn('status', [CryptoDepositStatus::Awaiting->value, CryptoDepositStatus::Detected->value])
+            ->pluck('deposit_address')
+            ->all();
+    }
+
     private function hydrate(CryptoDepositModel $model): CryptoDeposit
     {
         /** @var string $id */
@@ -105,6 +117,8 @@ final class EloquentCryptoDepositRepository implements CryptoDepositRepositoryIn
             $actualAmount = NativeCryptoAmount::of((int) $model->actual_units, $asset);
         }
 
+        $memo = $model->memo !== null ? Memo::fromString((string) $model->memo) : null;
+
         return CryptoDeposit::restore(
             id: CryptoDepositId::fromString($id),
             paymentId: (string) $model->payment_id,
@@ -112,8 +126,8 @@ final class EloquentCryptoDepositRepository implements CryptoDepositRepositoryIn
             asset: $asset,
             expectedAmount: NativeCryptoAmount::of((int) $model->expected_units, $asset),
             fiatAmountKopecks: (int) $model->fiat_amount_kopecks,
-            depositAddress: TonAddress::fromString((string) $model->deposit_address),
-            memo: Memo::fromString((string) $model->memo),
+            depositAddress: CryptoAddress::fromString((string) $model->deposit_address),
+            memo: $memo,
             expiresAt: new DateTimeImmutable((string) $model->expires_at),
             createdAtTimestamp: (int) $model->created_at_ts,
             txHash: $txHash,

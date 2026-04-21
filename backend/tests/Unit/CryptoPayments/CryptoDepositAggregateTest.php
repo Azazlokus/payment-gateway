@@ -13,9 +13,9 @@ use App\CryptoPayments\Domain\Events\DepositExpired;
 use App\CryptoPayments\Domain\Events\DepositOverpaid;
 use App\CryptoPayments\Domain\Exceptions\DepositExpiredException;
 use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
+use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
 use App\CryptoPayments\Domain\ValueObjects\Memo;
 use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
-use App\CryptoPayments\Domain\ValueObjects\TonAddress;
 use App\CryptoPayments\Domain\ValueObjects\TxHash;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
@@ -34,7 +34,7 @@ class CryptoDepositAggregateTest extends TestCase
             asset: CryptoAsset::TON,
             expectedAmount: NativeCryptoAmount::ofNanotons($expectedNanotons),
             fiatAmountKopecks: 5000,
-            depositAddress: TonAddress::fromString(self::ADDRESS),
+            depositAddress: CryptoAddress::fromString(self::ADDRESS),
             memo: Memo::generate(),
             expiresAt: $expiresAt ?? new DateTimeImmutable('+20 minutes'),
         );
@@ -169,7 +169,7 @@ class CryptoDepositAggregateTest extends TestCase
             asset: CryptoAsset::TON,
             expectedAmount: NativeCryptoAmount::ofNanotons(100_000_000),
             fiatAmountKopecks: 4000,
-            depositAddress: TonAddress::fromString(self::ADDRESS),
+            depositAddress: CryptoAddress::fromString(self::ADDRESS),
             memo: Memo::generate(),
             expiresAt: new DateTimeImmutable('+10 minutes'),
             createdAtTimestamp: time(),

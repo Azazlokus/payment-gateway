@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\CryptoPayments\Domain\Contracts;
 
 use App\CryptoPayments\Domain\Enums\CryptoAsset;
+use App\CryptoPayments\Domain\Enums\DepositMode;
+use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
 use App\CryptoPayments\Domain\ValueObjects\Memo;
 use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
-use App\CryptoPayments\Domain\ValueObjects\TonAddress;
 use App\CryptoPayments\Domain\ValueObjects\TransactionResult;
 use DateTimeImmutable;
 
@@ -18,29 +19,40 @@ interface BlockchainClientInterface
     /** @return CryptoAsset[] */
     public function supportedAssets(): array;
 
-    public function masterDepositAddress(): TonAddress;
+    public function depositMode(): DepositMode;
 
-    /**
-     * Queries blockchain for confirmed incoming transaction matching memo+asset+minAmount since given time.
-     * Returns null if not found yet.
-     */
-    public function findIncomingTransaction(
-        Memo $memo,
+    // ── Memo-based (TON, USDT_TON) ──
+
+    public function masterDepositAddress(): CryptoAddress;
+
+    // ── UniqueAddress-based (BTC, TRX, USDT_TRC20) ──
+
+    /** @return string[] pre-configured pool of receiving addresses */
+    public function depositAddressPool(): array;
+
+    /** Find confirmed incoming tx for a specific address (UniqueAddress mode). */
+    public function findIncomingTransactionByAddress(
+        CryptoAddress $address,
         CryptoAsset $asset,
-        NativeCryptoAmount $expectedAmount,
         DateTimeImmutable $since,
     ): ?TransactionResult;
 
+    // ── Memo-based batch polling ──
+
     /**
-     * Batch version: given list of memos, returns map of memo→TransactionResult for found ones.
-     * More efficient — one API call for all pending deposits on same address.
-     *
      * @param  Memo[] $memos
-     * @return array<string, TransactionResult>  key = memo string
+     * @return array<string, TransactionResult> key = memo string
      */
     public function findIncomingTransactionsBatch(
         array $memos,
         CryptoAsset $asset,
         DateTimeImmutable $since,
     ): array;
+
+    public function findIncomingTransaction(
+        Memo $memo,
+        CryptoAsset $asset,
+        NativeCryptoAmount $expectedAmount,
+        DateTimeImmutable $since,
+    ): ?TransactionResult;
 }

@@ -13,10 +13,10 @@ use App\CryptoPayments\Domain\Events\DepositOverpaid;
 use App\CryptoPayments\Domain\Events\DomainEvent;
 use App\CryptoPayments\Domain\Events\TransactionDetected;
 use App\CryptoPayments\Domain\Exceptions\DepositExpiredException;
+use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
 use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
 use App\CryptoPayments\Domain\ValueObjects\Memo;
 use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
-use App\CryptoPayments\Domain\ValueObjects\TonAddress;
 use App\CryptoPayments\Domain\ValueObjects\TxHash;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -33,8 +33,8 @@ final class CryptoDeposit
         private readonly CryptoAsset $asset,
         private readonly NativeCryptoAmount $expectedAmount,
         private readonly int $fiatAmountKopecks,
-        private readonly TonAddress $depositAddress,
-        private readonly Memo $memo,
+        private readonly CryptoAddress $depositAddress,
+        private readonly ?Memo $memo,
         private readonly DateTimeImmutable $expiresAt,
         private readonly int $createdAtTimestamp,
         private ?TxHash $txHash = null,
@@ -47,8 +47,8 @@ final class CryptoDeposit
         CryptoAsset $asset,
         NativeCryptoAmount $expectedAmount,
         int $fiatAmountKopecks,
-        TonAddress $depositAddress,
-        Memo $memo,
+        CryptoAddress $depositAddress,
+        ?Memo $memo,
         DateTimeImmutable $expiresAt,
     ): self {
         $deposit = new self(
@@ -69,7 +69,7 @@ final class CryptoDeposit
             paymentId: $paymentId,
             asset: $asset->value,
             expectedUnits: $expectedAmount->units(),
-            memo: $memo->toString(),
+            memo: $memo?->toString() ?? '',
             depositAddress: $depositAddress->toString(),
             expiresAt: $expiresAt->format(DateTimeInterface::ATOM),
         ));
@@ -156,7 +156,7 @@ final class CryptoDeposit
     /** @return DomainEvent[] */
     public function pullDomainEvents(): array
     {
-        $events           = $this->domainEvents;
+        $events             = $this->domainEvents;
         $this->domainEvents = [];
 
         return $events;
@@ -169,8 +169,8 @@ final class CryptoDeposit
         CryptoAsset $asset,
         NativeCryptoAmount $expectedAmount,
         int $fiatAmountKopecks,
-        TonAddress $depositAddress,
-        Memo $memo,
+        CryptoAddress $depositAddress,
+        ?Memo $memo,
         DateTimeImmutable $expiresAt,
         int $createdAtTimestamp,
         ?TxHash $txHash = null,
@@ -224,12 +224,12 @@ final class CryptoDeposit
         return $this->fiatAmountKopecks;
     }
 
-    public function depositAddress(): TonAddress
+    public function depositAddress(): CryptoAddress
     {
         return $this->depositAddress;
     }
 
-    public function memo(): Memo
+    public function memo(): ?Memo
     {
         return $this->memo;
     }

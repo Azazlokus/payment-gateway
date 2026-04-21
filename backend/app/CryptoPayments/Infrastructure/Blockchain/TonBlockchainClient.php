@@ -6,6 +6,8 @@ namespace App\CryptoPayments\Infrastructure\Blockchain;
 
 use App\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
 use App\CryptoPayments\Domain\Enums\CryptoAsset;
+use App\CryptoPayments\Domain\Enums\DepositMode;
+use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
 use App\CryptoPayments\Domain\ValueObjects\Memo;
 use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
 use App\CryptoPayments\Domain\ValueObjects\TonAddress;
@@ -37,9 +39,28 @@ final class TonBlockchainClient implements BlockchainClientInterface
         return [CryptoAsset::TON, CryptoAsset::USDT_TON];
     }
 
-    public function masterDepositAddress(): TonAddress
+    public function depositMode(): DepositMode
     {
-        return TonAddress::fromString($this->masterAddress);
+        return DepositMode::Memo;
+    }
+
+    public function masterDepositAddress(): CryptoAddress
+    {
+        return CryptoAddress::fromString(TonAddress::fromString($this->masterAddress)->toString());
+    }
+
+    /** @return string[] */
+    public function depositAddressPool(): array
+    {
+        return [];
+    }
+
+    public function findIncomingTransactionByAddress(
+        CryptoAddress $address,
+        CryptoAsset $asset,
+        DateTimeImmutable $since,
+    ): ?TransactionResult {
+        return null; // Not applicable for Memo-based mode
     }
 
     public function findIncomingTransaction(
@@ -65,6 +86,7 @@ final class TonBlockchainClient implements BlockchainClientInterface
         return match ($asset) {
             CryptoAsset::TON      => $this->fetchTonTransactions($memos, $since),
             CryptoAsset::USDT_TON => $this->fetchUsdtJettonTransfers($memos, $since),
+            default               => [],
         };
     }
 

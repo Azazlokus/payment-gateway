@@ -8,8 +8,10 @@ use App\CryptoPayments\Application\ACL\CryptoDepositToPaymentAdapter;
 use App\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
 use App\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
 use App\CryptoPayments\Domain\Contracts\PriceOracleInterface;
+use App\CryptoPayments\Infrastructure\Blockchain\BitcoinBlockchainClient;
 use App\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry;
 use App\CryptoPayments\Infrastructure\Blockchain\TonBlockchainClient;
+use App\CryptoPayments\Infrastructure\Blockchain\TronBlockchainClient;
 use App\CryptoPayments\Infrastructure\Observability\CryptoMetricsService;
 use App\CryptoPayments\Infrastructure\Persistence\EloquentCryptoDepositRepository;
 use App\CryptoPayments\Infrastructure\Pricing\CoinGeckoPriceOracle;
@@ -39,9 +41,29 @@ class CryptoServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->singleton(TronBlockchainClient::class, function () {
+            return new TronBlockchainClient(
+                apiUrl: (string) config('crypto.tron.api_url', 'https://api.trongrid.io'),
+                apiKey: (string) config('crypto.tron.api_key', ''),
+                usdtContract: (string) config('crypto.tron.usdt_contract', 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'),
+                addressPool: (array) config('crypto.tron.deposit_addresses', []),
+                logger: $this->app->make(PaymentLogger::class),
+            );
+        });
+
+        $this->app->singleton(BitcoinBlockchainClient::class, function () {
+            return new BitcoinBlockchainClient(
+                apiUrl: (string) config('crypto.bitcoin.api_url', 'https://mempool.space/api'),
+                addressPool: (array) config('crypto.bitcoin.deposit_addresses', []),
+                logger: $this->app->make(PaymentLogger::class),
+            );
+        });
+
         $this->app->singleton(BlockchainClientRegistry::class, function () {
             $registry = new BlockchainClientRegistry();
             $registry->register($this->app->make(TonBlockchainClient::class));
+            $registry->register($this->app->make(TronBlockchainClient::class));
+            $registry->register($this->app->make(BitcoinBlockchainClient::class));
 
             return $registry;
         });

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\CryptoPayments\Application\DTOs;
 
 use App\CryptoPayments\Domain\Aggregates\CryptoDeposit;
+use App\CryptoPayments\Domain\Enums\CryptoAsset;
 use DateTimeInterface;
 
 final readonly class CryptoDepositResultDTO
@@ -18,7 +19,7 @@ final readonly class CryptoDepositResultDTO
         public string $cryptoAmount,
         public int $fiatAmountKopecks,
         public string $depositAddress,
-        public string $memo,
+        public ?string $memo,
         public string $expiresAt,
         public string $qrPayload,
         public ?string $txHash,
@@ -26,16 +27,17 @@ final readonly class CryptoDepositResultDTO
 
     public static function fromAggregate(CryptoDeposit $deposit): self
     {
-        $address   = $deposit->depositAddress()->toNonBounceable()->toString();
-        $memoStr   = $deposit->memo()->toString();
-        $units     = $deposit->expectedAmount()->units();
+        $address = $deposit->depositAddress()->toString();
+        $memoStr = $deposit->memo()?->toString();
+        $units   = $deposit->expectedAmount()->units();
 
-        // TON: standard deep-link with amount in nanotons.
-        // USDT-TON: Jetton transfers don't use the ton:// amount param (amount is in micro-USDT,
-        // not nanotons), so we omit it — the wallet reads the amount from the Jetton transfer payload.
-        $qrPayload = $deposit->asset() === \App\CryptoPayments\Domain\Enums\CryptoAsset::TON
-            ? "ton://transfer/{$address}?amount={$units}&text={$memoStr}"
-            : "ton://transfer/{$address}?text={$memoStr}";
+        $qrPayload = match ($deposit->asset()) {
+            CryptoAsset::TON      => "ton://transfer/{$address}?amount={$units}&text={$memoStr}",
+            CryptoAsset::USDT_TON => "ton://transfer/{$address}?text={$memoStr}",
+            CryptoAsset::BTC      => sprintf('bitcoin:%s?amount=%s', $address, number_format($units / 1e8, 8, '.', '')),
+            CryptoAsset::TRX,
+            CryptoAsset::USDT_TRC20 => "tron:{$address}",
+        };
 
         return new self(
             depositId: $deposit->id()->toString(),
