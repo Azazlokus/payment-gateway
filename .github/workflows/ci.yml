@@ -18,6 +18,9 @@ jobs:
   lint:
     name: Code Style (Pint)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
@@ -29,8 +32,8 @@ jobs:
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.json') }}
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.json') }}
           restore-keys: composer-
 
       - name: Install dependencies
@@ -43,6 +46,9 @@ jobs:
   frontend:
     name: Frontend Build (Vue)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -50,9 +56,10 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+          cache-dependency-path: frontend/package.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build assets
         run: npm run build
@@ -61,6 +68,9 @@ jobs:
   analyse:
     name: Static Analysis (Larastan)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
@@ -72,8 +82,8 @@ jobs:
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.json') }}
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.json') }}
           restore-keys: composer-
 
       - name: Install dependencies
@@ -85,10 +95,13 @@ jobs:
       - name: Run Larastan
         run: ./vendor/bin/phpstan analyse --memory-limit=512M --no-progress
 
-  # ─── 3. Unit tests (no services) ────────────────────────────────────────────
+  # ─── 4. Unit tests (no services) ────────────────────────────────────────────
   test-unit:
     name: Unit Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
@@ -100,8 +113,8 @@ jobs:
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.json') }}
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.json') }}
           restore-keys: composer-
 
       - name: Install dependencies
@@ -110,10 +123,13 @@ jobs:
       - name: Run unit tests
         run: php vendor/bin/phpunit --testsuite=Unit --colors=always
 
-  # ─── 3. Feature tests (SQLite in-memory + Redis) ────────────────────────────
+  # ─── 5. Feature tests (SQLite in-memory + Redis) ────────────────────────────
   test-feature:
     name: Feature Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
 
     services:
       redis:
@@ -138,8 +154,8 @@ jobs:
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.json') }}
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.json') }}
           restore-keys: composer-
 
       - name: Install dependencies

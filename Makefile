@@ -18,7 +18,9 @@ DC_EXEC_TTY     := $(DOCKER_COMPOSE) exec $(APP_SERVICE)
 PHP             := $(DC_EXEC) php
 ARTISAN         := $(DC_EXEC) php artisan
 COMPOSER        := $(DC_EXEC) composer
-NPM             := $(DC_EXEC) npm
+
+# Frontend (runs locally via npm in ./frontend)
+NPM_FRONTEND    := npm --prefix frontend
 
 # Colors (ANSI)
 RESET  := \033[0m
@@ -32,7 +34,7 @@ GRAY   := \033[90m
 # ─── Phony targets ────────────────────────────────────────────────────────────
 
 .PHONY: help \
-        up down restart build rebuild logs ps \
+        up up-frontend down restart build rebuild logs ps \
         install setup first-run \
         composer-install composer-update composer-dump \
         npm-install npm-build npm-dev \
@@ -64,10 +66,15 @@ help: ## Show this help message
 ## Docker
 # =============================================================================
 
-up: ## Start all containers in detached mode
-	@printf "$(CYAN)Starting containers...$(RESET)\n"
+up: ## Start backend containers in detached mode (API only)
+	@printf "$(CYAN)Starting backend containers...$(RESET)\n"
 	@$(DOCKER_COMPOSE) up -d --remove-orphans
-	@printf "$(GREEN)Done.$(RESET) App: http://localhost:$${APP_PORT:-8000}\n"
+	@printf "$(GREEN)Done.$(RESET) API: http://localhost:$${APP_PORT:-8000}\n"
+
+up-frontend: ## Start all containers including the Vue frontend (profile: frontend)
+	@printf "$(CYAN)Starting all containers (with frontend)...$(RESET)\n"
+	@$(DOCKER_COMPOSE) --profile frontend up -d --remove-orphans
+	@printf "$(GREEN)Done.$(RESET) API: http://localhost:$${APP_PORT:-8000}  Frontend: http://localhost:$${FRONTEND_PORT:-3080}\n"
 
 down: ## Stop and remove containers
 	@printf "$(CYAN)Stopping containers...$(RESET)\n"
@@ -121,7 +128,6 @@ setup: ## Alias for first-run
 install: ## Install all dependencies (composer + npm)
 	@$(MAKE) composer-install
 	@$(MAKE) npm-install
-	@$(MAKE) npm-build
 
 key-generate: ## Generate application key
 	@$(ARTISAN) key:generate --no-interaction --force
@@ -151,15 +157,15 @@ composer-update: ## Update PHP dependencies
 composer-dump: ## Regenerate autoloader
 	@$(COMPOSER) dump-autoload --optimize
 
-npm-install: ## Install Node dependencies
-	@printf "$(CYAN)Installing Node dependencies...$(RESET)\n"
-	@$(NPM) install --ignore-scripts
+npm-install: ## Install frontend Node dependencies
+	@printf "$(CYAN)Installing frontend dependencies...$(RESET)\n"
+	@$(NPM_FRONTEND) install
 
 npm-build: ## Build frontend assets for production
-	@$(NPM) run build
+	@$(NPM_FRONTEND) run build
 
-npm-dev: ## Start Vite dev server (foreground)
-	@$(NPM) run dev
+npm-dev: ## Start Vite dev server locally (foreground)
+	@$(NPM_FRONTEND) run dev
 
 # =============================================================================
 ## Database
