@@ -57,7 +57,7 @@ class RetryPaymentTest extends TestCase
         $this->mockProvider();
         $id = $this->createPayment('Cancelled');
 
-        $response = $this->postJson("/api/payments/{$id}/retry", [
+        $response = $this->postJson("/api/v1/payments/{$id}/retry", [
             'return_url' => 'https://example.com/return',
         ]);
 
@@ -74,7 +74,7 @@ class RetryPaymentTest extends TestCase
     {
         $id = $this->createPayment('Pending');
 
-        $response = $this->postJson("/api/payments/{$id}/retry", [
+        $response = $this->postJson("/api/v1/payments/{$id}/retry", [
             'return_url' => 'https://example.com/return',
         ]);
 
@@ -86,7 +86,7 @@ class RetryPaymentTest extends TestCase
     {
         $id = $this->createPayment('Succeeded');
 
-        $response = $this->postJson("/api/payments/{$id}/retry", [
+        $response = $this->postJson("/api/v1/payments/{$id}/retry", [
             'return_url' => 'https://example.com/return',
         ]);
 
@@ -97,7 +97,7 @@ class RetryPaymentTest extends TestCase
     {
         $fakeId = PaymentId::generate()->toString();
 
-        $response = $this->postJson("/api/payments/{$fakeId}/retry", [
+        $response = $this->postJson("/api/v1/payments/{$fakeId}/retry", [
             'return_url' => 'https://example.com/return',
         ]);
 
@@ -109,7 +109,7 @@ class RetryPaymentTest extends TestCase
         $this->mockProvider();
         $originalId = $this->createPayment('Cancelled');
 
-        $this->postJson("/api/payments/{$originalId}/retry", [
+        $this->postJson("/api/v1/payments/{$originalId}/retry", [
             'return_url' => 'https://example.com/return',
         ]);
 

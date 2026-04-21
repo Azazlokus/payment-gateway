@@ -66,7 +66,7 @@ class RefundPaymentTest extends TestCase
         $id = $this->createSucceededPayment(10000);
         $this->mockRefundProvider();
 
-        $response = $this->postJson("/api/payments/{$id}/refund");
+        $response = $this->postJson("/api/v1/payments/{$id}/refund");
 
         $response->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Refunded')
@@ -79,7 +79,7 @@ class RefundPaymentTest extends TestCase
         $this->mockRefundProvider();
 
         // Не передаём amount — должен вернуть всю сумму
-        $response = $this->postJson("/api/payments/{$id}/refund", [
+        $response = $this->postJson("/api/v1/payments/{$id}/refund", [
             'reason' => 'Клиент передумал',
         ]);
 
@@ -94,7 +94,7 @@ class RefundPaymentTest extends TestCase
         $id = $this->createSucceededPayment(10000);
         $this->mockRefundProvider();
 
-        $response = $this->postJson("/api/payments/{$id}/refund", [
+        $response = $this->postJson("/api/v1/payments/{$id}/refund", [
             'amount' => 3000,
         ]);
 
@@ -107,11 +107,11 @@ class RefundPaymentTest extends TestCase
         $id = $this->createSucceededPayment(10000);
         $this->mockRefundProvider();
 
-        $this->postJson("/api/payments/{$id}/refund", ['amount' => 4000])
+        $this->postJson("/api/v1/payments/{$id}/refund", ['amount' => 4000])
             ->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Succeeded');
 
-        $this->postJson("/api/payments/{$id}/refund", ['amount' => 6000])
+        $this->postJson("/api/v1/payments/{$id}/refund", ['amount' => 6000])
             ->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Refunded');
     }
@@ -122,11 +122,11 @@ class RefundPaymentTest extends TestCase
         $this->mockRefundProvider();
 
         // Сначала частичный рефанд
-        $this->postJson("/api/payments/{$id}/refund", ['amount' => 8000])
+        $this->postJson("/api/v1/payments/{$id}/refund", ['amount' => 8000])
             ->assertStatus(Response::HTTP_OK);
 
         // Теперь пытаемся вернуть больше остатка
-        $response = $this->postJson("/api/payments/{$id}/refund", ['amount' => 5000]);
+        $response = $this->postJson("/api/v1/payments/{$id}/refund", ['amount' => 5000]);
 
         $response->assertStatus(Response::HTTP_CONFLICT);
     }
@@ -137,7 +137,7 @@ class RefundPaymentTest extends TestCase
     {
         $fakeId = PaymentId::generate()->toString();
 
-        $response = $this->postJson("/api/payments/{$fakeId}/refund");
+        $response = $this->postJson("/api/v1/payments/{$fakeId}/refund");
 
         $response->assertStatus(Response::HTTP_NOT_FOUND);
     }
@@ -162,7 +162,7 @@ class RefundPaymentTest extends TestCase
         });
         $this->app->make(PaymentProviderRegistry::class)->register($mockProvider);
 
-        $response = $this->postJson("/api/payments/{$id}/refund");
+        $response = $this->postJson("/api/v1/payments/{$id}/refund");
 
         $response->assertStatus(Response::HTTP_CONFLICT);
     }
@@ -171,7 +171,7 @@ class RefundPaymentTest extends TestCase
     {
         $id = $this->createSucceededPayment();
 
-        $response = $this->postJson("/api/payments/{$id}/refund", ['amount' => 50]);
+        $response = $this->postJson("/api/v1/payments/{$id}/refund", ['amount' => 50]);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
             ->assertJsonValidationErrors(['amount']);
@@ -195,11 +195,11 @@ class RefundPaymentTest extends TestCase
         });
         $this->app->make(PaymentProviderRegistry::class)->register($mockProvider);
 
-        $first = $this->postJson("/api/payments/{$id}/refund", [], ['Idempotency-Key' => $key]);
+        $first = $this->postJson("/api/v1/payments/{$id}/refund", [], ['Idempotency-Key' => $key]);
         $first->assertStatus(Response::HTTP_OK)->assertJsonPath('status', 'Refunded');
 
         // Второй запрос — идёт из кэша, провайдер не вызывается
-        $second = $this->postJson("/api/payments/{$id}/refund", [], ['Idempotency-Key' => $key]);
+        $second = $this->postJson("/api/v1/payments/{$id}/refund", [], ['Idempotency-Key' => $key]);
         $second->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Refunded')
             ->assertJsonPath('id', $first->json('id'));
@@ -219,11 +219,11 @@ class RefundPaymentTest extends TestCase
         });
         $this->app->make(PaymentProviderRegistry::class)->register($mockProvider);
 
-        $this->postJson("/api/payments/{$id}/refund", ['amount' => 4000], ['Idempotency-Key' => (string) Str::uuid()])
+        $this->postJson("/api/v1/payments/{$id}/refund", ['amount' => 4000], ['Idempotency-Key' => (string) Str::uuid()])
             ->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Succeeded');
 
-        $this->postJson("/api/payments/{$id}/refund", ['amount' => 6000], ['Idempotency-Key' => (string) Str::uuid()])
+        $this->postJson("/api/v1/payments/{$id}/refund", ['amount' => 6000], ['Idempotency-Key' => (string) Str::uuid()])
             ->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Refunded');
     }
@@ -233,7 +233,7 @@ class RefundPaymentTest extends TestCase
         $fakeId = PaymentId::generate()->toString();
         $key = (string) Str::uuid();
 
-        $this->postJson("/api/payments/{$fakeId}/refund", [], ['Idempotency-Key' => $key])
+        $this->postJson("/api/v1/payments/{$fakeId}/refund", [], ['Idempotency-Key' => $key])
             ->assertStatus(Response::HTTP_NOT_FOUND);
 
         // Ключ не должен попасть в кэш при ошибке

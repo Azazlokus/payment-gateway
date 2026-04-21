@@ -6,16 +6,21 @@ REST API платёжного шлюза на Laravel 13 с поддержкой
 
 - [Возможности](#возможности)
 - [Стек технологий](#стек-технологий)
+- [Структура репозитория](#структура-репозитория)
 - [Архитектура](#архитектура)
 - [Быстрый старт](#быстрый-старт)
 - [Конфигурация](#конфигурация)
-- [API](#api)
+- [API v1](#api-v1)
 - [Провайдеры](#провайдеры)
 - [Вебхуки](#вебхуки)
+- [Крипто-депозиты (TON / USDT-TON)](#крипто-депозиты-ton--usdt-ton)
+- [Диспуты и чарджбэки](#диспуты-и-чарджбэки)
 - [Очереди и Horizon](#очереди-и-horizon)
+- [Observability](#observability)
 - [Тесты](#тесты)
 - [CI/CD](#cicd)
 - [Makefile](#makefile)
+- [Структура БД](#структура-бд)
 
 ---
 
@@ -26,18 +31,19 @@ REST API платёжного шлюза на Laravel 13 с поддержкой
 - **Рекуррентные платежи** (YooKassa): сохранение метода оплаты и списание без редиректа
 - **Чеки 54-ФЗ** (YooKassa): передача позиций, налоговых кодов, данных покупателя
 - **QR-коды СБП**: динамические QR через НСПК API
+- **3-D Secure**: событие `PaymentRequiresThreeDSecure`, поля `three_ds_required` / `three_ds_challenge_url`
+- **Диспуты / чарджбэки**: агрегат `Dispute` со статусами Filed → Won / Lost
+- **Крипто-депозиты** (TON / USDT-TON): приём оплаты в блокчейне TON, поллинг через TonCenter API
 - **Идемпотентность** создания и возврата по заголовку `Idempotency-Key`
-- Асинхронная обработка вебхуков с экспоненциальным backoff (Horizon + Redis)
-- Полный **audit trail** через `spatie/laravel-activitylog`
-- Structured logging с Correlation ID на каждый запрос
-- IP-фильтрация вебхуков по официальным CIDR провайдеров (YooKassa, Robokassa, Альфа-Банк)
-- HMAC-SHA256 верификация вебхуков (CloudPayments) и X-Api-Key (СБП)
-- Исходящие уведомления (outbound webhooks) с HMAC-подписью
+- Асинхронная обработка вебхуков (Horizon + Redis), 5 попыток с экспоненциальным backoff
+- Structured logging с Correlation ID, audit trail через `spatie/laravel-activitylog`
+- IP-фильтрация вебхуков по официальным CIDR; HMAC-SHA256 (CloudPayments), X-Api-Key (СБП)
 - Алерты в **Slack** при исчерпании попыток обработки вебхука
-- **Prometheus метрики** + **Grafana** дашборды через Docker Compose
-- Swagger UI / OpenAPI 3.0 документация
+- **Стандартизированные ошибки**: единый формат `{code, message, trace_id}`
+- **Версионирование API**: все бизнес-маршруты под `/api/v1/`
+- **Prometheus метрики** + **Grafana** дашборды
 - **PHPStan level 6** + **Laravel Pint** в CI
-- **Vue 3 SPA** фронтенд: дашборд платежей, создание, детали, рефанды
+- **Vue 3 SPA** фронтенд: дашборд, создание платежей, детали, крипто-депозиты
 
 ---
 
@@ -59,125 +65,138 @@ REST API платёжного шлюза на Laravel 13 с поддержкой
 
 ---
 
+## Структура репозитория
+
+Монорепозиторий: backend и frontend живут в отдельных папках и деплоятся как независимые Docker-контейнеры.
+
+```
+payment-gateway/
+├── backend/                  # Laravel 13 (PHP 8.4)
+│   ├── app/
+│   │   ├── Payments/         # Bounded context: платежи, диспуты
+│   │   └── CryptoPayments/   # Bounded context: TON / USDT-TON депозиты
+│   ├── config/
+│   ├── database/migrations/
+│   ├── routes/
+│   │   └── api.php           # Все API маршруты (v1 + unversioned)
+│   └── tests/
+│       ├── Unit/             # PHPUnit без БД (Mockery + Http::fake)
+│       └── Feature/          # SQLite in-memory + Redis
+│
+├── frontend/                 # Vue 3 SPA (Vite + Tailwind)
+│   └── src/
+│       ├── api/payments.js   # axios wrapper → /api/v1/
+│       ├── pages/
+│       │   ├── DashboardPage.vue
+│       │   ├── CreatePaymentPage.vue
+│       │   ├── PaymentDetailPage.vue
+│       │   ├── CryptoDepositPage.vue
+│       │   └── MetricsDashboardPage.vue
+│       └── router/index.js
+│
+├── docker/
+│   ├── nginx/default.conf    # reverse proxy для backend
+│   └── frontend/nginx.conf   # статика Vue SPA
+│
+├── docker-compose.yml
+└── Makefile
+```
+
+---
+
 ## Архитектура
 
-Проект построен по принципам **Clean Architecture** с элементами **DDD**.
+Проект построен по принципам **Clean Architecture + DDD**. Каждый bounded context полностью независим.
+
+### Bounded context `Payments`
 
 ```
 app/Payments/
-├── Domain/                      # Бизнес-логика, не зависит от фреймворка
+├── Domain/
 │   ├── Aggregates/
-│   │   └── Payment.php          # Главный агрегат: статусы, рефанды, события
-│   ├── Contracts/
-│   │   ├── PaymentProviderInterface.php
-│   │   ├── PaymentRepositoryInterface.php
-│   │   └── ProviderResponse.php
-│   ├── Entities/
-│   │   ├── PaymentAttempt.php
-│   │   └── RefundRequest.php
-│   ├── Enums/
-│   │   ├── Currency.php
-│   │   └── PaymentStatus.php    # Pending | Succeeded | Cancelled | Refunded
-│   ├── Events/                  # Доменные события (чистый PHP, без Laravel)
-│   │   ├── PaymentWasCreated.php
-│   │   ├── PaymentWasSucceeded.php
-│   │   ├── PaymentWasCancelled.php
-│   │   └── PaymentWasRefunded.php
-│   ├── Exceptions/
-│   │   ├── PaymentException.php
-│   │   └── InvalidPaymentStateException.php
-│   └── ValueObjects/
-│       ├── Money.php            # Сумма в копейках + валюта
-│       ├── PaymentId.php        # ULID
-│       ├── ExternalId.php       # ID у провайдера
-│       ├── AttemptId.php
-│       └── RefundId.php
+│   │   ├── Payment.php       # Главный агрегат (final): статусы, возвраты, 3DS
+│   │   └── Dispute.php       # Агрегат диспута: Filed → Won / Lost
+│   ├── Contracts/            # PaymentProviderInterface, PaymentRepositoryInterface, ...
+│   ├── Enums/                # PaymentStatus, DisputeStatus, Currency
+│   ├── Events/               # PaymentWas*, PaymentRequiresThreeDSecure, DisputeWas*
+│   ├── Exceptions/           # InvalidPaymentStateException (409), WebhookVerificationFailedException (403), ...
+│   └── ValueObjects/         # Money (копейки), PaymentId (ULID), DisputeId, ...
 │
-├── Application/                 # Сценарии использования
-│   ├── Bus/
-│   │   └── CommandBus.php       # Pipeline: Validate → Idempotency → Log → Handle
-│   ├── Commands/
-│   │   ├── CreatePayment/
-│   │   ├── CancelPayment/
-│   │   ├── RefundPayment/       # Поддержка Idempotency-Key
-│   │   └── SyncPayment/
-│   ├── DTOs/
-│   │   ├── PaymentResultDTO.php
-│   │   ├── CreatePaymentOptionsDTO.php
-│   │   ├── ReceiptDTO.php
-│   │   └── ReceiptItemDTO.php
-│   └── Pipeline/
-│       ├── EnforceIdempotency.php
-│       ├── LogCommand.php
-│       └── ValidateCommand.php
+├── Application/
+│   ├── Bus/CommandBus.php    # Pipeline: Validate → Idempotency → Log → Handle
+│   └── Commands/             # CreatePayment, CancelPayment, RefundPayment, SyncPayment
 │
-├── Infrastructure/              # Адаптеры к внешнему миру
+├── Infrastructure/
+│   ├── Jobs/                 # ProcessXxxWebhookJob (ShouldQueue, 5 попыток)
+│   ├── Observability/        # PaymentLogger, MetricsService, NotificationService
+│   ├── Persistence/          # EloquentPaymentRepository, EloquentDisputeRepository
+│   └── Providers/            # YooKassa, Robokassa, CloudPayments, SBP, AlfaBank
+│
+└── Presentation/Http/
+    ├── Controllers/          # PaymentController, DisputeController, WebhookControllers, ...
+    ├── Requests/             # CreatePaymentRequest, RefundPaymentRequest
+    └── Resources/            # PaymentResource
+```
+
+### Bounded context `CryptoPayments`
+
+```
+app/CryptoPayments/
+├── Domain/
+│   ├── Aggregates/CryptoDeposit.php       # Awaiting → Confirmed / Overpaid / Expired
+│   ├── Contracts/                          # BlockchainClientInterface, PriceOracleInterface
+│   ├── Enums/                              # CryptoAsset (TON, USDT_TON), CryptoDepositStatus
+│   ├── Events/                             # DepositAwaitingPayment, DepositConfirmed, ...
+│   └── ValueObjects/                       # TonAddress, Memo, NativeCryptoAmount, TxHash
+│
+├── Application/
+│   ├── ACL/CryptoDepositToPaymentAdapter.php   # Anti-corruption layer → Payments context
+│   └── Commands/CreateCryptoDeposit/
+│
+├── Infrastructure/
+│   ├── Blockchain/
+│   │   ├── TonBlockchainClient.php         # TON via v2 /getTransactions
+│   │   │                                   # USDT-TON via v3 /jetton/transfers
+│   │   └── BlockchainClientRegistry.php
 │   ├── Jobs/
-│   │   ├── ProcessYooKassaWebhookJob.php
-│   │   └── ProcessRobokassaWebhookJob.php
-│   ├── Observability/
-│   │   ├── PaymentLogger.php    # Structured logging + enrich с контекстом
-│   │   └── CorrelationIdMiddleware.php
-│   ├── Persistence/
-│   │   ├── EloquentPaymentRepository.php
-│   │   └── Models/
-│   │       ├── PaymentModel.php
-│   │       └── PaymentEventModel.php
-│   └── Providers/
-│       ├── YooKassaProvider.php
-│       └── RobokassaProvider.php
+│   │   ├── PollCryptoDepositsJob.php       # каждые 15 сек — опрос блокчейна
+│   │   └── ExpireCryptoDepositsJob.php     # каждую минуту — экспирация
+│   ├── Pricing/CoinGeckoPriceOracle.php    # RUB → TON/USDT конвертация
+│   └── Persistence/EloquentCryptoDepositRepository.php
 │
-└── Presentation/                # HTTP-слой
-    └── Http/
-        ├── Controllers/
-        │   ├── PaymentController.php
-        │   ├── WebhookController.php           # YooKassa JSON webhook
-        │   ├── RobokassaWebhookController.php  # Robokassa form POST webhook
-        │   ├── HealthController.php
-        │   └── ApiDocController.php            # OpenAPI schemas
-        ├── Requests/
-        │   ├── CreatePaymentRequest.php
-        │   └── RefundPaymentRequest.php
-        └── Resources/
-            └── PaymentResource.php
+└── Presentation/Http/Controllers/CryptoDepositController.php
 ```
 
 ### Жизненный цикл платежа
 
 ```
-POST /payments
+POST /api/v1/payments
     → CommandBus (Validate → Idempotency → Log)
     → CreatePaymentHandler
-        → Payment::create()           # доменный агрегат
-        → repository->save()          # первое сохранение (status=Pending)
-        → provider->createPayment()   # запрос к YooKassa / Robokassa
-        → payment->assignExternalData()
-        → repository->save()          # обновление с external_id и confirmation_url
+        → Payment::create()           # агрегат, status=Pending
+        → provider->createPayment()   # запрос к провайдеру
+        → repository->save()
     ← PaymentResultDTO { id, status, confirmation_url, ... }
 
 Клиент переходит по confirmation_url → оплачивает → провайдер шлёт webhook
 
-POST /webhook/yookassa (или /webhook/robokassa)
-    → verifyWebhook()     # проверка IP + подписи
+POST /api/webhook/{provider}
+    → verifyWebhook()                 # IP / HMAC / X-Api-Key
     → ProcessWebhookJob::dispatch()   # очередь Horizon
     ← 200 OK (немедленно)
 
-ProcessWebhookJob (async, Horizon)
-    → repository->findBy...()
+ProcessWebhookJob (async)
     → payment->markAsSucceeded() / cancel() / refund()
-    → repository->save()
-    → activity log
+    → repository->save() + activity log
 ```
 
 ### Состояния платежа
 
 ```
-Pending ──→ Succeeded ──→ Refunded  (частичный возврат: остаётся Succeeded до полной суммы)
+Pending ──→ Succeeded ──→ Refunded  (частичный возврат: Succeeded до полной суммы)
    │
    └──→ Cancelled
 ```
-
-Переход в терминальный статус (Succeeded / Cancelled / Refunded) необратим — агрегат выбрасывает `InvalidPaymentStateException`.
 
 ---
 
@@ -186,125 +205,133 @@ Pending ──→ Succeeded ──→ Refunded  (частичный возвра
 ### Требования
 
 - Docker и Docker Compose
-- Make (опционально, для удобства)
+- Make (опционально)
 
 ### Установка
 
 ```bash
-# 1. Клонировать репозиторий
-git clone <repo-url>
-cd payment-gateway
+git clone <repo-url> && cd payment-gateway
 
-# 2. Скопировать и настроить .env
-cp .env.example .env
+# Backend
+cp backend/.env.example backend/.env
+docker compose up -d
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate
 
-# 3. Поднять контейнеры
-make up
-
-# 4. Сгенерировать ключ приложения
-make artisan CMD="key:generate"
-
-# 5. Выполнить миграции
-make migrate
-
-# 6. (Опционально) Открыть Swagger UI
-open http://localhost:8000/api/documentation
+# Frontend (опционально, отдельный контейнер)
+docker compose --profile frontend up -d frontend
 ```
 
 Сервисы после запуска:
 
 | Сервис | URL |
 |---|---|
-| API | http://localhost:8000/api |
+| API v1 | http://localhost:8000/api/v1 |
+| Vue SPA | http://localhost:3080 |
 | Swagger UI | http://localhost:8000/api/documentation |
 | Horizon dashboard | http://localhost:8000/horizon |
 | Adminer (БД) | http://localhost:8080 |
+| Grafana | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
 
 ---
 
 ## Конфигурация
 
-### Переменные окружения
+### Основные переменные окружения
 
 ```dotenv
-# Активный провайдер: yookassa | robokassa
+# Платёжные провайдеры
 PAYMENT_PROVIDER=yookassa
 
-# YooKassa
 YOOKASSA_SHOP_ID=100500
 YOOKASSA_SECRET_KEY=test_xxxxx
 
-# Robokassa
 ROBOKASSA_LOGIN=your_login
-ROBOKASSA_PASSWORD1=your_password1   # для создания платежей и возвратов
-ROBOKASSA_PASSWORD2=your_password2   # для верификации вебхуков
-ROBOKASSA_IS_TEST=true               # false в продакшене
+ROBOKASSA_PASSWORD1=your_password1
+ROBOKASSA_PASSWORD2=your_password2
+ROBOKASSA_IS_TEST=true
 
-# Slack-алерты при сбое обработки вебхука
+CLOUDPAYMENTS_PUBLIC_ID=pk_xxxxx
+CLOUDPAYMENTS_API_SECRET=your_secret
+
+SBP_MERCHANT_ID=your_merchant
+SBP_API_KEY=your_api_key
+SBP_WEBHOOK_SECRET=your_secret
+
+ALFABANK_LOGIN=your_login
+ALFABANK_PASSWORD=your_password
+
+# TON / Крипто-депозиты
+TON_MASTER_ADDRESS=UQA...           # адрес для приёма депозитов
+TON_API_KEY=                        # TonCenter API key (опционально, выше лимиты)
+TON_API_URL=https://toncenter.com/api/v2
+TON_API_V3_URL=https://toncenter.com/api/v3
+TON_USDT_JETTON_MASTER=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs
+TON_DEPOSIT_TTL_MINUTES=20
+
+# Observability
 SLACK_WEBHOOK_URL=https://hooks.slack.com/...
-
-# Horizon dashboard: разрешённые IP в продакшене (через запятую)
-HORIZON_ALLOWED_IPS=1.2.3.4,5.6.7.8
+GRAFANA_USER=admin
+GRAFANA_PASSWORD=secret
 ```
-
-### Переключение провайдера
-
-Изменить `PAYMENT_PROVIDER` в `.env` — без изменения кода. Вся бизнес-логика не знает о конкретном провайдере.
 
 ---
 
-## API
+## API v1
 
 ### Базовый URL
 
 ```
-http://localhost:8000/api
+http://localhost:8000/api/v1
 ```
 
-### Эндпоинты
+Все бизнес-маршруты версионированы. Инфраструктурные эндпоинты (`/health`, `/metrics`, `/webhook/*`) — без версии, т.к. Prometheus и провайдеры используют фиксированные URL.
 
-#### `GET /payments`
+### Заголовки
+
+| Заголовок | Описание |
+|---|---|
+| `X-Correlation-Id` | Передаётся в структурированные логи как `trace_id`. Если не указан — генерируется автоматически |
+| `Idempotency-Key` | UUID. Защищает `POST /payments` и `POST /payments/{id}/refund` от двойного исполнения |
+
+### Эндпоинты — Платежи
+
+#### `GET /api/v1/payments`
 
 Список платежей с пагинацией.
 
 | Параметр | Тип | Описание |
 |---|---|---|
-| `status` | string | Фильтр: `Pending`, `Succeeded`, `Cancelled`, `Refunded` |
+| `status` | string | `Pending` / `Succeeded` / `Cancelled` / `Refunded` |
+| `provider` | string | `yookassa` / `robokassa` / `cloudpayments` / `sbp` / `alfabank` |
 | `from_date` | date | Дата от (Y-m-d) |
 | `to_date` | date | Дата до (Y-m-d) |
-| `per_page` | int | Размер страницы (1–100, default: 15) |
+| `per_page` | int | 1–100, default: 15 |
 | `page` | int | Номер страницы |
 
----
+#### `GET /api/v1/payments/export`
 
-#### `POST /payments`
+CSV-экспорт платежей (streaming). Throttle: 10 запросов/мин.
+
+#### `POST /api/v1/payments`
 
 Создать платёж.
 
-**Заголовки:**
-
-| Заголовок | Описание |
-|---|---|
-| `Idempotency-Key` | UUID (опционально). Повторный запрос с тем же ключом вернёт существующий платёж без обращения к провайдеру |
-
-**Тело запроса:**
-
 ```json
 {
-  "amount": 10000,
+  "provider":    "yookassa",
+  "amount":      10000,
+  "currency":    "RUB",
   "description": "Оплата заказа №1234",
-  "return_url": "https://example.com/payment/success",
-  "metadata": { "order_id": "1234" },
+  "return_url":  "https://example.com/payment/success",
+  "metadata":    { "order_id": "1234" },
 
-  // Опционально (YooKassa)
-  "payment_method_type": "bank_card",
-  "confirmation_type": "redirect",
+  // Опционально — YooKassa
   "save_payment_method": false,
+  "payment_method_id":   "saved-method-uuid",
 
-  // Рекуррентное списание (YooKassa)
-  "payment_method_id": "saved-method-uuid",
-
-  // Чек 54-ФЗ (YooKassa)
+  // Чек 54-ФЗ — YooKassa
   "receipt": {
     "customer": { "email": "user@example.com" },
     "items": [{
@@ -317,162 +344,207 @@ http://localhost:8000/api
 }
 ```
 
-> **Robokassa:** `confirmation_url` в ответе — прямая ссылка для редиректа клиента. `external_id` содержит внутренний ULID как placeholder; реальный `InvId` устанавливается при обработке вебхука.
-
----
-
-#### `GET /payments/{id}`
+#### `GET /api/v1/payments/{id}`
 
 Получить платёж по ULID.
 
+#### `POST /api/v1/payments/{id}/cancel`
+
+Отменить. Только статус `Pending` → `409` при терминальном.
+
+#### `POST /api/v1/payments/{id}/refund`
+
+```json
+{ "amount": 5000, "reason": "Возврат по заявке" }
+```
+
+Если `amount` не указан — полный возврат. Частичные возвраты аккумулируются.
+
+#### `POST /api/v1/payments/{id}/sync`
+
+Синхронизировать статус с провайдером.
+
+#### `POST /api/v1/payments/{id}/retry`
+
+Повторить создание платежа у провайдера (при сбое на стороне провайдера).
+
+#### `POST /api/v1/payments/{id}/resync`
+
+Принудительная синхронизация через job (асинхронно).
+
 ---
 
-#### `POST /payments/{id}/cancel`
+### Эндпоинты — Диспуты
 
-Отменить платёж. Работает только для статуса `Pending`. Возвращает `409` при терминальном статусе.
+#### `GET /api/v1/payments/{id}/disputes`
+
+Список диспутов по платежу.
+
+#### `POST /api/v1/payments/{id}/disputes`
+
+Открыть диспут.
+
+```json
+{ "amount": 50000, "reason": "Товар не получен" }
+```
+
+#### `GET /api/v1/disputes/{id}`
+
+Получить диспут по ID.
+
+#### `POST /api/v1/disputes/{id}/resolve`
+
+Разрешить диспут.
+
+```json
+{ "resolution": "Won", "note": "Доставка подтверждена треком" }
+```
+
+`resolution`: `Won` (победа мерчанта) / `Lost`.
 
 ---
 
-#### `POST /payments/{id}/refund`
+### Эндпоинты — Крипто-депозиты
 
-Создать возврат. Работает только для статуса `Succeeded`.
+#### `POST /api/v1/crypto/deposits`
 
-**Заголовки:** `Idempotency-Key` — защита от двойного списания при сетевых ретраях.
+Создать крипто-депозит. Возвращает адрес и memo для перевода.
 
 ```json
 {
-  "amount": 5000,   // копейки; если не указан — полный возврат
-  "reason": "Возврат по заявке клиента"
+  "payment_id":          "order-1234",
+  "fiat_amount_kopecks": 50000,
+  "asset":               "TON"
 }
 ```
 
-**Частичные возвраты:** сумма аккумулируется. Статус меняется на `Refunded` только когда сумма возвратов равна сумме платежа.
+`asset`: `TON` или `USDT_TON`. Минимум `fiat_amount_kopecks`: 100 (1 рубль).
 
----
-
-#### `POST /payments/{id}/sync`
-
-Синхронизировать статус с провайдером (polling).
-
-> **Robokassa:** polling не поддерживается, вернёт `422`.
-
----
-
-#### `GET /health`
+**Ответ:**
 
 ```json
-{ "status": "ok", "db": "ok" }
+{
+  "depositId":          "01HXXXXX...",
+  "paymentId":          "order-1234",
+  "status":             "awaiting",
+  "asset":              "TON",
+  "expectedUnits":      125000000,
+  "cryptoAmount":       "0.125000000",
+  "fiatAmountKopecks":  50000,
+  "depositAddress":     "UQA...",
+  "memo":               "748291836",
+  "expiresAt":          "2026-04-21T15:30:00+00:00",
+  "qrPayload":          "ton://transfer/UQA...?amount=125000000&text=748291836",
+  "txHash":             null
+}
 ```
+
+Клиент переводит ровно `expectedUnits` с комментарием `memo` на `depositAddress`. Поллинг — каждые 15 сек через `GET /deposits/{id}`.
+
+#### `GET /api/v1/crypto/deposits/{id}`
+
+Статус депозита. Когда `status` станет `confirmed` — оплата зачтена.
+
+---
+
+### Инфраструктурные эндпоинты (без версии)
+
+| Метод | URL | Описание |
+|---|---|---|
+| GET | `/api/health` | Liveness probe: `{"status":"ok","db":"ok"}` |
+| GET | `/api/metrics` | Prometheus text format |
+
+---
+
+### Формат ошибок
+
+```json
+{
+  "code":     "invalid_payment_state",
+  "message":  "Payment 01HV... is already in terminal status: Succeeded",
+  "trace_id": "a1b2c3d4-0000-0000-0000-000000000000"
+}
+```
+
+| `code` | HTTP | Причина |
+|---|---|---|
+| `payment_error` | 422 | Ошибка бизнес-логики |
+| `invalid_payment_state` | 409 | Недопустимый переход состояния |
+| `idempotency_violation` | 409 | Коллизия Idempotency-Key |
+| `webhook_verification_failed` | 403 | Невалидная подпись / IP вебхука |
+| `throttle_exceeded` | 429 | Превышен rate limit |
+| `not_found` | 404 | Ресурс не найден |
 
 ---
 
 ## Провайдеры
 
-### YooKassa
-
-**Настройка:** `shop_id` и `secret_key` из [личного кабинета YooKassa](https://yookassa.ru/my).
-
-| Возможность | Поддержка |
-|---|---|
-| Методы оплаты | Карта, ЮMoney, СБП, Сбербанк, Тинькофф, и др. |
-| Типы подтверждения | `redirect`, `embedded`, `qr`, `mobile_application` |
-| Рекуррентные платежи | ✅ |
-| Чеки 54-ФЗ | ✅ |
-| Возвраты | ✅ (частичные и полные) |
-| Polling статуса | ✅ |
-
-### Robokassa
-
-**Настройка:** Создать магазин в [личном кабинете Robokassa](https://merchant.robokassa.ru). Указать `ResultURL = https://yourdomain.com/api/webhook/robokassa`.
-
-| Возможность | Поддержка |
-|---|---|
-| Методы оплаты | Карты, электронные кошельки, терминалы, СБП |
-| Типы подтверждения | `redirect` (только) |
-| Рекуррентные платежи | ❌ |
-| Чеки 54-ФЗ | ❌ (в данной реализации) |
-| Возвраты | ✅ |
-| Polling статуса | ❌ (только вебхуки) |
-
-### СБП
-
-Интеграция через банк-эквайер с НСПК-совместимым API. Платёж — динамический QR-код.
-
-**Настройка:** Получить `merchant_id`, `api_key` и `webhook_secret` у банка-партнёра. Настроить URL вебхука: `https://yourdomain.com/api/webhook/sbp`.
-
-| Возможность | Поддержка |
-|---|---|
-| Подтверждение | QR-код / deep link (`https://qr.nspk.ru/...`) |
-| Рекуррентные платежи | ❌ |
-| Возвраты | ✅ |
-| Polling статуса | ✅ |
-
-> `confirmation_url` в ответе содержит QR-payload — строку для рендеринга QR-кода или deep link для мобильных приложений.
-
-### Альфа-Банк
-
-Интернет-эквайринг Альфа-Банка. Тестовый стенд: `https://alfa.rbsuat.com/payment/rest`.
-
-**Настройка:** Получить `login` и `password` в личном кабинете. Настроить URL вебхука: `https://yourdomain.com/api/webhook/alfabank`.
-
-| Возможность | Поддержка |
-|---|---|
-| Методы оплаты | Банковские карты |
-| Типы подтверждения | `redirect` |
-| Рекуррентные платежи | ❌ |
-| Возвраты | ✅ |
-| Polling статуса | ✅ |
+| Провайдер | Верификация вебхука | Возвраты | Polling | Рекуррентные |
+|---|---|---|---|---|
+| YooKassa | IP CIDR | ✅ частичные | ✅ | ✅ |
+| Robokassa | IP + MD5 | ✅ | ❌ | ❌ |
+| CloudPayments | HMAC-SHA256 | ✅ | ✅ | ❌ |
+| СБП | X-Api-Key | ✅ | ✅ | ❌ |
+| Альфа-Банк | IP CIDR + поля | ✅ | ✅ | ❌ |
 
 ---
 
 ## Вебхуки
 
-### Сравнительная таблица провайдеров
+Все вебхуки — **без версии** (`/api/webhook/*`). Менять URL у провайдера при обновлении API не нужно.
 
-| Провайдер | Подтверждение | Возвраты | Polling | Вебхук формат | Верификация |
-|---|---|---|---|---|---|
-| YooKassa | redirect / embedded / qr / mobile | ✅ частичные | ✅ | JSON | IP CIDR |
-| Robokassa | redirect | ✅ | ❌ | Form POST | IP + MD5 |
-| СБП | QR / deep link | ✅ | ✅ | JSON | HMAC заголовок |
-| Альфа-Банк | redirect | ✅ | ✅ | Form POST | Поля payload |
+| Провайдер | URL | Формат |
+|---|---|---|
+| YooKassa | `POST /api/webhook/yookassa` | JSON |
+| Robokassa | `POST /api/webhook/robokassa` | Form POST, ответ `OK{InvId}` |
+| СБП | `POST /api/webhook/sbp` | JSON |
+| Альфа-Банк | `POST /api/webhook/alfabank` | Form POST |
+| CloudPayments | `POST /api/webhook/cloudpayments` | JSON, ответ `{code:0}` |
+
+**Надёжность:** 5 попыток, backoff 10s → 30s → 60s → 120s → 300s. При исчерпании — Slack алерт.
 
 ---
 
-### YooKassa — `POST /api/webhook/yookassa`
+## Крипто-депозиты (TON / USDT-TON)
 
-**Формат:** JSON  
-**Верификация:** IP-фильтрация по официальным CIDR
+Приём криптовалютных платежей без кастодиального кошелька — клиент переводит средства напрямую на ваш адрес.
 
-| Событие | Действие |
-|---|---|
-| `payment.succeeded` | `payment->markAsSucceeded()` |
-| `payment.canceled` | `payment->cancel()` |
-| `refund.succeeded` | `payment->refund()` с суммой из вебхука |
+### Как это работает
 
-### Robokassa — `POST /api/webhook/robokassa`
+1. `POST /api/v1/crypto/deposits` → создаётся депозит с уникальным `memo` (числовой комментарий) и TTL 20 мин
+2. Клиент переводит указанную сумму на `depositAddress` с комментарием `memo`
+3. `PollCryptoDepositsJob` каждые 15 сек опрашивает TonCenter API
+   - **TON**: `/getTransactions` (v2) — читает `in_msg.value` + комментарий
+   - **USDT-TON**: `/jetton/transfers` (v3) — парсит Jetton-перевод без декодирования BOC
+4. При совпадении memo+сумма — депозит подтверждается, событие `DepositConfirmed` уходит в `CryptoDepositToPaymentAdapter`
 
-**Формат:** `application/x-www-form-urlencoded`  
-**Верификация:** IP-фильтрация + MD5-подпись (`Password#2`)  
-**Ответ:** Plain-text `OK{InvId}` (обязательно, иначе Robokassa повторит запрос)
+### Статусы депозита
 
-### СБП — `POST /api/webhook/sbp`
+```
+awaiting ──→ confirmed
+    │──→ overpaid
+    └──→ expired   (по TTL, ExpireCryptoDepositsJob каждую минуту)
+```
 
-**Формат:** JSON  
-**Верификация:** заголовок `X-Api-Key` сверяется с `SBP_WEBHOOK_SECRET`  
-**Статусы:** `PAID` → Succeeded, `CANCELLED` / `EXPIRED` → Cancelled
+### Конфигурация
 
-### Альфа-Банк — `POST /api/webhook/alfabank`
+```dotenv
+TON_MASTER_ADDRESS=UQA...          # ваш адрес-накопитель в TON
+TON_API_KEY=                       # ключ TonCenter (опционально)
+TON_DEPOSIT_TTL_MINUTES=20
+TON_USDT_JETTON_MASTER=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs
+```
 
-**Формат:** `application/x-www-form-urlencoded`  
-**Верификация:** наличие полей `mdOrder` и `operation`  
-**Операции:** `deposited` → Succeeded, `refunded` → Refunded, `reversed` / `declinedByTimeout` → Cancelled
+---
 
-### Надёжность
+## Диспуты и чарджбэки
 
-- Вебхуки ставятся в очередь Redis мгновенно — `200 OK` до обработки
-- **5 попыток** с экспоненциальным backoff: 10s → 30s → 60s → 120s → 300s
-- При исчерпании: критический лог + алерт в Slack
-- Повторный вебхук на терминальный платёж молча игнорируется (идемпотентность)
+```
+POST /api/v1/payments/{id}/disputes   → открыть диспут (status=Filed)
+POST /api/v1/disputes/{id}/resolve    → разрешить (Won / Lost)
+```
+
+Агрегат `Dispute` хранится в таблице `disputes`, связан с `payments` по FK. Доменные события `DisputeWasFiled` и `DisputeWasResolved` попадают в `payment_events` для audit trail.
 
 ---
 
@@ -480,30 +552,48 @@ http://localhost:8000/api
 
 **Dashboard:** http://localhost:8000/horizon
 
-### Супервизоры
-
-| Супервизор | Очередь | Процессы (min/max) |
+| Супервизор | Очередь | min/max процессов |
 |---|---|---|
 | `payments-critical` | `payments-critical` | 2 / 10 |
 | `payments` | `payments` | 1 / 5 |
 | `default` | `default` | 1 / 5 |
 
 ```bash
-make horizon-status    # статус
-make horizon-pause     # пауза всех воркеров
-make horizon-resume    # возобновление
-make queue-failed      # список упавших задач
-make queue-retry-all   # повторить все упавшие
+make horizon-status
+make queue-failed
+make queue-retry-all
 ```
+
+---
+
+## Observability
+
+| Сервис | URL | Описание |
+|---|---|---|
+| Prometheus | http://localhost:9090 | Сбор метрик |
+| Grafana | http://localhost:3000 | Дашборды |
+| Horizon | http://localhost:8000/horizon | Очереди |
+
+**Метрики** (`GET /api/metrics`, Prometheus text format):
+
+| Метрика | Тип | Описание |
+|---|---|---|
+| `payments_total{provider,status}` | counter | Созданные платежи |
+| `refunds_total{provider}` | counter | Возвраты |
+| `webhook_processed_total{provider}` | counter | Обработанные вебхуки |
+| `throttle_rejections_total{route}` | counter | Rate limit отказы |
+| `failed_jobs_count` | gauge | DLQ: количество упавших задач |
+| `crypto_deposits_total{asset}` | counter | Созданные крипто-депозиты |
+| `crypto_deposits_confirmed_total{asset}` | counter | Подтверждённые депозиты |
 
 ---
 
 ## Тесты
 
 ```bash
-make test           # все тесты
-make test-unit      # только Domain (без БД, без Laravel bootstrap)
-make test-feature   # только Feature (SQLite in-memory)
+make test            # все тесты
+make test-unit       # Domain unit-тесты (без БД, без Laravel)
+make test-feature    # Feature-тесты (SQLite in-memory + Redis)
 ```
 
 ### Структура
@@ -512,18 +602,25 @@ make test-feature   # только Feature (SQLite in-memory)
 tests/
 ├── Unit/
 │   ├── Domain/
-│   │   ├── PaymentAggregateTest.php   # 20 тестов: create, succeed, cancel, partial refund, restore
-│   │   └── MoneyTest.php              # 10 тестов: валидация, форматирование, сравнение
-│   └── YooKassaProviderTest.php
+│   │   ├── PaymentAggregateTest.php      # 20 тестов: create, succeed, cancel, 3DS
+│   │   └── MoneyTest.php                  # Валидация, копейки, форматирование
+│   ├── CryptoPayments/
+│   │   ├── CryptoDepositAggregateTest.php # 9 тестов: create, confirm, expire, overpay
+│   │   └── TonBlockchainClientTest.php    # 12 тестов: TON v2 + USDT-TON v3, Http::fake()
+│   └── YooKassaProviderTest.php, RobokassaProviderTest.php, ...
+│
 └── Feature/
-    └── Payments/
-        ├── CreatePaymentTest.php      # создание, идемпотентность, валидация, пагинация
-        ├── RefundPaymentTest.php      # полный/частичный рефанд, кумулятив, идемпотентность
-        ├── CancelPaymentTest.php      # отмена всех статусов, show, sync
-        └── WebhookTest.php            # диспетчеризация, IP-фильтрация
+    ├── Payments/
+    │   ├── CreatePaymentTest.php          # Создание, идемпотентность, пагинация, фильтры
+    │   ├── RefundPaymentTest.php          # Полный / частичный / кумулятивный возврат
+    │   ├── CancelPaymentTest.php
+    │   ├── ExportPaymentsTest.php         # CSV streaming, заголовки, Content-Disposition
+    │   ├── DisputeTest.php               # 14 сценариев: filed, won, lost, ошибки
+    │   ├── WebhookTest.php               # IP-фильтрация, dispatch, идемпотентность
+    │   └── YooKassa/Robokassa/CloudPayments/Sbp/AlfaBankWebhookTest.php
+    └── CryptoPayments/
+        └── CryptoDepositTest.php          # 12 сценариев: TON + USDT-TON
 ```
-
-Unit-тесты домена не зависят от Laravel (чистый PHPUnit). Feature-тесты используют SQLite in-memory и мокируют провайдеров через `$this->mock()`.
 
 ---
 
@@ -531,27 +628,27 @@ Unit-тесты домена не зависят от Laravel (чистый PHPU
 
 GitHub Actions на каждый push:
 
-| Job | Что делает |
-|---|---|
-| `lint` | `pint --test` — стиль кода |
-| `analyse` | PHPStan level 6 |
-| `test-unit` | Unit-тесты |
-| `test-feature` | Feature-тесты (Redis + SQLite) |
+| Job | Что делает | Рабочая директория |
+|---|---|---|
+| `lint` | `pint --test` | `backend/` |
+| `frontend` | `npm run build` | `frontend/` |
+| `analyse` | PHPStan level 6 | `backend/` |
+| `test-unit` | Unit-тесты | `backend/` |
+| `test-feature` | Feature-тесты (Redis + SQLite) | `backend/` |
 
-CD (`cd.yml`) собирает Docker-образ и пушит в GHCR. Для деплоя настроить секреты: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`, `SSH_PORT`, `DEPLOY_PATH`.
+Все 5 джобов независимы и выполняются параллельно.
 
 ---
 
 ## Makefile
 
 ```bash
-make help             # список всех команд
+make help
 
 make up / down / restart / logs / ps
 
 make migrate
-make migrate-fresh    # пересоздать БД (с подтверждением)
-make migrate-rollback STEP=1
+make migrate-fresh      # пересоздать БД (с подтверждением)
 
 make test / test-unit / test-feature
 make lint / lint-fix / analyse
@@ -560,8 +657,7 @@ make horizon-status / horizon-pause / horizon-resume
 make queue-failed / queue-retry-all
 
 make artisan CMD="route:list"
-make shell            # bash в контейнере app
-make tinker
+make shell              # bash в контейнере app
 ```
 
 ---
@@ -572,17 +668,47 @@ make tinker
 
 | Колонка | Тип | Описание |
 |---|---|---|
-| `id` | ULID | Внутренний ID |
-| `idempotency_key` | string(36) | Ключ для дедупликации |
-| `external_id` | string, nullable | ID у провайдера |
-| `payment_method_id` | string, nullable | Сохранённый метод (YooKassa recurring) |
-| `provider` | string(50) | `yookassa` / `robokassa` |
-| `amount` | uint | Сумма в копейках |
-| `refunded_amount` | uint | Сумма возвратов в копейках |
+| `id` | ULID PK | |
+| `idempotency_key` | string(36)? | Очищается через 90 дней |
+| `external_id` | string? | ID у провайдера |
+| `payment_method_id` | string? | Сохранённый метод (YooKassa recurring) |
+| `provider` | string(50) | `yookassa` / `robokassa` / ... |
+| `amount` | uint | Копейки |
+| `refunded_amount` | uint |累积 сумма возвратов |
 | `currency` | char(3) | `RUB` |
 | `status` | string(30) | `Pending` / `Succeeded` / `Cancelled` / `Refunded` |
-| `confirmation_url` | string, nullable | URL страницы оплаты |
-| `metadata` | JSON, nullable | Произвольные данные |
+| `confirmation_url` | string? | |
+| `three_ds_required` | boolean | |
+| `three_ds_challenge_url` | string? | |
+| `metadata` | JSON? | |
+
+### `disputes`
+
+| Колонка | Тип | Описание |
+|---|---|---|
+| `id` | ULID PK | |
+| `payment_id` | ULID FK | |
+| `status` | string(20) | `Filed` / `Won` / `Lost` |
+| `amount` | uint | Копейки |
+| `reason` | string | |
+| `note` | text? | Комментарий при разрешении |
+
+### `crypto_deposits`
+
+| Колонка | Тип | Описание |
+|---|---|---|
+| `id` | ULID PK | |
+| `payment_id` | string | Внешний ID платежа |
+| `status` | string(20) | `awaiting` / `confirmed` / `overpaid` / `expired` |
+| `asset` | string(20) | `TON` / `USDT_TON` |
+| `expected_units` | uint | Ожидаемая сумма (nanotons или microUSDT) |
+| `actual_units` | uint? | Фактически полученная сумма |
+| `fiat_amount_kopecks` | uint | Сумма в копейках |
+| `deposit_address` | string | TON-адрес для приёма |
+| `memo` | string(10) | Числовой комментарий — уникальный идентификатор перевода |
+| `tx_hash` | string? | Хэш транзакции |
+| `expires_at` | timestamp | TTL депозита |
+| `created_at_ts` | uint | Unix timestamp создания |
 
 ### `payment_events`
 
@@ -591,7 +717,7 @@ Audit trail доменных событий.
 | Колонка | Тип | Описание |
 |---|---|---|
 | `payment_id` | ULID FK | |
-| `event_id` | UUID | Уникальный ID события |
-| `event_name` | string | `PaymentWasCreated`, `PaymentWasSucceeded`, ... |
-| `event_data` | JSON | Данные события |
+| `event_id` | UUID | |
+| `event_name` | string | `PaymentWasCreated`, `DisputeWasFiled`, `PaymentRequiresThreeDSecure`, ... |
+| `event_data` | JSON | |
 | `occurred_at` | string | ISO 8601 |

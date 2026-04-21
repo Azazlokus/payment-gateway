@@ -45,7 +45,7 @@ class CryptoDepositTest extends TestCase
 
     public function test_create_crypto_deposit_returns_201(): void
     {
-        $response = $this->postJson('/api/crypto/deposits', [
+        $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-001',
             'fiat_amount_kopecks' => 5000,
             'asset'               => 'TON',
@@ -69,7 +69,7 @@ class CryptoDepositTest extends TestCase
 
     public function test_create_crypto_deposit_stores_in_db(): void
     {
-        $response = $this->postJson('/api/crypto/deposits', [
+        $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-002',
             'fiat_amount_kopecks' => 10000,
             'asset'               => 'TON',
@@ -91,7 +91,7 @@ class CryptoDepositTest extends TestCase
 
     public function test_show_returns_deposit_by_id(): void
     {
-        $createResponse = $this->postJson('/api/crypto/deposits', [
+        $createResponse = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-003',
             'fiat_amount_kopecks' => 5000,
             'asset'               => 'TON',
@@ -99,7 +99,7 @@ class CryptoDepositTest extends TestCase
 
         $depositId = $createResponse->json('depositId');
 
-        $showResponse = $this->getJson("/api/crypto/deposits/{$depositId}");
+        $showResponse = $this->getJson("/api/v1/crypto/deposits/{$depositId}");
 
         $showResponse->assertStatus(Response::HTTP_OK);
         $showResponse->assertJsonPath('depositId', $depositId);
@@ -110,14 +110,14 @@ class CryptoDepositTest extends TestCase
     {
         $fakeId = CryptoDepositId::generate()->toString();
 
-        $response = $this->getJson("/api/crypto/deposits/{$fakeId}");
+        $response = $this->getJson("/api/v1/crypto/deposits/{$fakeId}");
 
         $response->assertStatus(Response::HTTP_NOT_FOUND);
     }
 
     public function test_create_deposit_validates_required_fields(): void
     {
-        $response = $this->postJson('/api/crypto/deposits', []);
+        $response = $this->postJson('/api/v1/crypto/deposits', []);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
         $response->assertJsonValidationErrors(['payment_id', 'fiat_amount_kopecks', 'asset']);
@@ -125,7 +125,7 @@ class CryptoDepositTest extends TestCase
 
     public function test_create_deposit_validates_minimum_amount(): void
     {
-        $response = $this->postJson('/api/crypto/deposits', [
+        $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-004',
             'fiat_amount_kopecks' => 50,
             'asset'               => 'TON',
@@ -137,7 +137,7 @@ class CryptoDepositTest extends TestCase
 
     public function test_create_deposit_validates_asset_enum(): void
     {
-        $response = $this->postJson('/api/crypto/deposits', [
+        $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-005',
             'fiat_amount_kopecks' => 5000,
             'asset'               => 'BTC',
@@ -149,7 +149,7 @@ class CryptoDepositTest extends TestCase
 
     public function test_create_deposit_returns_correct_deposit_address(): void
     {
-        $response = $this->postJson('/api/crypto/deposits', [
+        $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-006',
             'fiat_amount_kopecks' => 5000,
             'asset'               => 'TON',
@@ -162,7 +162,7 @@ class CryptoDepositTest extends TestCase
 
     public function test_create_deposit_qr_payload_contains_amount_and_memo(): void
     {
-        $response = $this->postJson('/api/crypto/deposits', [
+        $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-007',
             'fiat_amount_kopecks' => 5000,
             'asset'               => 'TON',
@@ -182,7 +182,7 @@ class CryptoDepositTest extends TestCase
 
     public function test_create_usdt_deposit_returns_201(): void
     {
-        $response = $this->postJson('/api/crypto/deposits', [
+        $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-usdt-001',
             'fiat_amount_kopecks' => 10000,
             'asset'               => 'USDT_TON',
@@ -198,7 +198,7 @@ class CryptoDepositTest extends TestCase
 
     public function test_create_usdt_deposit_stores_correct_asset(): void
     {
-        $response = $this->postJson('/api/crypto/deposits', [
+        $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-usdt-002',
             'fiat_amount_kopecks' => 10000,
             'asset'               => 'USDT_TON',
@@ -220,7 +220,7 @@ class CryptoDepositTest extends TestCase
         // For USDT-TON the ton:// deep-link must NOT include ?amount= because
         // the amount is in micro-USDT (not nanotons) and wallets use Jetton transfer,
         // not a native TON transfer.
-        $response = $this->postJson('/api/crypto/deposits', [
+        $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-usdt-003',
             'fiat_amount_kopecks' => 10000,
             'asset'               => 'USDT_TON',
@@ -239,7 +239,7 @@ class CryptoDepositTest extends TestCase
     public function test_create_usdt_deposit_human_readable_amount_has_six_decimals(): void
     {
         // Oracle mock returns 125_000_000 units; for USDT (6 decimals) → "125.000000"
-        $response = $this->postJson('/api/crypto/deposits', [
+        $response = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-usdt-004',
             'fiat_amount_kopecks' => 10000,
             'asset'               => 'USDT_TON',
@@ -254,7 +254,7 @@ class CryptoDepositTest extends TestCase
 
     public function test_show_usdt_deposit_by_id(): void
     {
-        $createResponse = $this->postJson('/api/crypto/deposits', [
+        $createResponse = $this->postJson('/api/v1/crypto/deposits', [
             'payment_id'          => 'pay-usdt-005',
             'fiat_amount_kopecks' => 5000,
             'asset'               => 'USDT_TON',
@@ -263,7 +263,7 @@ class CryptoDepositTest extends TestCase
 
         $depositId = $createResponse->json('depositId');
 
-        $showResponse = $this->getJson("/api/crypto/deposits/{$depositId}");
+        $showResponse = $this->getJson("/api/v1/crypto/deposits/{$depositId}");
 
         $showResponse->assertStatus(Response::HTTP_OK);
         $showResponse->assertJsonPath('depositId', $depositId);

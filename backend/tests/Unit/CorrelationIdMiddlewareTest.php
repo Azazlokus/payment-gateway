@@ -88,7 +88,7 @@ class CorrelationIdMiddlewareTest extends TestCase
 
     public function test_integration_via_api_route(): void
     {
-        $response = $this->get('/api/payments');
+        $response = $this->get('/api/v1/payments');
 
         $response->assertHeader('X-Correlation-Id');
     }
@@ -97,7 +97,7 @@ class CorrelationIdMiddlewareTest extends TestCase
     {
         $response = $this->withHeaders([
             'X-Correlation-Id' => 'custom-trace-id-abc',
-        ])->get('/api/payments');
+        ])->get('/api/v1/payments');
 
         $response->assertHeader('X-Correlation-Id', 'custom-trace-id-abc');
     }

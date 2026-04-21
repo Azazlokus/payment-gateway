@@ -37,7 +37,7 @@ class CreatePaymentTest extends TestCase
     {
         $this->mockProvider();
 
-        $response = $this->postJson('/api/payments', [
+        $response = $this->postJson('/api/v1/payments', [
             'amount' => 10000,
             'description' => 'Test order',
             'return_url' => 'https://example.com/success',
@@ -57,7 +57,7 @@ class CreatePaymentTest extends TestCase
 
         $key = (string) Str::uuid();
 
-        $first = $this->postJson('/api/payments', [
+        $first = $this->postJson('/api/v1/payments', [
             'amount' => 10000,
             'description' => 'Test order',
             'return_url' => 'https://example.com/success',
@@ -73,7 +73,7 @@ class CreatePaymentTest extends TestCase
         });
         $this->app->make(PaymentProviderRegistry::class)->register($mockProvider2);
 
-        $second = $this->postJson('/api/payments', [
+        $second = $this->postJson('/api/v1/payments', [
             'amount' => 10000,
             'description' => 'Test order',
             'return_url' => 'https://example.com/success',
@@ -85,7 +85,7 @@ class CreatePaymentTest extends TestCase
 
     public function test_validation_rejects_missing_fields(): void
     {
-        $response = $this->postJson('/api/payments', []);
+        $response = $this->postJson('/api/v1/payments', []);
 
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
             ->assertJsonValidationErrors(['amount', 'description', 'return_url']);
@@ -93,7 +93,7 @@ class CreatePaymentTest extends TestCase
 
     public function test_validation_rejects_non_https_return_url(): void
     {
-        $response = $this->postJson('/api/payments', [
+        $response = $this->postJson('/api/v1/payments', [
             'amount' => 10000,
             'description' => 'Test',
             'return_url' => 'http://example.com/success',
@@ -105,7 +105,7 @@ class CreatePaymentTest extends TestCase
 
     public function test_validation_rejects_amount_below_minimum(): void
     {
-        $response = $this->postJson('/api/payments', [
+        $response = $this->postJson('/api/v1/payments', [
             'amount' => 50,
             'description' => 'Test',
             'return_url' => 'https://example.com/success',
@@ -117,7 +117,7 @@ class CreatePaymentTest extends TestCase
 
     public function test_get_payment_returns_404_for_unknown_id(): void
     {
-        $response = $this->getJson('/api/payments/01HHHHHHHHHHHHHHHHHHHHHHH');
+        $response = $this->getJson('/api/v1/payments/01HHHHHHHHHHHHHHHHHHHHHHH');
 
         $response->assertStatus(Response::HTTP_NOT_FOUND)
             ->assertJsonPath('error', 'not_found');
@@ -125,7 +125,7 @@ class CreatePaymentTest extends TestCase
 
     public function test_get_payment_returns_404_for_invalid_ulid(): void
     {
-        $response = $this->getJson('/api/payments/not-a-valid-ulid');
+        $response = $this->getJson('/api/v1/payments/not-a-valid-ulid');
 
         $response->assertStatus(Response::HTTP_NOT_FOUND);
     }
@@ -135,13 +135,13 @@ class CreatePaymentTest extends TestCase
         $this->mockProvider();
 
         // Create a payment first
-        $this->postJson('/api/payments', [
+        $this->postJson('/api/v1/payments', [
             'amount' => 10000,
             'description' => 'Test order',
             'return_url' => 'https://example.com/success',
         ]);
 
-        $response = $this->getJson('/api/payments');
+        $response = $this->getJson('/api/v1/payments');
 
         $response->assertStatus(Response::HTTP_OK)
             ->assertJsonStructure(['data', 'total', 'per_page', 'current_page', 'last_page'])
@@ -154,19 +154,19 @@ class CreatePaymentTest extends TestCase
         $this->mockProvider();
 
         // Create a payment through the API (provider = yookassa from mock)
-        $this->postJson('/api/payments', [
+        $this->postJson('/api/v1/payments', [
             'amount'      => 10000,
             'description' => 'Test order',
             'return_url'  => 'https://example.com/success',
         ]);
 
         // Filter by matching provider
-        $this->getJson('/api/payments?provider=yookassa')
+        $this->getJson('/api/v1/payments?provider=yookassa')
             ->assertStatus(200)
             ->assertJsonPath('total', 1);
 
         // Filter by non-matching provider
-        $this->getJson('/api/payments?provider=robokassa')
+        $this->getJson('/api/v1/payments?provider=robokassa')
             ->assertStatus(200)
             ->assertJsonPath('total', 0);
     }

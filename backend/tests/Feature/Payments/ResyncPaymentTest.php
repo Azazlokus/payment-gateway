@@ -42,7 +42,7 @@ class ResyncPaymentTest extends TestCase
     {
         $id = $this->createPayment();
 
-        $response = $this->postJson("/api/payments/{$id}/resync");
+        $response = $this->postJson("/api/v1/payments/{$id}/resync");
 
         $response->assertStatus(Response::HTTP_OK);
     }
@@ -51,7 +51,7 @@ class ResyncPaymentTest extends TestCase
     {
         $fakeId = PaymentId::generate()->toString();
 
-        $response = $this->postJson("/api/payments/{$fakeId}/resync");
+        $response = $this->postJson("/api/v1/payments/{$fakeId}/resync");
 
         $response->assertStatus(Response::HTTP_NOT_FOUND);
     }
@@ -72,7 +72,7 @@ class ResyncPaymentTest extends TestCase
 
         $id = $this->createPayment(['notification_url' => 'https://example.com/notify']);
 
-        $this->postJson("/api/payments/{$id}/resync");
+        $this->postJson("/api/v1/payments/{$id}/resync");
 
         $this->assertTrue($notified);
     }
@@ -83,7 +83,7 @@ class ResyncPaymentTest extends TestCase
 
         $id = $this->createPayment(['notification_url' => 'https://example.com/notify']);
 
-        $this->postJson("/api/payments/{$id}/resync");
+        $this->postJson("/api/v1/payments/{$id}/resync");
 
         Http::assertSent(fn ($req) => $req->url() === 'https://example.com/notify');
     }
@@ -94,7 +94,7 @@ class ResyncPaymentTest extends TestCase
 
         $id = $this->createPayment(); // нет notification_url в metadata
 
-        $response = $this->postJson("/api/payments/{$id}/resync");
+        $response = $this->postJson("/api/v1/payments/{$id}/resync");
 
         $response->assertStatus(Response::HTTP_OK);
         Http::assertNothingSent();

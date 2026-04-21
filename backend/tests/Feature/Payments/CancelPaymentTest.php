@@ -47,7 +47,7 @@ class CancelPaymentTest extends TestCase
     {
         $id = $this->createPayment('Pending');
 
-        $this->postJson("/api/payments/{$id}/cancel")
+        $this->postJson("/api/v1/payments/{$id}/cancel")
             ->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Cancelled');
     }
@@ -56,7 +56,7 @@ class CancelPaymentTest extends TestCase
     {
         $id = $this->createPayment('Pending');
 
-        $this->postJson("/api/payments/{$id}/cancel", ['reason' => 'Отменено по запросу клиента'])
+        $this->postJson("/api/v1/payments/{$id}/cancel", ['reason' => 'Отменено по запросу клиента'])
             ->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Cancelled');
     }
@@ -65,7 +65,7 @@ class CancelPaymentTest extends TestCase
     {
         $id = $this->createPayment('Succeeded');
 
-        $this->postJson("/api/payments/{$id}/cancel")
+        $this->postJson("/api/v1/payments/{$id}/cancel")
             ->assertStatus(Response::HTTP_CONFLICT);
     }
 
@@ -73,7 +73,7 @@ class CancelPaymentTest extends TestCase
     {
         $id = $this->createPayment('Refunded');
 
-        $this->postJson("/api/payments/{$id}/cancel")
+        $this->postJson("/api/v1/payments/{$id}/cancel")
             ->assertStatus(Response::HTTP_CONFLICT);
     }
 
@@ -81,7 +81,7 @@ class CancelPaymentTest extends TestCase
     {
         $id = $this->createPayment('Cancelled');
 
-        $this->postJson("/api/payments/{$id}/cancel")
+        $this->postJson("/api/v1/payments/{$id}/cancel")
             ->assertStatus(Response::HTTP_CONFLICT);
     }
 
@@ -89,7 +89,7 @@ class CancelPaymentTest extends TestCase
     {
         $fakeId = PaymentId::generate()->toString();
 
-        $this->postJson("/api/payments/{$fakeId}/cancel")
+        $this->postJson("/api/v1/payments/{$fakeId}/cancel")
             ->assertStatus(Response::HTTP_NOT_FOUND);
     }
 
@@ -99,7 +99,7 @@ class CancelPaymentTest extends TestCase
     {
         $id = $this->createPayment('Succeeded');
 
-        $this->getJson("/api/payments/{$id}")
+        $this->getJson("/api/v1/payments/{$id}")
             ->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('id', $id)
             ->assertJsonPath('status', 'Succeeded')
@@ -111,14 +111,14 @@ class CancelPaymentTest extends TestCase
     {
         $fakeId = PaymentId::generate()->toString();
 
-        $this->getJson("/api/payments/{$fakeId}")
+        $this->getJson("/api/v1/payments/{$fakeId}")
             ->assertStatus(Response::HTTP_NOT_FOUND)
             ->assertJsonPath('error', 'not_found');
     }
 
     public function test_show_returns_404_for_invalid_id_format(): void
     {
-        $this->getJson('/api/payments/not-a-ulid')
+        $this->getJson('/api/v1/payments/not-a-ulid')
             ->assertStatus(Response::HTTP_NOT_FOUND);
     }
 
@@ -141,7 +141,7 @@ class CancelPaymentTest extends TestCase
         });
         $this->app->make(PaymentProviderRegistry::class)->register($mockProvider);
 
-        $this->postJson("/api/payments/{$id}/sync")
+        $this->postJson("/api/v1/payments/{$id}/sync")
             ->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Succeeded');
     }
@@ -156,7 +156,7 @@ class CancelPaymentTest extends TestCase
             $mock->shouldNotReceive('getPayment');
         });
 
-        $this->postJson("/api/payments/{$id}/sync")
+        $this->postJson("/api/v1/payments/{$id}/sync")
             ->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Pending');
     }
@@ -169,7 +169,7 @@ class CancelPaymentTest extends TestCase
             $mock->shouldReceive('name')->andReturn('yookassa');
         });
 
-        $this->postJson("/api/payments/{$fakeId}/sync")
+        $this->postJson("/api/v1/payments/{$fakeId}/sync")
             ->assertStatus(Response::HTTP_NOT_FOUND);
     }
 }
