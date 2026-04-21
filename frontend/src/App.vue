@@ -21,6 +21,13 @@
             Создать
           </router-link>
           <router-link
+            to="/crypto/deposit"
+            class="text-sm text-gray-600 hover:text-gray-900"
+            active-class="text-blue-600 font-medium"
+          >
+            Крипто
+          </router-link>
+          <router-link
             to="/metrics"
             class="text-sm text-gray-600 hover:text-gray-900"
             active-class="text-blue-600 font-medium"

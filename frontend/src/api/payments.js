@@ -37,3 +37,13 @@ export const paymentsApi = {
         return http.post(`/payments/${id}/sync`);
     },
 };
+
+export const cryptoApi = {
+    createDeposit(data) {
+        return http.post('/crypto/deposits', data);
+    },
+
+    getDeposit(id) {
+        return http.get(`/crypto/deposits/${id}`);
+    },
+};

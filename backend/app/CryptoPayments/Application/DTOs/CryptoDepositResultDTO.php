@@ -26,10 +26,16 @@ final readonly class CryptoDepositResultDTO
 
     public static function fromAggregate(CryptoDeposit $deposit): self
     {
-        $address    = $deposit->depositAddress()->toNonBounceable()->toString();
-        $nanotons   = $deposit->expectedAmount()->units();
-        $memoStr    = $deposit->memo()->toString();
-        $qrPayload  = "ton://transfer/{$address}?amount={$nanotons}&text={$memoStr}";
+        $address   = $deposit->depositAddress()->toNonBounceable()->toString();
+        $memoStr   = $deposit->memo()->toString();
+        $units     = $deposit->expectedAmount()->units();
+
+        // TON: standard deep-link with amount in nanotons.
+        // USDT-TON: Jetton transfers don't use the ton:// amount param (amount is in micro-USDT,
+        // not nanotons), so we omit it — the wallet reads the amount from the Jetton transfer payload.
+        $qrPayload = $deposit->asset() === \App\CryptoPayments\Domain\Enums\CryptoAsset::TON
+            ? "ton://transfer/{$address}?amount={$units}&text={$memoStr}"
+            : "ton://transfer/{$address}?text={$memoStr}";
 
         return new self(
             depositId: $deposit->id()->toString(),
