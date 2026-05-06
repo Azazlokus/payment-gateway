@@ -18,6 +18,10 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
+# Root-level vendor and storage (monorepo setup)
+/vendor/
+/storage/
+
 # Backend
 /backend/vendor/
 /backend/node_modules/
