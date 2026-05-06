@@ -119,6 +119,108 @@
         </div>
       </div>
 
+      <!-- 3-D Secure -->
+      <div v-if="payment.three_ds_required" class="bg-amber-50 border border-amber-200 rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-amber-900 mb-2">Требуется 3-D Secure</h2>
+        <p class="text-xs text-amber-700 mb-3">Клиент должен пройти дополнительную аутентификацию по ссылке ниже.</p>
+        <a
+          v-if="payment.three_ds_challenge_url"
+          :href="payment.three_ds_challenge_url"
+          target="_blank"
+          class="inline-block text-xs bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors"
+        >
+          Открыть страницу 3DS →
+        </a>
+      </div>
+
+      <!-- Диспуты -->
+      <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-gray-700">Диспуты / чарджбэки</h2>
+          <button
+            v-if="payment.status === 'Succeeded'"
+            @click="showDisputeForm = !showDisputeForm"
+            class="text-xs text-red-600 border border-red-300 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+          >
+            Открыть диспут
+          </button>
+        </div>
+
+        <div v-if="disputes.length === 0 && !showDisputeForm" class="text-xs text-gray-400">Нет диспутов</div>
+
+        <!-- Список диспутов -->
+        <div v-if="disputes.length > 0" class="space-y-3 mb-4">
+          <div
+            v-for="d in disputes"
+            :key="d.id"
+            class="border border-gray-100 rounded-lg p-3 text-sm"
+          >
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono text-xs text-gray-400">{{ d.id }}</span>
+              <span
+                class="text-xs font-medium px-2 py-0.5 rounded-full"
+                :class="{
+                  'bg-yellow-100 text-yellow-800': d.status === 'Filed',
+                  'bg-green-100 text-green-800': d.status === 'Won',
+                  'bg-red-100 text-red-800': d.status === 'Lost',
+                }"
+              >{{ d.status }}</span>
+            </div>
+            <p class="text-gray-700">{{ d.reason }}</p>
+            <p class="text-xs text-gray-500 mt-1">
+              Сумма: {{ formatAmount(d.amount, d.currency) }}
+              <span v-if="d.note"> · {{ d.note }}</span>
+            </p>
+
+            <!-- Разрешить диспут -->
+            <div v-if="d.status === 'Filed'" class="mt-3 flex gap-2">
+              <button
+                @click="resolveDispute(d.id, 'Won')"
+                :disabled="acting"
+                class="text-xs border border-green-300 text-green-700 px-3 py-1 rounded hover:bg-green-50 disabled:opacity-50 transition-colors"
+              >Выиграли</button>
+              <button
+                @click="resolveDispute(d.id, 'Lost')"
+                :disabled="acting"
+                class="text-xs border border-red-300 text-red-700 px-3 py-1 rounded hover:bg-red-50 disabled:opacity-50 transition-colors"
+              >Проиграли</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Форма нового диспута -->
+        <div v-if="showDisputeForm" class="border-t border-gray-100 pt-4 space-y-3">
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">Оспариваемая сумма (руб.)</label>
+            <input
+              v-model.number="disputeAmount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              :max="payment.amount / 100"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">Основание</label>
+            <input
+              v-model="disputeReason"
+              type="text"
+              maxlength="500"
+              placeholder="Товар не получен"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+          <button
+            @click="fileDispute"
+            :disabled="acting || !disputeAmount || !disputeReason"
+            class="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+          >
+            {{ acting ? 'Отправка…' : 'Подать диспут' }}
+          </button>
+        </div>
+      </div>
+
       <!-- Метаданные -->
       <div v-if="payment.metadata && Object.keys(payment.metadata).length > 0" class="bg-white rounded-xl border border-gray-200 p-6">
         <h2 class="text-sm font-semibold text-gray-700 mb-3">Метаданные</h2>
@@ -130,7 +232,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { paymentsApi } from '@/api/payments.js';
+import { paymentsApi, disputesApi } from '@/api/payments.js';
 import StatusBadge from '@/components/StatusBadge.vue';
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 import AlertMessage from '@/components/AlertMessage.vue';
@@ -145,6 +247,10 @@ const actionError = ref('');
 const actionSuccess = ref('');
 const showRefundForm = ref(false);
 const refundAmount = ref('');
+const disputes = ref([]);
+const showDisputeForm = ref(false);
+const disputeAmount = ref('');
+const disputeReason = ref('');
 
 const maxRefundable = computed(() =>
   (payment.value?.amount ?? 0) - (payment.value?.refunded_amount ?? 0)
@@ -168,8 +274,12 @@ async function fetchPayment() {
   loading.value = true;
   error.value = '';
   try {
-    const { data } = await paymentsApi.get(props.id);
+    const [{ data }, disputesRes] = await Promise.all([
+      paymentsApi.get(props.id),
+      disputesApi.list(props.id).catch(() => ({ data: { data: [] } })),
+    ]);
     payment.value = data.data ?? data;
+    disputes.value = disputesRes.data.data ?? [];
   } catch (e) {
     error.value = e.response?.data?.message ?? 'Ошибка загрузки платежа';
   } finally {
@@ -213,6 +323,27 @@ function doRefund() {
     actionSuccess.value = `Возврат на ${formatAmount(kopecks, payment.value.currency)} выполнен`;
     showRefundForm.value = false;
     refundAmount.value = '';
+  });
+}
+
+async function fileDispute() {
+  if (!disputeAmount.value || !disputeReason.value) return;
+  await runAction(async () => {
+    await disputesApi.create(props.id, {
+      amount: Math.round(parseFloat(disputeAmount.value) * 100),
+      reason: disputeReason.value,
+    });
+    actionSuccess.value = 'Диспут подан';
+    showDisputeForm.value = false;
+    disputeAmount.value = '';
+    disputeReason.value = '';
+  });
+}
+
+async function resolveDispute(disputeId, resolution) {
+  await runAction(async () => {
+    await disputesApi.resolve(disputeId, { resolution });
+    actionSuccess.value = `Диспут помечен как ${resolution}`;
   });
 }
 

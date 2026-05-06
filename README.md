@@ -691,7 +691,7 @@ php artisan payments:shutdown --wait=60
 
 ### Supervisor конфигурации
 
-Готовые конфиги находятся в `docker/supervisor/`:
+Готовые конфиги находятся в `.docker/supervisor/`:
 
 | Файл | Описание |
 |---|---|

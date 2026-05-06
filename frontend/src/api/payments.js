@@ -38,6 +38,20 @@ export const paymentsApi = {
     },
 };
 
+export const disputesApi = {
+    list(paymentId) {
+        return http.get(`/payments/${paymentId}/disputes`);
+    },
+
+    create(paymentId, data) {
+        return http.post(`/payments/${paymentId}/disputes`, data);
+    },
+
+    resolve(disputeId, data) {
+        return http.post(`/disputes/${disputeId}/resolve`, data);
+    },
+};
+
 export const cryptoApi = {
     createDeposit(data) {
         return http.post('/crypto/deposits', data);
