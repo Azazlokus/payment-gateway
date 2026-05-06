@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\CryptoPayments\Application\ACL\CryptoDepositToPaymentAdapter;
+use App\CryptoPayments\Application\Commands\CreateCryptoRefund\CreateCryptoRefundHandler;
+use App\CryptoPayments\Domain\Contracts\CryptoRefundRepositoryInterface;
+use App\CryptoPayments\Infrastructure\Persistence\EloquentCryptoRefundRepository;
 use App\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
 use App\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
 use App\CryptoPayments\Domain\Contracts\PriceOracleInterface;
@@ -66,6 +69,15 @@ class CryptoServiceProvider extends ServiceProvider
             $registry->register($this->app->make(BitcoinBlockchainClient::class));
 
             return $registry;
+        });
+
+        $this->app->singleton(CryptoRefundRepositoryInterface::class, EloquentCryptoRefundRepository::class);
+
+        $this->app->singleton(CreateCryptoRefundHandler::class, function () {
+            return new CreateCryptoRefundHandler(
+                deposits: $this->app->make(CryptoDepositRepositoryInterface::class),
+                refunds: $this->app->make(CryptoRefundRepositoryInterface::class),
+            );
         });
 
         $this->app->singleton(CryptoDepositToPaymentAdapter::class, function () {

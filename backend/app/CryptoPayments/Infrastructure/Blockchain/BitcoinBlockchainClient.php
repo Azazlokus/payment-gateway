@@ -131,4 +131,20 @@ final class BitcoinBlockchainClient implements BlockchainClientInterface
 
         return null;
     }
+
+    // ─── Sending (not supported — UTXO management requires external service) ──
+
+    public function canSend(): bool
+    {
+        return false;
+    }
+
+    public function sendTransfer(
+        CryptoAddress $to,
+        NativeCryptoAmount $amount,
+        CryptoAsset $asset,
+        string $comment,
+    ): TxHash {
+        throw new \RuntimeException('BTC sending not supported: use an external UTXO signing service');
+    }
 }

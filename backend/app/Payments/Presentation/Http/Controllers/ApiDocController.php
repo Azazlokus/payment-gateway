@@ -10,16 +10,31 @@ use OpenApi\Attributes as OA;
     version: '1.0.0',
     title: 'Payment Gateway API',
     description: <<<'TEXT'
-        API платёжного шлюза с поддержкой нескольких провайдеров.
+        API платёжного шлюза с поддержкой нескольких провайдеров и крипто-депозитов.
 
         ## Провайдеры
 
-        | Провайдер  | Тип подтверждения | Рефанды | Polling |
-        |------------|-------------------|---------|---------|
-        | YooKassa   | redirect / embedded / qr / mobile | ✅ | ✅ |
-        | Robokassa  | redirect (только) | ✅ | ❌ |
+        | Провайдер     | Тип подтверждения                        | Рефанды | Вебхуки |
+        |---------------|------------------------------------------|---------|---------|
+        | YooKassa      | redirect / embedded / qr / mobile        | ✅      | ✅      |
+        | Robokassa     | redirect (только)                        | ✅      | ✅      |
+        | CloudPayments | redirect                                  | ✅      | ✅      |
+        | СБП           | QR-код (НСПК)                            | ❌      | ✅      |
+        | Альфа-Банк    | redirect                                  | ✅      | ✅      |
 
         Активный провайдер задаётся через переменную окружения `PAYMENT_PROVIDER`.
+
+        ## Крипто-депозиты
+
+        Приём криптовалюты без кастодиального кошелька — только бесплатные API:
+
+        | Актив        | Блокчейн | API              | Режим           |
+        |--------------|----------|------------------|-----------------|
+        | TON          | TON      | TonCenter v2     | Адрес + memo    |
+        | USDT-TON     | TON      | TonCenter v3     | Адрес + memo    |
+        | TRX          | TRON     | TronGrid         | Пул адресов     |
+        | USDT-TRC20   | TRON     | TronGrid         | Пул адресов     |
+        | BTC          | Bitcoin  | mempool.space    | Пул адресов     |
 
         ## Идемпотентность
 
@@ -29,11 +44,18 @@ use OpenApi\Attributes as OA;
 
         ## Суммы
 
-        Все суммы передаются и возвращаются **в копейках** (целое число).
+        Все фиатные суммы передаются и возвращаются **в копейках** (целое число).
         Минимальная сумма: 100 (= 1 рубль).
         TEXT,
 )]
-#[OA\Server(url: '/api', description: 'Local / Docker')]
+#[OA\Server(url: '/api/v1', description: 'Local / Docker')]
+#[OA\SecurityScheme(
+    securityScheme: 'ApiKeyAuth',
+    type: 'apiKey',
+    in: 'header',
+    name: 'X-Api-Key',
+    description: 'API-ключ для всех эндпоинтов /api/v1/*. Устанавливается через переменную окружения API_KEY.',
+)]
 #[OA\SecurityScheme(
     securityScheme: 'IdempotencyKey',
     type: 'apiKey',
@@ -87,7 +109,7 @@ use OpenApi\Attributes as OA;
     description: 'Стандартный ответ об ошибке',
     properties: [
         new OA\Property(property: 'code', type: 'string', description: 'Машиночитаемый код ошибки', example: 'payment_error',
-            enum: ['payment_error', 'invalid_payment_state', 'webhook_verification_failed', 'idempotency_violation', 'throttle_exceeded', 'not_found']),
+            enum: ['payment_error', 'invalid_payment_state', 'webhook_verification_failed', 'idempotency_violation', 'throttle_exceeded', 'not_found', 'unauthorized']),
         new OA\Property(property: 'message', type: 'string', description: 'Человекочитаемое описание ошибки', example: 'Payment not found: 01HV9Z7BKQE4GNKR2XQVP0M8T'),
         new OA\Property(property: 'trace_id', type: 'string', nullable: true, description: 'X-Correlation-Id запроса для отслеживания в логах', example: 'a1b2c3d4-0000-0000-0000-000000000000'),
     ]
@@ -158,6 +180,36 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'operation', type: 'string', enum: ['deposited', 'refunded', 'reversed', 'declinedByTimeout'], example: 'deposited'),
         new OA\Property(property: 'orderNumber', type: 'string', description: 'Внутренний ULID платежа', example: '01HV9Z7BKQE4GNKR2XQVP0M8T'),
         new OA\Property(property: 'status', type: 'integer', description: '1 = успех, 0 = ошибка', example: 1),
+    ]
+)]
+
+// ─── Crypto deposit schemas ───────────────────────────────────────────────────
+
+#[OA\Schema(
+    schema: 'CryptoDepositResponse',
+    description: 'Крипто-депозит',
+    properties: [
+        new OA\Property(property: 'depositId', type: 'string', format: 'ulid', description: 'ID депозита', example: '01HV9Z7BKQE4GNKR2XQVP0M8T'),
+        new OA\Property(property: 'paymentId', type: 'string', description: 'Внешний ID платежа', example: 'pay-order-1234'),
+        new OA\Property(property: 'status', type: 'string', enum: ['awaiting', 'confirmed', 'expired', 'overpaid'], example: 'awaiting'),
+        new OA\Property(property: 'asset', type: 'string', enum: ['TON', 'USDT_TON', 'TRX', 'USDT_TRC20', 'BTC'], example: 'TON'),
+        new OA\Property(property: 'expectedUnits', type: 'integer', description: 'Ожидаемая сумма в наименьших единицах актива (наноТОН, сатоши, sun и т.д.)', example: 125000000),
+        new OA\Property(property: 'cryptoAmount', type: 'string', description: 'Читаемое значение суммы', example: '0.125'),
+        new OA\Property(property: 'fiatAmountKopecks', type: 'integer', description: 'Эквивалент в копейках на момент создания', example: 50000),
+        new OA\Property(property: 'depositAddress', type: 'string', description: 'Адрес для перевода', example: 'UQA...'),
+        new OA\Property(property: 'memo', type: 'string', nullable: true, description: 'Числовой комментарий (только для TON-сетей). Для BTC/TRX — null.', example: '123456789'),
+        new OA\Property(property: 'expiresAt', type: 'string', format: 'date-time', description: 'Время истечения депозита (ISO 8601)'),
+        new OA\Property(property: 'qrPayload', type: 'string', description: 'URI для QR-кода (ton://, bitcoin:, tron:)', example: 'ton://transfer/UQA...?amount=125000000&text=123456789'),
+        new OA\Property(property: 'txHash', type: 'string', nullable: true, description: 'Хэш транзакции после подтверждения'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'CreateCryptoDepositRequest',
+    required: ['payment_id', 'fiat_amount_kopecks', 'asset'],
+    properties: [
+        new OA\Property(property: 'payment_id', type: 'string', description: 'Внешний ID платежа', example: 'pay-order-1234', maxLength: 255),
+        new OA\Property(property: 'fiat_amount_kopecks', type: 'integer', description: 'Сумма в копейках для конвертации в крипту', example: 50000, minimum: 100),
+        new OA\Property(property: 'asset', type: 'string', enum: ['TON', 'USDT_TON', 'TRX', 'USDT_TRC20', 'BTC'], description: 'Криптоактив для приёма', example: 'TON'),
     ]
 )]
 

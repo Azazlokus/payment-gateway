@@ -9,7 +9,9 @@ return [
         'api_url'            => env('TON_API_URL', 'https://toncenter.com/api/v2'),
         'api_v3_url'         => env('TON_API_V3_URL', 'https://toncenter.com/api/v3'),
         // USDT-TON Jetton master contract (mainnet). Override via TON_USDT_JETTON_MASTER in .env.
-        'usdt_jetton_master' => env('TON_USDT_JETTON_MASTER', 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'),
+        'usdt_jetton_master'   => env('TON_USDT_JETTON_MASTER', 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'),
+        // Hot wallet for sending refunds. Requires olifanton/ton SDK to use.
+        'hot_wallet_mnemonic'  => env('TON_HOT_WALLET_MNEMONIC', ''),
     ],
 
     'bitcoin' => [
@@ -26,7 +28,9 @@ return [
         // Free API key from trongrid.io (optional, increases rate limits).
         'api_key'           => env('TRONGRID_API_KEY', ''),
         // USDT-TRC20 contract address (mainnet).
-        'usdt_contract'     => env('TRON_USDT_CONTRACT', 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'),
+        'usdt_contract'          => env('TRON_USDT_CONTRACT', 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'),
+        // Hot wallet for sending refunds. Requires secp256k1 signing library to use.
+        'hot_wallet_private_key' => env('TRON_HOT_WALLET_PRIVATE_KEY', ''),
     ],
 
     'price_oracle' => [

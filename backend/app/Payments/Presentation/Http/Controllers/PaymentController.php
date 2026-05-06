@@ -14,9 +14,10 @@ use App\Payments\Application\DTOs\CreatePaymentOptionsDTO;
 use App\Payments\Application\DTOs\PaymentResultDTO;
 use App\Payments\Application\DTOs\ReceiptDTO;
 use App\Payments\Application\DTOs\ReceiptItemDTO;
-use App\Payments\Infrastructure\Observability\NotificationService;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Payments\Domain\ValueObjects\PaymentId;
+use App\Payments\Infrastructure\Observability\AuditLogger;
+use App\Payments\Infrastructure\Observability\NotificationService;
 use App\Payments\Presentation\Http\Requests\CreatePaymentRequest;
 use App\Payments\Presentation\Http\Requests\RefundPaymentRequest;
 use App\Payments\Presentation\Http\Resources\PaymentResource;
@@ -26,6 +27,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class PaymentController extends Controller
 {
@@ -33,6 +35,7 @@ final class PaymentController extends Controller
         private readonly CommandBus $bus,
         private readonly PaymentRepositoryInterface $repository,
         private readonly NotificationService $notifications,
+        private readonly AuditLogger $auditLogger,
     ) {}
 
     #[OA\Get(
@@ -61,10 +64,10 @@ final class PaymentController extends Controller
         $perPage = min((int) $request->query('per_page', 15), 100);
         $page = max((int) $request->query('page', 1), 1);
         $filters = array_filter([
-            'status'    => $request->query('status'),
-            'provider'  => $request->query('provider'),
+            'status' => $request->query('status'),
+            'provider' => $request->query('provider'),
             'from_date' => $request->query('from_date'),
-            'to_date'   => $request->query('to_date'),
+            'to_date' => $request->query('to_date'),
         ]);
 
         $result = $this->repository->paginate($perPage, $page, $filters);
@@ -143,6 +146,8 @@ final class PaymentController extends Controller
             provider: $request->input('provider'),
         ));
 
+        $this->auditLogger->log('payment.created', "Payment created: {$result->id}", ['id' => $result->id, 'amount' => $result->amount]);
+
         return response()->json(new PaymentResource($result), Response::HTTP_CREATED);
     }
 
@@ -204,6 +209,8 @@ final class PaymentController extends Controller
             reason: request()->input('reason', 'Отменено пользователем'),
         ));
 
+        $this->auditLogger->log('payment.cancelled', "Payment cancelled: {$id}", ['id' => $id]);
+
         return response()->json(new PaymentResource($result), Response::HTTP_OK);
     }
 
@@ -239,6 +246,8 @@ final class PaymentController extends Controller
             idempotencyKey: $request->header('Idempotency-Key'),
         ));
 
+        $this->auditLogger->log('payment.refunded', "Payment refunded: {$id}", ['id' => $id]);
+
         return response()->json(new PaymentResource($result), Response::HTTP_OK);
     }
 
@@ -268,25 +277,25 @@ final class PaymentController extends Controller
         description: 'Стримит CSV-файл со всеми платежами, удовлетворяющими фильтрам. Поддерживает те же фильтры, что и GET /payments.',
         tags: ['Payments'],
         parameters: [
-            new OA\Parameter(name: 'status',    in: 'query', required: false, schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'provider',  in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'provider', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'from_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
-            new OA\Parameter(name: 'to_date',   in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'to_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
         ],
         responses: [
             new OA\Response(response: 200, description: 'CSV-файл', content: new OA\MediaType(mediaType: 'text/csv')),
         ]
     )]
-    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function export(Request $request): StreamedResponse
     {
         $filters = array_filter([
-            'status'    => $request->query('status'),
-            'provider'  => $request->query('provider'),
+            'status' => $request->query('status'),
+            'provider' => $request->query('provider'),
             'from_date' => $request->query('from_date'),
-            'to_date'   => $request->query('to_date'),
+            'to_date' => $request->query('to_date'),
         ]);
 
-        $filename = 'payments-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'payments-'.now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($filters) {
             $handle = fopen('php://output', 'w');
@@ -336,8 +345,8 @@ final class PaymentController extends Controller
     public function retry(string $id, Request $request): JsonResponse
     {
         $result = $this->bus->dispatch(new RetryPaymentCommand(
-            paymentId:      $id,
-            returnUrl:      (string) $request->input('return_url', ''),
+            paymentId: $id,
+            returnUrl: (string) $request->input('return_url', ''),
             idempotencyKey: $request->header('Idempotency-Key') ?? (string) Str::uuid(),
         ));
 

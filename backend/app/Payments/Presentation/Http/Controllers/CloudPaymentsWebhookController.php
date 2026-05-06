@@ -7,6 +7,7 @@ namespace App\Payments\Presentation\Http\Controllers;
 use App\Payments\Infrastructure\Jobs\ProcessCloudPaymentsWebhookJob;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use App\Payments\Infrastructure\Providers\CloudPaymentsProvider;
+use App\Payments\Infrastructure\Webhook\ReplayProtector;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -18,6 +19,7 @@ final class CloudPaymentsWebhookController extends Controller
     public function __construct(
         private readonly CloudPaymentsProvider $provider,
         private readonly PaymentLogger $logger,
+        private readonly ReplayProtector $replayProtector,
     ) {}
 
     #[OA\Post(
@@ -63,11 +65,16 @@ final class CloudPaymentsWebhookController extends Controller
     )]
     public function handle(Request $request): JsonResponse
     {
+        $nonce = (string) $request->header('X-Request-Id', uniqid('', true));
+        $timestamp = $request->integer('DateTimeUTC') ?: time();
+
+        $this->replayProtector->verify($nonce, $timestamp);
+
         $payload = $request->all();
 
         if (! $this->provider->verifyWebhook($payload, $request->headers->all())) {
             $this->logger->warning('CloudPayments: webhook отклонён', [
-                'ip'             => $request->ip(),
+                'ip' => $request->ip(),
                 'transaction_id' => $payload['TransactionId'] ?? 'unknown',
             ]);
 
@@ -77,7 +84,7 @@ final class CloudPaymentsWebhookController extends Controller
 
         $this->logger->info('CloudPayments: webhook получен, постановка в очередь', [
             'transaction_id' => $payload['TransactionId'] ?? 'unknown',
-            'status'         => $payload['Status'] ?? 'unknown',
+            'status' => $payload['Status'] ?? 'unknown',
         ]);
 
         ProcessCloudPaymentsWebhookJob::dispatch($payload);

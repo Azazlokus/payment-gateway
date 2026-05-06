@@ -2,6 +2,7 @@
 
 use App\CryptoPayments\Infrastructure\Jobs\ExpireCryptoDepositsJob;
 use App\CryptoPayments\Infrastructure\Jobs\PollCryptoDepositsJob;
+use App\CryptoPayments\Infrastructure\Jobs\ProcessCryptoRefundsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -19,3 +20,6 @@ Schedule::job(PollCryptoDepositsJob::class)->everyFifteenSeconds();
 
 // Экспирация просроченных депозитов (каждую минуту)
 Schedule::job(ExpireCryptoDepositsJob::class)->everyMinute();
+
+// Обработка крипто-рефандов (каждые 2 минуты)
+Schedule::job(ProcessCryptoRefundsJob::class)->everyTwoMinutes();

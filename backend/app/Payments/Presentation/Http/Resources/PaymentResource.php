@@ -26,6 +26,9 @@ final class PaymentResource extends JsonResource
             'confirmation_url' => $this->dto->confirmationUrl,
             'external_id' => $this->dto->externalId,
             'payment_method_id' => $this->dto->paymentMethodId,
+            'refunded_amount' => $this->dto->refundedAmount,
+            'three_ds_required' => $this->dto->threeDsRequired,
+            'three_ds_challenge_url' => $this->dto->threeDsChallengeUrl,
         ];
     }
 }

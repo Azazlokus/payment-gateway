@@ -55,4 +55,21 @@ interface BlockchainClientInterface
         NativeCryptoAmount $expectedAmount,
         DateTimeImmutable $since,
     ): ?TransactionResult;
+
+    // ── Sending (hot wallet) ──
+
+    /** Returns true when a hot wallet private key / mnemonic is configured. */
+    public function canSend(): bool;
+
+    /**
+     * Sends crypto from the hot wallet to $to address.
+     *
+     * @throws \RuntimeException if hot wallet not configured or SDK unavailable.
+     */
+    public function sendTransfer(
+        CryptoAddress $to,
+        NativeCryptoAmount $amount,
+        CryptoAsset $asset,
+        string $comment,
+    ): TxHash;
 }

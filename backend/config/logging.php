@@ -123,9 +123,26 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        'logstash' => [
+            'driver'       => 'monolog',
+            'level'        => env('LOG_LEVEL', 'debug'),
+            'handler'      => Monolog\Handler\SocketHandler::class,
+            'handler_with' => [
+                'connectionString' => 'tcp://' . env('LOGSTASH_HOST', 'logstash') . ':' . env('LOGSTASH_PORT', '5044'),
+                'connectionTimeout' => 1.0,
+                'persistent'        => false,
+            ],
+            'formatter'    => Monolog\Formatter\LogstashFormatter::class,
+            'formatter_with' => [
+                'applicationName' => env('APP_NAME', 'payment-gateway'),
+            ],
+            'processors'   => [Monolog\Processor\PsrLogMessageProcessor::class],
+        ],
+
         'payments' => [
             'driver'   => 'stack',
             'channels' => explode(',', env('LOG_PAYMENTS_STACK', 'payments_file')),
+            // Set LOG_PAYMENTS_STACK=payments_file,logstash to enable ELK shipping
         ],
 
         'payments_file' => [

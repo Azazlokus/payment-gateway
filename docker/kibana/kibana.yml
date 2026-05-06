@@ -1,0 +1,8 @@
+server.host: "0.0.0.0"
+server.name: "payment-gateway-kibana"
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+elasticsearch.username: "${ELASTIC_USER}"
+elasticsearch.password: "${ELASTIC_PASSWORD}"
+monitoring.enabled: false
+# Disable telemetry
+telemetry.enabled: false

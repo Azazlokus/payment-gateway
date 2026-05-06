@@ -11,6 +11,7 @@ use App\Payments\Domain\Enums\DisputeStatus;
 use App\Payments\Domain\ValueObjects\DisputeId;
 use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Domain\ValueObjects\PaymentId;
+use App\Payments\Infrastructure\Observability\AuditLogger;
 use App\Payments\Infrastructure\Observability\MetricsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ final class DisputeController extends Controller
         private readonly DisputeRepositoryInterface $disputes,
         private readonly PaymentRepositoryInterface $payments,
         private readonly MetricsService $metrics,
+        private readonly AuditLogger $auditLogger,
     ) {}
 
     #[OA\Get(
@@ -107,6 +109,7 @@ final class DisputeController extends Controller
 
         $this->disputes->save($dispute);
         $this->metrics->disputeFiled($payment->provider());
+        $this->auditLogger->log('dispute.filed', "Dispute filed for payment: {$paymentId}", ['payment_id' => $paymentId]);
 
         return response()->json($this->format($dispute), Response::HTTP_CREATED);
     }
@@ -169,7 +172,7 @@ final class DisputeController extends Controller
     {
         $request->validate([
             'resolution' => ['required', 'in:Won,Lost'],
-            'note'       => ['nullable', 'string', 'max:500'],
+            'note' => ['nullable', 'string', 'max:500'],
         ]);
 
         try {
@@ -185,7 +188,7 @@ final class DisputeController extends Controller
         }
 
         $resolution = $request->string('resolution')->toString();
-        $note       = $request->string('note')->toString() ?: null;
+        $note = $request->string('note')->toString() ?: null;
 
         if ($resolution === DisputeStatus::Won->value) {
             $dispute->markAsWon($note);
@@ -195,6 +198,7 @@ final class DisputeController extends Controller
 
         $this->disputes->save($dispute);
         $this->metrics->disputeResolved($resolution);
+        $this->auditLogger->log('dispute.resolved', "Dispute resolved: {$id}", ['id' => $id, 'resolution' => $resolution]);
 
         return response()->json($this->format($dispute));
     }
@@ -205,20 +209,20 @@ final class DisputeController extends Controller
     private function format(Dispute $d): array
     {
         return [
-            'id'         => $d->id()->toString(),
+            'id' => $d->id()->toString(),
             'payment_id' => $d->paymentId()->toString(),
-            'status'     => $d->status()->value,
-            'amount'     => $d->amount()->amount(),
-            'currency'   => $d->amount()->currency()->value,
-            'reason'     => $d->reason(),
-            'note'       => $d->note(),
+            'status' => $d->status()->value,
+            'amount' => $d->amount()->amount(),
+            'currency' => $d->amount()->currency()->value,
+            'reason' => $d->reason(),
+            'note' => $d->note(),
         ];
     }
 
     private function notFound(): JsonResponse
     {
         return response()->json([
-            'code'    => 'not_found',
+            'code' => 'not_found',
             'message' => 'Resource not found',
         ], Response::HTTP_NOT_FOUND);
     }

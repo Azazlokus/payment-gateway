@@ -2,7 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Payments\Domain\Exceptions\IdempotencyViolationException;
+use App\Payments\Domain\Exceptions\InvalidPaymentStateException;
+use App\Payments\Domain\Exceptions\PaymentException;
+use App\Payments\Domain\Exceptions\WebhookVerificationFailedException;
+use App\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
 use App\Payments\Infrastructure\Observability\MetricsService;
+use App\Payments\Presentation\Http\Middleware\RequireApiKey;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,7 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'correlation' => \App\Payments\Infrastructure\Observability\CorrelationIdMiddleware::class,
+            'correlation' => CorrelationIdMiddleware::class,
+            'auth.api' => RequireApiKey::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
@@ -39,7 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // InvalidPaymentStateException — 409 Conflict
         $exceptions->render(function (
-            \App\Payments\Domain\Exceptions\InvalidPaymentStateException $e,
+            InvalidPaymentStateException $e,
             Request $request,
         ) use ($traceId, $errorJson) {
             return $errorJson('invalid_payment_state', $e->getMessage(), Response::HTTP_CONFLICT, $traceId($request));
@@ -47,7 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // WebhookVerificationFailedException — 403 Forbidden
         $exceptions->render(function (
-            \App\Payments\Domain\Exceptions\WebhookVerificationFailedException $e,
+            WebhookVerificationFailedException $e,
             Request $request,
         ) use ($traceId, $errorJson) {
             return $errorJson('webhook_verification_failed', $e->getMessage(), Response::HTTP_FORBIDDEN, $traceId($request));
@@ -55,7 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // IdempotencyViolationException — 409 Conflict
         $exceptions->render(function (
-            \App\Payments\Domain\Exceptions\IdempotencyViolationException $e,
+            IdempotencyViolationException $e,
             Request $request,
         ) use ($traceId, $errorJson) {
             return $errorJson('idempotency_violation', $e->getMessage(), Response::HTTP_CONFLICT, $traceId($request));
@@ -63,7 +70,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // PaymentException (base) — используем код из исключения
         $exceptions->render(function (
-            \App\Payments\Domain\Exceptions\PaymentException $e,
+            PaymentException $e,
             Request $request,
         ) use ($traceId, $errorJson) {
             $status = ($e->getCode() >= 400 && $e->getCode() < 600)
@@ -84,7 +91,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 app(MetricsService::class)->throttleRejected(
                     $request->route()?->getName() ?? $request->path()
                 );
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Не ломаем ответ если Redis недоступен
             }
 

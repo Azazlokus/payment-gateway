@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 use App\CryptoPayments\Presentation\Http\Controllers\CryptoDepositController;
-use App\Payments\Presentation\Http\Controllers\DisputeController;
-use App\Payments\Presentation\Http\Controllers\HealthController;
-use App\Payments\Presentation\Http\Controllers\PaymentController;
 use App\Payments\Presentation\Http\Controllers\AlfaBankWebhookController;
 use App\Payments\Presentation\Http\Controllers\CloudPaymentsWebhookController;
+use App\Payments\Presentation\Http\Controllers\DisputeController;
+use App\Payments\Presentation\Http\Controllers\HealthController;
 use App\Payments\Presentation\Http\Controllers\MetricsController;
+use App\Payments\Presentation\Http\Controllers\PaymentController;
 use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
 use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
 use App\Payments\Presentation\Http\Controllers\WebhookController;
@@ -28,23 +28,28 @@ Route::get('/metrics', MetricsController::class)
     ->name('metrics');
 
 Route::post('/webhook/yookassa', [WebhookController::class, 'yookassa'])
+    ->middleware('throttle:webhook.yookassa')
     ->name('webhook.yookassa');
 
 Route::post('/webhook/robokassa', [RobokassaWebhookController::class, 'handle'])
+    ->middleware('throttle:webhook.robokassa')
     ->name('webhook.robokassa');
 
 Route::post('/webhook/sbp', [SbpWebhookController::class, 'handle'])
+    ->middleware('throttle:webhook.sbp')
     ->name('webhook.sbp');
 
 Route::post('/webhook/alfabank', [AlfaBankWebhookController::class, 'handle'])
+    ->middleware('throttle:webhook.alfabank')
     ->name('webhook.alfabank');
 
 Route::post('/webhook/cloudpayments', [CloudPaymentsWebhookController::class, 'handle'])
+    ->middleware('throttle:webhook.cloudpayments')
     ->name('webhook.cloudpayments');
 
 // ─── API v1 ───────────────────────────────────────────────────────────────────
 
-Route::prefix('v1')->name('v1.')->middleware(['correlation'])->group(function () {
+Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group(function () {
 
     // ── Payments ────────────────────────────────────────────────────────────
 
@@ -112,6 +117,10 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation'])->group(function ()
         Route::post('/deposits', [CryptoDepositController::class, 'store'])
             ->middleware('throttle:30,1')
             ->name('deposits.store');
+
+        Route::post('/deposits/{id}/refund', [CryptoDepositController::class, 'refund'])
+            ->middleware('throttle:10,1')
+            ->name('deposits.refund');
 
         Route::get('/deposits/{id}', [CryptoDepositController::class, 'show'])
             ->middleware('throttle:60,1')

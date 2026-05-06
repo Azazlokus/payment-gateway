@@ -211,6 +211,30 @@ final class TronBlockchainClient implements BlockchainClientInterface
         return null;
     }
 
+    // ─── Sending (hot wallet) ────────────────────────────────────────────────
+
+    public function canSend(): bool
+    {
+        return config('crypto.tron.hot_wallet_private_key', '') !== '';
+    }
+
+    public function sendTransfer(
+        CryptoAddress $to,
+        NativeCryptoAmount $amount,
+        CryptoAsset $asset,
+        string $comment,
+    ): TxHash {
+        if (! $this->canSend()) {
+            throw new \RuntimeException('TRON hot wallet not configured: set TRON_HOT_WALLET_PRIVATE_KEY in .env');
+        }
+
+        // Full TRON sending: POST /wallet/createtransaction → sign with secp256k1 → POST /wallet/broadcasttransaction
+        // Signing requires a secp256k1 library (e.g. composer require kornrunner/keccak + raw openssl).
+        throw new \RuntimeException(
+            'TRON on-chain sending requires a secp256k1 signing library'
+        );
+    }
+
     /** @return array<string, string> */
     private function authHeaders(): array
     {

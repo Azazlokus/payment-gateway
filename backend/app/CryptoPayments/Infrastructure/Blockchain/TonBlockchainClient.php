@@ -247,6 +247,31 @@ final class TonBlockchainClient implements BlockchainClientInterface
         return $found;
     }
 
+    // ─── Sending (hot wallet) ────────────────────────────────────────────────
+
+    public function canSend(): bool
+    {
+        return config('crypto.ton.hot_wallet_mnemonic', '') !== '';
+    }
+
+    public function sendTransfer(
+        CryptoAddress $to,
+        NativeCryptoAmount $amount,
+        CryptoAsset $asset,
+        string $comment,
+    ): TxHash {
+        if (! $this->canSend()) {
+            throw new \RuntimeException('TON hot wallet not configured: set TON_HOT_WALLET_MNEMONIC in .env');
+        }
+
+        // Full on-chain signing requires the olifanton/ton PHP SDK.
+        // Install via: composer require olifanton/ton
+        // Then: create wallet from mnemonic, sign transfer message, broadcast via /sendBoc.
+        throw new \RuntimeException(
+            'TON on-chain sending requires olifanton/ton SDK: composer require olifanton/ton'
+        );
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     /** @return array<string, string> */
