@@ -12,21 +12,28 @@ final class RequireApiKey
 {
     public function handle(Request $request, Closure $next): mixed
     {
-        $configKey = (string) config('api.key');
+        // Поддержка ротации ключей: API_KEY=old-key,new-key
+        // Оба ключа принимаются одновременно — позволяет плавно ротировать
+        // без даунтайма. После обновления клиентов старый ключ удаляется.
+        $configKeys = array_values(array_filter(
+            array_map('trim', explode(',', (string) config('api.key')))
+        ));
 
-        if ($configKey === '') {
+        if ($configKeys === []) {
             return $next($request);
         }
 
         $header = (string) $request->header('X-Api-Key', '');
 
-        if (! hash_equals($configKey, $header)) {
-            return response()->json([
-                'code' => 'unauthorized',
-                'message' => 'Invalid or missing API key',
-            ], Response::HTTP_UNAUTHORIZED);
+        foreach ($configKeys as $key) {
+            if (hash_equals($key, $header)) {
+                return $next($request);
+            }
         }
 
-        return $next($request);
+        return response()->json([
+            'code'    => 'unauthorized',
+            'message' => 'Invalid or missing API key',
+        ], Response::HTTP_UNAUTHORIZED);
     }
 }

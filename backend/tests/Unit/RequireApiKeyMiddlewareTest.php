@@ -132,6 +132,56 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $this->assertFalse($called);
     }
 
+    // ─── Ротация ключей ───────────────────────────────────────────────────────
+
+    public function test_accepts_first_key_in_rotation(): void
+    {
+        config(['api.key' => 'key-old,key-new']);
+
+        $request = Request::create('/test', 'GET');
+        $request->headers->set('X-Api-Key', 'key-old');
+
+        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+
+        $this->assertSame(200, $response->getStatusCode());
+    }
+
+    public function test_accepts_second_key_in_rotation(): void
+    {
+        config(['api.key' => 'key-old,key-new']);
+
+        $request = Request::create('/test', 'GET');
+        $request->headers->set('X-Api-Key', 'key-new');
+
+        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+
+        $this->assertSame(200, $response->getStatusCode());
+    }
+
+    public function test_rejects_unknown_key_when_rotation_configured(): void
+    {
+        config(['api.key' => 'key-old,key-new']);
+
+        $request = Request::create('/test', 'GET');
+        $request->headers->set('X-Api-Key', 'key-unknown');
+
+        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+
+        $this->assertSame(401, $response->getStatusCode());
+    }
+
+    public function test_ignores_whitespace_around_keys_in_rotation(): void
+    {
+        config(['api.key' => ' key-one , key-two ']);
+
+        $request = Request::create('/test', 'GET');
+        $request->headers->set('X-Api-Key', 'key-two');
+
+        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+
+        $this->assertSame(200, $response->getStatusCode());
+    }
+
     // ─── Timing-safe: не допускает timing-атак ────────────────────────────────
 
     public function test_rejects_key_that_is_prefix_of_correct_key(): void

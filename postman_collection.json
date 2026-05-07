@@ -1,0 +1,427 @@
+{
+  "info": {
+    "name": "Payment Gateway API",
+    "description": "REST API платёжного шлюза. Базовый URL и API ключ настраиваются через переменные окружения Postman.\n\n**Окружения:**\n- Local: base_url = http://localhost:8000\n- Staging: base_url = https://staging.example.com\n\n**Аутентификация:** заголовок `X-Api-Key`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "payment-gateway-v1"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "api_key",  "value": "",                     "type": "string" },
+    { "key": "payment_id", "value": "", "type": "string" },
+    { "key": "dispute_id", "value": "", "type": "string" },
+    { "key": "deposit_id", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key",   "value": "X-Api-Key",    "type": "string" },
+      { "key": "value", "value": "{{api_key}}",   "type": "string" },
+      { "key": "in",    "value": "header",        "type": "string" }
+    ]
+  },
+  "item": [
+
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/health",
+            "description": "Проверяет доступность сервиса, БД, Redis и Horizon. Не требует X-Api-Key."
+          }
+        },
+        {
+          "name": "Metrics (Prometheus)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/metrics",
+            "description": "Метрики в формате Prometheus text. Не требует X-Api-Key."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "List payments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "payments"],
+              "query": [
+                { "key": "status",    "value": "",           "disabled": true, "description": "Pending | Succeeded | Cancelled | Refunded" },
+                { "key": "provider",  "value": "",           "disabled": true, "description": "yookassa | robokassa | cloudpayments | sbp | alfabank" },
+                { "key": "from_date", "value": "2024-01-01", "disabled": true },
+                { "key": "to_date",   "value": "2024-12-31", "disabled": true },
+                { "key": "per_page",  "value": "15",         "disabled": true },
+                { "key": "cursor",    "value": "",           "disabled": true, "description": "Курсор для следующей страницы (из next_cursor в предыдущем ответе)" }
+              ]
+            },
+            "description": "Cursor-based пагинация. Передай next_cursor из ответа в параметр cursor для следующей страницы."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has data array', () => pm.expect(json.data).to.be.an('array'));",
+                  "pm.test('Has cursor fields', () => {",
+                  "  pm.expect(json).to.have.property('next_cursor');",
+                  "  pm.expect(json).to.have.property('prev_cursor');",
+                  "});",
+                  "if (json.data.length > 0) {",
+                  "  pm.collectionVariables.set('payment_id', json.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Create payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",    "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}", "description": "Уникальный ключ идемпотентности" }
+            ],
+            "url": "{{base_url}}/api/v1/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50000,\n  \"description\": \"Оплата заказа №1234\",\n  \"return_url\": \"https://example.com/payment/success\",\n  \"metadata\": {\n    \"order_id\": \"1234\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Создаёт платёж. amount — в копейках (50000 = 500 RUB)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has payment id', () => pm.expect(json.data).to.have.property('id'));",
+                  "pm.collectionVariables.set('payment_id', json.data.id);",
+                  "console.log('Payment ID saved:', json.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Create payment (recurring — save method)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",    "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "url": "{{base_url}}/api/v1/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50000,\n  \"description\": \"Подписка — первый платёж\",\n  \"return_url\": \"https://example.com/success\",\n  \"save_payment_method\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Первый платёж подписки. После успешной оплаты вебхук вернёт payment_method_id."
+          }
+        },
+
+        {
+          "name": "Create payment (recurring — charge)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",    "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "url": "{{base_url}}/api/v1/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50000,\n  \"description\": \"Подписка — повторное списание\",\n  \"return_url\": \"https://example.com/success\",\n  \"payment_method_id\": \"ЗАМЕНИ_НА_РЕАЛЬНЫЙ_ID\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Повторное списание без редиректа клиента. Нужен payment_method_id из предыдущего успешного платежа."
+          }
+        },
+
+        {
+          "name": "Get payment",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/payments/{{payment_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Correct id', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data.id).to.equal(pm.collectionVariables.get('payment_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Cancel payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/payments/{{payment_id}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Отменено пользователем\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+
+        {
+          "name": "Refund payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",    "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "url": "{{base_url}}/api/v1/payments/{{payment_id}}/refund",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 10000,\n  \"reason\": \"Возврат по заявке клиента\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Частичный возврат (amount в копейках). Без amount — полный возврат."
+          }
+        },
+
+        {
+          "name": "Sync payment status",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/payments/{{payment_id}}/sync",
+            "description": "Запрашивает актуальный статус у провайдера и обновляет в БД. Полезно если вебхук потерялся."
+          }
+        },
+
+        {
+          "name": "Export payments (CSV)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments/export",
+              "query": [
+                { "key": "status",    "value": "Succeeded", "disabled": true },
+                { "key": "from_date", "value": "2024-01-01", "disabled": true },
+                { "key": "to_date",   "value": "2024-12-31", "disabled": true }
+              ]
+            },
+            "description": "Стримит CSV-файл. В Postman скачается как файл."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Disputes",
+      "item": [
+        {
+          "name": "List disputes for payment",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/payments/{{payment_id}}/disputes"
+          }
+        },
+
+        {
+          "name": "File dispute",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/payments/{{payment_id}}/disputes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50000,\n  \"reason\": \"Товар не получен\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('dispute_id', json.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Get dispute",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/disputes/{{dispute_id}}"
+          }
+        },
+
+        {
+          "name": "Resolve dispute (Won)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/disputes/{{dispute_id}}/resolve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolution\": \"Won\",\n  \"note\": \"Клиент предоставил подтверждение получения\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+
+        {
+          "name": "Resolve dispute (Lost)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/disputes/{{dispute_id}}/resolve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolution\": \"Lost\",\n  \"note\": \"Подтверждение не предоставлено\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Crypto Deposits",
+      "item": [
+        {
+          "name": "Create TON deposit",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/crypto/deposits",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset\": \"TON\",\n  \"fiat_amount_kopecks\": 100000,\n  \"payment_id\": \"order-12345\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Создаёт депозит на 1000 RUB в TON. Клиент переводит TON на depositAddress с указанным memo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('deposit_id', json.data.id);",
+                  "console.log('Deposit address:', json.data.deposit_address);",
+                  "console.log('Memo:', json.data.memo);"
+                ]
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Create USDT-TRC20 deposit",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/crypto/deposits",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset\": \"USDT_TRC20\",\n  \"fiat_amount_kopecks\": 100000,\n  \"payment_id\": \"order-12345\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+
+        {
+          "name": "Get deposit",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/crypto/deposits/{{deposit_id}}"
+          }
+        },
+
+        {
+          "name": "Refund deposit",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/crypto/deposits/{{deposit_id}}/refund",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to_address\": \"UQA...\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Webhooks (тестовые запросы)",
+      "description": "Симуляция вебхуков от провайдеров. Не требуют X-Api-Key.",
+      "item": [
+        {
+          "name": "YooKassa — payment.succeeded",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/webhook/yookassa",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"payment.succeeded\",\n  \"object\": {\n    \"id\": \"EXTERNAL_PAYMENT_ID\",\n    \"status\": \"succeeded\",\n    \"amount\": { \"value\": \"500.00\", \"currency\": \"RUB\" },\n    \"payment_method\": { \"id\": \"pm_saved_123\", \"saved\": true }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+
+        {
+          "name": "CloudPayments — pay",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-Request-Id",  "value": "{{$guid}}" },
+              { "key": "Content-HMAC",  "value": "BASE64_HMAC_SIGNATURE" }
+            ],
+            "url": "{{base_url}}/api/webhook/cloudpayments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"TransactionId\": 12345,\n  \"InvoiceId\": \"{{payment_id}}\",\n  \"Status\": \"Completed\",\n  \"DateTimeUTC\": \"2024-01-15T10:30:00Z\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    }
+
+  ]
+}
