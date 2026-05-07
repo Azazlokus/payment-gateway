@@ -9,6 +9,7 @@ use App\Payments\Domain\Exceptions\WebhookVerificationFailedException;
 use App\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
 use App\Payments\Infrastructure\Observability\MetricsService;
 use App\Payments\Presentation\Http\Middleware\RequireApiKey;
+use App\Payments\Presentation\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -22,9 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->append(SecurityHeaders::class);
+
         $middleware->alias([
             'correlation' => CorrelationIdMiddleware::class,
-            'auth.api' => RequireApiKey::class,
+            'auth.api'    => RequireApiKey::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
