@@ -1,0 +1,81 @@
+groups:
+  - name: payment_gateway
+    interval: 30s
+    rules:
+
+      # ─── Сервис ────────────────────────────────────────────────────────────
+
+      - alert: PaymentGatewayDown
+        expr: up{job="payment-gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Payment Gateway недоступен"
+          description: "Prometheus не может собрать метрики с /api/metrics уже {{ $value | humanizeDuration }}."
+
+      # ─── DLQ ───────────────────────────────────────────────────────────────
+
+      - alert: HighFailedJobs
+        expr: failed_jobs_count > 10
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Много упавших задач в DLQ"
+          description: "В очереди failed_jobs накопилось {{ $value }} задач. Запусти: make queue-retry-all"
+
+      - alert: FailedJobsGrowing
+        expr: delta(failed_jobs_count[10m]) > 5
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DLQ растёт"
+          description: "За 10 минут добавилось {{ $value }} упавших задач."
+
+      # ─── Вебхуки ───────────────────────────────────────────────────────────
+
+      - alert: WebhookFailureSpike
+        expr: sum(rate(webhooks_failed_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Всплеск ошибок вебхуков"
+          description: "Провайдеры: {{ range query \"sum by(provider) (rate(webhooks_failed_total[5m])) > 0\" }}{{ .Labels.provider }} ({{ .Value | humanize }}/s) {{ end }}"
+
+      # ─── Конверсия ─────────────────────────────────────────────────────────
+
+      - alert: LowConversionRate
+        expr: |
+          sum(rate(payments_succeeded_total[1h])) /
+          sum(rate(payments_created_total[1h])) < 0.5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Низкая конверсия платежей"
+          description: "Конверсия за последний час: {{ $value | humanizePercentage }}. Норма > 50%."
+
+      # ─── Активность ────────────────────────────────────────────────────────
+
+      - alert: NoPaymentsCreated
+        expr: sum(rate(payments_created_total[15m])) == 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Нет новых платежей 30 минут"
+          description: "Возможно проблема с API или клиентами перестали присылать запросы."
+
+      # ─── Диспуты ───────────────────────────────────────────────────────────
+
+      - alert: DisputeSpike
+        expr: sum(rate(disputes_filed_total[1h])) * 3600 > 5
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Всплеск диспутов"
+          description: "За последний час подано {{ $value | humanize }} диспутов."

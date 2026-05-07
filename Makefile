@@ -37,6 +37,7 @@ GRAY   := \033[90m
         up up-frontend down restart build rebuild logs ps \
         prod-up prod-down staging-up staging-down ci-up ci-down ci-test \
         monitoring-up monitoring-down prod-monitoring-up prod-monitoring-down staging-monitoring-up \
+        telescope-install \
         install setup first-run \
         composer-install composer-update composer-dump \
         npm-install npm-build npm-dev \
@@ -169,6 +170,12 @@ staging-monitoring-up: ## Start staging + full monitoring stack
 	@printf "$(CYAN)Starting staging + monitoring...$(RESET)\n"
 	@$(STAGING_MONITORING_COMPOSE) up -d --remove-orphans
 	@printf "$(GREEN)Done.$(RESET)\n"
+
+telescope-install: ## Install Laravel Telescope (run once after composer install)
+	@printf "$(CYAN)Installing Telescope...$(RESET)\n"
+	@$(DC_EXEC) php artisan telescope:install
+	@$(DC_EXEC) php artisan migrate --force
+	@printf "$(GREEN)Telescope ready: http://localhost:$${APP_PORT:-8000}/telescope$(RESET)\n"
 
 # =============================================================================
 ## Setup

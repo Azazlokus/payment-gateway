@@ -1,10 +1,20 @@
 global:
-  scrape_interval: 15s
+  scrape_interval:     15s
   evaluation_interval: 15s
+
+# Alertmanager — получает сработавшие алерты от Prometheus
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+# Файлы с правилами алертов
+rule_files:
+  - 'alerts.yml'
 
 scrape_configs:
   - job_name: 'payment-gateway'
     metrics_path: '/api/metrics'
     static_configs:
       - targets: ['nginx:80']
-    # In production, restrict /api/metrics via nginx IP whitelist or bearer_token_file
+    # В продакшне ограничить /api/metrics через nginx IP whitelist или bearer_token_file
