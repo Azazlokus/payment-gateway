@@ -19,6 +19,10 @@ Schedule::command('payments:prune-idempotency-keys')->dailyAt('02:00');
 // Рекуррентные методы не нужны вечно; сдвинуто на 02:30 чтобы не конкурировать
 Schedule::command('payments:prune-payment-methods')->dailyAt('02:30');
 
+// Сверка Pending-платежей с провайдерами каждые 15 минут
+// Подхватывает случаи когда вебхук не дошёл (сбой сети, рестарт Horizon)
+Schedule::command('payments:reconcile --hours=1')->everyFifteenMinutes();
+
 // Опрос блокчейна TON на входящие транзакции (каждые 15 секунд)
 Schedule::job(PollCryptoDepositsJob::class)->everyFifteenSeconds();
 

@@ -46,6 +46,8 @@ GRAY   := \033[90m
         tinker shell shell-root \
         test test-unit test-feature test-coverage \
         lint lint-fix analyse mutation \
+        reconcile prune \
+        k6-create k6-list k6-webhook \
         horizon horizon-terminate horizon-pause horizon-continue horizon-status \
         queue-flush queue-retry-all queue-failed \
         storage-link \
@@ -354,6 +356,33 @@ horizon-continue: ## Resume all paused Horizon workers
 
 horizon-status: ## Show Horizon status
 	@$(ARTISAN) horizon:status
+
+# =============================================================================
+## Maintenance
+# =============================================================================
+
+reconcile: ## Sync all stale Pending payments with providers (HOURS=N, PROVIDER=xxx)
+	@$(ARTISAN) payments:reconcile --hours=$(or $(HOURS),2) $(if $(PROVIDER),--provider=$(PROVIDER))
+
+prune: ## Prune old idempotency keys and payment methods (DAYS=N)
+	@$(ARTISAN) payments:prune-idempotency-keys --days=$(or $(DAYS),90)
+	@$(ARTISAN) payments:prune-payment-methods  --days=$(or $(DAYS),365)
+
+# =============================================================================
+## Load testing (k6)
+# =============================================================================
+
+k6-create: ## Run create-payment load test (BASE_URL=... API_KEY=...)
+	@printf "$(CYAN)Running k6: create-payment...$(RESET)\n"
+	@k6 run k6/create-payment.js
+
+k6-list: ## Run list-payments load test (BASE_URL=... API_KEY=...)
+	@printf "$(CYAN)Running k6: list-payments...$(RESET)\n"
+	@k6 run k6/list-payments.js
+
+k6-webhook: ## Run webhook flood test (BASE_URL=... PROVIDER=yookassa)
+	@printf "$(CYAN)Running k6: webhook-flood (PROVIDER=$(or $(PROVIDER),yookassa))...$(RESET)\n"
+	@k6 run -e PROVIDER=$(or $(PROVIDER),yookassa) k6/webhook-flood.js
 
 queue-flush: ## Delete all jobs from the failed jobs table
 	@$(ARTISAN) queue:flush

@@ -29,6 +29,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      # Проверяем что PHP-FPM процесс живой и autoloader грузится
+      test: ["CMD", "php", "-r", "require '/var/www/html/vendor/autoload.php'; echo 'ok';"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - payment-network
 
@@ -40,7 +47,14 @@ services:
       - ./backend/public:/var/www/html/public:ro
       - ./.docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - app
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO/dev/null http://localhost/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - payment-network
 
@@ -103,6 +117,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      # Horizon пишет статус в Redis ключ horizon:status
+      test: ["CMD-SHELL", "php artisan horizon:status | grep -qiE 'running|paused' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - payment-network
 
