@@ -62,25 +62,24 @@ final class PaymentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $perPage = min((int) $request->query('per_page', 15), 100);
-        $page = max((int) $request->query('page', 1), 1);
+        $cursor  = $request->query('cursor');
         $filters = array_filter([
-            'status' => $request->query('status'),
-            'provider' => $request->query('provider'),
+            'status'    => $request->query('status'),
+            'provider'  => $request->query('provider'),
             'from_date' => $request->query('from_date'),
-            'to_date' => $request->query('to_date'),
+            'to_date'   => $request->query('to_date'),
         ]);
 
-        $result = $this->repository->paginate($perPage, $page, $filters);
+        $result = $this->repository->cursorPaginate($perPage, $cursor ?: null, $filters);
 
         return response()->json([
-            'data' => array_map(
+            'data'        => array_map(
                 fn ($payment) => (new PaymentResource(PaymentResultDTO::fromAggregate($payment)))->resolve(),
                 $result['data']
             ),
-            'total' => $result['total'],
-            'per_page' => $result['per_page'],
-            'current_page' => $result['current_page'],
-            'last_page' => $result['last_page'],
+            'per_page'    => $result['per_page'],
+            'next_cursor' => $result['next_cursor'],
+            'prev_cursor' => $result['prev_cursor'],
         ], Response::HTTP_OK);
     }
 

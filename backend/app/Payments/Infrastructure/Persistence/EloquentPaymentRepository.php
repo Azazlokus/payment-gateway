@@ -69,10 +69,14 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
     }
 
     /** @param array<string, mixed> $filters
-     *  @return array{data: Payment[], total: int, per_page: int, current_page: int, last_page: int} */
-    public function paginate(int $perPage, int $page, array $filters): array
+     *  @return array{data: Payment[], per_page: int, next_cursor: string|null, prev_cursor: string|null} */
+    public function cursorPaginate(int $perPage, ?string $cursor, array $filters): array
     {
-        $query = PaymentModel::query()->orderByDesc('created_at');
+        // ORDER BY created_at + id обеспечивает уникальность курсора
+        // (два платежа могут иметь одинаковый created_at)
+        $query = PaymentModel::query()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -90,14 +94,13 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
             $query->whereDate('created_at', '<=', $filters['to_date']);
         }
 
-        $paginator = $query->paginate(perPage: $perPage, page: $page);
+        $paginator = $query->cursorPaginate(perPage: $perPage, cursor: $cursor);
 
         return [
-            'data' => $paginator->getCollection()->map(fn ($m) => $this->hydrate($m))->all(),
-            'total' => $paginator->total(),
-            'per_page' => $paginator->perPage(),
-            'current_page' => $paginator->currentPage(),
-            'last_page' => $paginator->lastPage(),
+            'data'        => $paginator->getCollection()->map(fn ($m) => $this->hydrate($m))->all(),
+            'per_page'    => $paginator->perPage(),
+            'next_cursor' => $paginator->nextCursor()?->encode(),
+            'prev_cursor' => $paginator->previousCursor()?->encode(),
         ];
     }
 
