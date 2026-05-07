@@ -36,6 +36,7 @@ GRAY   := \033[90m
 .PHONY: help \
         up up-frontend down restart build rebuild logs ps \
         prod-up prod-down staging-up staging-down ci-up ci-down ci-test \
+        monitoring-up monitoring-down prod-monitoring-up prod-monitoring-down staging-monitoring-up \
         install setup first-run \
         composer-install composer-update composer-dump \
         npm-install npm-build npm-dev \
@@ -143,6 +144,31 @@ ci-down: ## Stop CI test environment
 ci-test: ## Run full test suite inside CI environment
 	@printf "$(CYAN)Running tests in CI environment...$(RESET)\n"
 	@$(CI_COMPOSE) exec app php artisan test --colors=always
+
+MONITORING_COMPOSE         := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+PROD_MONITORING_COMPOSE    := docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.monitoring.yml
+STAGING_MONITORING_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.staging.yml -f docker-compose.monitoring.yml
+
+monitoring-up: ## Start dev + full monitoring stack (Prometheus + Grafana + ELK)
+	@printf "$(CYAN)Starting monitoring stack...$(RESET)\n"
+	@$(MONITORING_COMPOSE) up -d --remove-orphans
+	@printf "$(GREEN)Monitoring up.$(RESET) Grafana: http://localhost:3000  Kibana: http://localhost:5601\n"
+
+monitoring-down: ## Stop monitoring stack
+	@$(MONITORING_COMPOSE) down
+
+prod-monitoring-up: ## Start production + full monitoring stack
+	@printf "$(CYAN)Starting production + monitoring...$(RESET)\n"
+	@$(PROD_MONITORING_COMPOSE) up -d --remove-orphans
+	@printf "$(GREEN)Done.$(RESET)\n"
+
+prod-monitoring-down: ## Stop production + monitoring stack
+	@$(PROD_MONITORING_COMPOSE) down
+
+staging-monitoring-up: ## Start staging + full monitoring stack
+	@printf "$(CYAN)Starting staging + monitoring...$(RESET)\n"
+	@$(STAGING_MONITORING_COMPOSE) up -d --remove-orphans
+	@printf "$(GREEN)Done.$(RESET)\n"
 
 # =============================================================================
 ## Setup
