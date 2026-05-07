@@ -35,6 +35,7 @@ GRAY   := \033[90m
 
 .PHONY: help \
         up up-frontend down restart build rebuild logs ps \
+        prod-up prod-down staging-up staging-down ci-up ci-down ci-test \
         install setup first-run \
         composer-install composer-update composer-dump \
         npm-install npm-build npm-dev \
@@ -103,6 +104,45 @@ logs: ## Tail logs (SERVICE=<name> to filter, e.g. make logs SERVICE=horizon)
 
 ps: ## Show running containers and their status
 	@$(DOCKER_COMPOSE) ps
+
+# =============================================================================
+## Environments
+# =============================================================================
+
+PROD_COMPOSE    := docker compose -f docker-compose.yml -f docker-compose.prod.yml
+STAGING_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.staging.yml
+CI_COMPOSE      := docker compose -f docker-compose.yml -f docker-compose.ci.yml
+
+prod-up: ## Start production environment (no override.yml)
+	@printf "$(CYAN)Starting production containers...$(RESET)\n"
+	@$(PROD_COMPOSE) up -d --remove-orphans
+	@printf "$(GREEN)Production up.$(RESET)\n"
+
+prod-down: ## Stop production environment
+	@$(PROD_COMPOSE) down
+
+prod-build: ## Build production images (target: prod / prod-worker)
+	@$(PROD_COMPOSE) build $(if $(NOCACHE),--no-cache)
+
+staging-up: ## Start staging environment
+	@printf "$(CYAN)Starting staging containers...$(RESET)\n"
+	@$(STAGING_COMPOSE) up -d --remove-orphans
+	@printf "$(GREEN)Staging up. API: http://localhost:$${APP_PORT:-8000}$(RESET)\n"
+
+staging-down: ## Stop staging environment
+	@$(STAGING_COMPOSE) down
+
+ci-up: ## Start CI test environment (minimal, sync queue)
+	@printf "$(CYAN)Starting CI containers...$(RESET)\n"
+	@$(CI_COMPOSE) up -d --remove-orphans
+	@printf "$(GREEN)CI containers ready.$(RESET)\n"
+
+ci-down: ## Stop CI test environment
+	@$(CI_COMPOSE) down
+
+ci-test: ## Run full test suite inside CI environment
+	@printf "$(CYAN)Running tests in CI environment...$(RESET)\n"
+	@$(CI_COMPOSE) exec app php artisan test --colors=always
 
 # =============================================================================
 ## Setup

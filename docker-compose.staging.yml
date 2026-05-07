@@ -1,0 +1,77 @@
+# =============================================================================
+# docker-compose.staging.yml — STAGING / QA
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+#   make staging-up
+#
+# Staging mirrors production as closely as possible, with these additions:
+#   - All ports exposed so QA team can inspect DB, Redis, monitoring directly
+#   - APP_DEBUG=true for better error visibility
+#   - Adminer available for DB inspection
+#   - No resource limits (staging runs on smaller VMs)
+# =============================================================================
+
+services:
+
+  app:
+    build:
+      target: prod                         # prod stage (OPcache, non-root) — same as prod
+    restart: unless-stopped
+    environment:
+      APP_ENV: staging
+      APP_DEBUG: "true"                    # debug on for QA error visibility
+
+  nginx:
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:80"
+
+  frontend:
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3080}:80"
+
+  postgres:
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"            # exposed for QA DB inspection
+
+  redis:
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  horizon:
+    build:
+      target: prod-worker
+    restart: unless-stopped
+    environment:
+      APP_ENV: staging
+      APP_DEBUG: "true"
+
+  prometheus:
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+
+  grafana:
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+
+  # ─── QA extras ────────────────────────────────────────────────────────────
+
+  adminer:
+    image: adminer:4
+    container_name: payment-gateway-adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha-dark
+    depends_on:
+      - postgres
+    networks:
+      - payment-network

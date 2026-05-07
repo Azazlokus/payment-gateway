@@ -1,0 +1,59 @@
+# =============================================================================
+# .dockerignore — excludes files from the Docker build context
+# Reduces image size and prevents leaking sensitive/unnecessary files
+# =============================================================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE / editor
+.idea
+.vscode
+.fleet
+.nova
+.zed
+.phpactor.json
+*.code-workspace
+
+# Tests and quality tools (not needed at runtime)
+tests/
+coverage/
+.phpunit.cache
+.phpunit.result.cache
+phpunit.xml
+phpstan.neon
+pint.json
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Development dependencies (installed fresh inside image)
+vendor/
+node_modules/
+
+# Build artifacts
+public/build/
+public/hot/
+public/storage
+
+# Logs and runtime storage
+storage/logs/
+storage/framework/sessions/
+storage/framework/views/
+storage/framework/cache/
+
+# Docker config (build scripts are explicitly copied — no need for the dir)
+# docker/ is included because entrypoint.sh lives there
+
+# Documentation
+*.md
+CHANGELOG
+LICENSE
+
+# macOS
+.DS_Store
+Thumbs.db

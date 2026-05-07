@@ -1,0 +1,90 @@
+# =============================================================================
+# docker-compose.prod.yml — PRODUCTION
+#
+# Usage (explicit -f disables override.yml auto-apply):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   make prod-up
+#
+# Key differences from dev:
+#   - prod / prod-worker build stages (OPcache, non-root user, no Xdebug)
+#   - restart: always (auto-recover from crashes)
+#   - Resource limits (prevent runaway memory/CPU)
+#   - DB and Redis NOT exposed to the host (internal-only)
+#   - Monitoring ports bound to 127.0.0.1 (accessible via SSH tunnel)
+#   - No Adminer or Mailpit
+# =============================================================================
+
+services:
+
+  app:
+    build:
+      target: prod
+    restart: always
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  nginx:
+    restart: always
+    ports:
+      - "80:80"
+      - "443:80"                           # TLS termination handled upstream (load balancer / Traefik)
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 64M
+
+  postgres:
+    restart: always
+    # No host ports — only reachable within payment-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  redis:
+    restart: always
+    # No host ports — only reachable within payment-network
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+  horizon:
+    build:
+      target: prod-worker
+    restart: always
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+        reservations:
+          memory: 64M
+
+  prometheus:
+    restart: always
+    ports:
+      - "127.0.0.1:9090:9090"             # localhost-only; reach via SSH tunnel
+
+  grafana:
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"             # localhost-only; reach via SSH tunnel
+    deploy:
+      resources:
+        limits:
+          memory: 128M

@@ -9,6 +9,7 @@ REST API платёжного шлюза на Laravel 13 с поддержкой
 - [Структура репозитория](#структура-репозитория)
 - [Архитектура](#архитектура)
 - [Быстрый старт](#быстрый-старт)
+- [Docker окружения](#docker-окружения)
 - [Конфигурация](#конфигурация)
 - [Безопасность](#безопасность)
 - [API v1](#api-v1)
@@ -97,11 +98,18 @@ payment-gateway/
 │       │   └── MetricsDashboardPage.vue
 │       └── router/index.js
 │
-├── docker/
+├── .docker/                  # Docker-конфиги (nginx, prometheus, grafana, ELK)
 │   ├── nginx/default.conf    # reverse proxy для backend
-│   └── frontend/nginx.conf   # статика Vue SPA
+│   ├── frontend/nginx.conf   # статика Vue SPA
+│   ├── prometheus/
+│   ├── grafana/
+│   └── logstash/
 │
-├── docker-compose.yml
+├── docker-compose.yml        # базовый скелет (без env-специфики)
+├── docker-compose.override.yml  # локальная разработка (авто)
+├── docker-compose.prod.yml   # продакшн
+├── docker-compose.staging.yml   # стейджинг / QA
+├── docker-compose.ci.yml     # CI / тесты
 └── Makefile
 ```
 
@@ -236,6 +244,68 @@ docker compose --profile frontend up -d frontend
 | Adminer (БД) | http://localhost:8080 |
 | Grafana | http://localhost:3000 |
 | Prometheus | http://localhost:9090 |
+
+---
+
+## Docker окружения
+
+### Образы — стадии сборки
+
+`backend/Dockerfile` использует **multi-stage build** из 4 стадий:
+
+| Стадия | На основе | Назначение | Ключевые отличия |
+|---|---|---|---|
+| `base` | php:8.4-fpm-alpine | Общий слой | PHP-расширения, Composer deps, код приложения |
+| `dev` | base | Локальная разработка | + Xdebug, + dev-зависимости Composer |
+| `prod` | base | Продакшн PHP-FPM | + OPcache + JIT, non-root пользователь, без Xdebug |
+| `prod-worker` | prod | Продакшн Horizon | Тот же образ, другой ENTRYPOINT (запускает `artisan horizon`) |
+
+```bash
+# Явная сборка нужной стадии
+docker build --target dev  -t payment-gateway:dev  ./backend
+docker build --target prod -t payment-gateway:prod ./backend
+```
+
+### Файлы окружений
+
+| Файл | Когда применяется | Назначение |
+|---|---|---|
+| `docker-compose.yml` | Всегда (базовый скелет) | Определяет сервисы, сети, volumes — без портов и политик рестарта |
+| `docker-compose.override.yml` | `docker compose up` (авто) | Локальная разработка: Xdebug, все порты, Adminer, Mailpit |
+| `docker-compose.prod.yml` | `-f docker-compose.prod.yml` | Продакшн: `restart: always`, лимиты ресурсов, порты только Nginx |
+| `docker-compose.staging.yml` | `-f docker-compose.staging.yml` | Стейджинг: prod-образы + все порты открыты для QA |
+| `docker-compose.ci.yml` | `-f docker-compose.ci.yml` | CI: минимум сервисов, `QUEUE_CONNECTION=sync` |
+
+```bash
+# Локальная разработка (override.yml применяется автоматически)
+docker compose up -d
+
+# Продакшн (override.yml НЕ применяется при явном -f)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+make prod-up
+
+# Стейджинг
+docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+make staging-up
+
+# CI / тесты
+docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+make ci-up && make ci-test
+```
+
+### Что доступно в каждом окружении
+
+| Сервис | dev (override) | prod | staging | ci |
+|---|---|---|---|---|
+| PHP-FPM (app) | `dev` stage + xdebug | `prod` stage | `prod` stage | `dev` stage |
+| Nginx | ✓ порт 8000 | ✓ порт 80/443 | ✓ порт 8000 | — |
+| Horizon | `dev` stage | `prod-worker` stage | `prod-worker` stage | — (sync queue) |
+| PostgreSQL | порт 5432 | только внутри сети | порт 5432 | порт 5432 |
+| Redis | порт 6379 | только внутри сети | порт 6379 | порт 6379 |
+| Prometheus | порт 9090 | 127.0.0.1:9090 | порт 9090 | — |
+| Grafana | порт 3000 | 127.0.0.1:3000 | порт 3000 | — |
+| Adminer | порт 8080 | — | порт 8080 | — |
+| Mailpit | порт 8025/1025 | — | — | — |
 
 ---
 

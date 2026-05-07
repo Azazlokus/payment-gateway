@@ -1,0 +1,62 @@
+# =============================================================================
+# docker-compose.ci.yml — CONTINUOUS INTEGRATION (GitHub Actions / GitLab CI)
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+#   make ci-up
+#
+# Design goals:
+#   - Minimal surface: only app + postgres + redis (no nginx, no horizon, no monitoring)
+#   - QUEUE_CONNECTION=sync — jobs run inline, no worker needed
+#   - APP_ENV=testing — uses phpunit.xml config, in-memory SQLite or test DB
+#   - No volumes on app (code is COPYed into the image)
+#   - No restart policies (containers are ephemeral)
+# =============================================================================
+
+services:
+
+  app:
+    build:
+      target: dev                          # dev stage includes test/analysis tooling
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "true"
+      APP_KEY: base64:ci-testing-key-not-used-in-production==
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-payment_gateway_test}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      REDIS_HOST: redis
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync              # no worker needed in CI
+      LOG_CHANNEL: stderr
+
+  postgres:
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-payment_gateway_test}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+
+  redis:
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  # Disabled in CI (not needed for tests)
+  nginx:
+    profiles:
+      - disabled-in-ci
+
+  horizon:
+    profiles:
+      - disabled-in-ci
+
+  prometheus:
+    profiles:
+      - disabled-in-ci
+
+  grafana:
+    profiles:
+      - disabled-in-ci

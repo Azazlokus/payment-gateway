@@ -1,0 +1,109 @@
+# =============================================================================
+# docker-compose.override.yml — LOCAL DEVELOPMENT
+#
+# Auto-applied by Docker Compose when you run `docker compose up`.
+# Adds: Xdebug, live code mounts, host-exposed ports, Adminer, Mailpit.
+#
+# To skip this file (e.g. to test prod config locally):
+#   docker compose -f docker-compose.yml up
+# =============================================================================
+
+services:
+
+  app:
+    build:
+      target: dev                          # Xdebug stage
+    restart: unless-stopped
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      XDEBUG_MODE: debug,develop
+    volumes:
+      - ./backend:/var/www/html            # live code reload
+      - /var/www/html/vendor               # preserve container vendor
+      - /var/www/html/storage              # preserve container storage
+
+  nginx:
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:80"
+
+  frontend:
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3080}:80"
+
+  postgres:
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"            # expose for local DB clients (TablePlus etc.)
+
+  redis:
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"         # expose for local Redis clients (Medis etc.)
+
+  horizon:
+    build:
+      target: dev                          # also use dev stage locally (xdebug, dev deps)
+    restart: unless-stopped
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+    volumes:
+      - ./backend:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/storage
+
+  prometheus:
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+
+  grafana:
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+
+  # ─── Dev-only extras ──────────────────────────────────────────────────────
+
+  adminer:
+    image: adminer:4
+    container_name: payment-gateway-adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha-dark
+    depends_on:
+      - postgres
+    networks:
+      - payment-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: payment-gateway-mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"    # Web UI
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"  # SMTP
+    networks:
+      - payment-network
+
+  # ─── ELK ports (only when started with --profile elk) ────────────────────
+
+  elasticsearch:
+    restart: unless-stopped
+    ports:
+      - "${ELASTIC_PORT:-9200}:9200"
+
+  logstash:
+    restart: unless-stopped
+    ports:
+      - "${LOGSTASH_PORT:-5044}:5044"
+
+  kibana:
+    restart: unless-stopped
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"

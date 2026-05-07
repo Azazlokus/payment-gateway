@@ -6,7 +6,9 @@ namespace App\Payments\Presentation\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -25,6 +27,8 @@ final class HealthController extends Controller
                     properties: [
                         new OA\Property(property: 'status', type: 'string', example: 'ok'),
                         new OA\Property(property: 'db', type: 'string', example: 'ok'),
+                        new OA\Property(property: 'redis', type: 'string', example: 'ok'),
+                        new OA\Property(property: 'horizon', type: 'string', example: 'running'),
                     ]
                 )
             ),
@@ -35,6 +39,8 @@ final class HealthController extends Controller
                     properties: [
                         new OA\Property(property: 'status', type: 'string', example: 'error'),
                         new OA\Property(property: 'db', type: 'string', example: 'unavailable'),
+                        new OA\Property(property: 'redis', type: 'string', example: 'unavailable'),
+                        new OA\Property(property: 'horizon', type: 'string', example: 'inactive'),
                     ]
                 )
             ),
@@ -49,10 +55,30 @@ final class HealthController extends Controller
             $dbStatus = 'unavailable';
         }
 
-        $healthy = $dbStatus === 'ok';
+        try {
+            Redis::ping();
+            $redisStatus = 'ok';
+        } catch (\Throwable) {
+            $redisStatus = 'unavailable';
+        }
+
+        // Horizon записывает свой статус в Redis под ключом horizon:master
+        // Возможные значения: running, paused, или ключ отсутствует (inactive)
+        try {
+            $horizonStatus = Cache::store('redis')->get('horizon:status') ?? 'inactive';
+        } catch (\Throwable) {
+            $horizonStatus = 'inactive';
+        }
+
+        $healthy = $dbStatus === 'ok' && $redisStatus === 'ok';
 
         return response()->json(
-            ['status' => $healthy ? 'ok' : 'error', 'db' => $dbStatus],
+            [
+                'status'  => $healthy ? 'ok' : 'error',
+                'db'      => $dbStatus,
+                'redis'   => $redisStatus,
+                'horizon' => $horizonStatus,
+            ],
             $healthy ? Response::HTTP_OK : Response::HTTP_SERVICE_UNAVAILABLE,
         );
     }
