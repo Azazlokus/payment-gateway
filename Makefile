@@ -45,7 +45,7 @@ GRAY   := \033[90m
         cache-clear config-clear route-clear view-clear optimize \
         tinker shell shell-root \
         test test-unit test-feature test-coverage \
-        lint lint-fix analyse \
+        lint lint-fix analyse mutation \
         horizon horizon-terminate horizon-pause horizon-continue horizon-status \
         queue-flush queue-retry-all queue-failed \
         storage-link \
@@ -324,6 +324,14 @@ analyse: ## Run static analysis with Larastan (PHPStan)
 	@printf "$(CYAN)Running static analysis...$(RESET)\n"
 	@$(DC_EXEC) ./vendor/bin/phpstan analyse --memory-limit=512M
 	@printf "$(GREEN)Done.$(RESET)\n"
+
+mutation: ## Run mutation tests with Infection PHP (Domain + Application layers)
+	@printf "$(CYAN)Running mutation tests...$(RESET)\n"
+	@$(DC_EXEC) php -d xdebug.mode=coverage vendor/bin/infection \
+		--threads=4 \
+		--show-mutations \
+		--no-interaction
+	@printf "$(GREEN)Report: storage/logs/infection.log$(RESET)\n"
 
 # =============================================================================
 ## Horizon & Queue

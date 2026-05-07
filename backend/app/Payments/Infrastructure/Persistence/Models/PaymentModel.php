@@ -8,10 +8,12 @@ use App\Payments\Domain\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 final class PaymentModel extends Model
 {
     use HasUlids;
+    use SoftDeletes;
 
     protected $table = 'payments';
 

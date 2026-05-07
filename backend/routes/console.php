@@ -15,6 +15,10 @@ Artisan::command('inspire', function () {
 // Запускается ночью в 02:00, когда нагрузка минимальна
 Schedule::command('payments:prune-idempotency-keys')->dailyAt('02:00');
 
+// Очистка payment_method_id у завершённых платежей старше 365 дней
+// Рекуррентные методы не нужны вечно; сдвинуто на 02:30 чтобы не конкурировать
+Schedule::command('payments:prune-payment-methods')->dailyAt('02:30');
+
 // Опрос блокчейна TON на входящие транзакции (каждые 15 секунд)
 Schedule::job(PollCryptoDepositsJob::class)->everyFifteenSeconds();
 

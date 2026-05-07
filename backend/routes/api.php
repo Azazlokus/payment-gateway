@@ -9,6 +9,7 @@ use App\Payments\Presentation\Http\Controllers\DisputeController;
 use App\Payments\Presentation\Http\Controllers\HealthController;
 use App\Payments\Presentation\Http\Controllers\MetricsController;
 use App\Payments\Presentation\Http\Controllers\PaymentController;
+use App\Payments\Presentation\Http\Controllers\PaymentStatusStreamController;
 use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
 use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
 use App\Payments\Presentation\Http\Controllers\WebhookController;
@@ -89,6 +90,11 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
         Route::post('/resync', [PaymentController::class, 'resync'])
             ->middleware('throttle:10,1')
             ->name('resync');
+
+        // SSE — real-time статус платежа (EventSource)
+        Route::get('/stream', PaymentStatusStreamController::class)
+            ->middleware('throttle:10,1')
+            ->name('stream');
 
         Route::get('/disputes', [DisputeController::class, 'index'])
             ->middleware('throttle:60,1')

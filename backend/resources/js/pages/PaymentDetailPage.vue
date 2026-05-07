@@ -3,6 +3,10 @@
     <div class="flex items-center gap-3 mb-6">
       <router-link to="/" class="text-gray-400 hover:text-gray-600 text-sm">← Назад</router-link>
       <h1 class="text-2xl font-semibold text-gray-900">Детали платежа</h1>
+      <span v-if="liveConnected" class="flex items-center gap-1 text-xs text-green-600 ml-auto">
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        Live
+      </span>
     </div>
 
     <LoadingSpinner v-if="loading" />
@@ -129,7 +133,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { paymentsApi } from '@/api/payments.js';
 import StatusBadge from '@/components/StatusBadge.vue';
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
@@ -145,6 +149,50 @@ const actionError = ref('');
 const actionSuccess = ref('');
 const showRefundForm = ref(false);
 const refundAmount = ref('');
+const liveConnected = ref(false);
+
+/** Реф на активный EventSource (SSE). Закрываем при unmount или терминальном статусе. */
+let eventSource = null;
+
+const TERMINAL_STATUSES = ['Succeeded', 'Cancelled', 'Refunded'];
+
+function startSSE() {
+  if (eventSource) return;
+
+  const apiKey = import.meta.env.VITE_API_KEY ?? '';
+  const url = `/api/v1/payments/${props.id}/stream`;
+
+  // EventSource не поддерживает произвольные заголовки — передаём ключ как query-param
+  // Сервер должен принимать ?api_key= как альтернативу заголовку X-Api-Key
+  eventSource = new EventSource(apiKey ? `${url}?api_key=${encodeURIComponent(apiKey)}` : url);
+
+  eventSource.onopen = () => { liveConnected.value = true; };
+
+  eventSource.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data && data.id) payment.value = data;
+  };
+
+  eventSource.addEventListener('status', (e) => {
+    const data = JSON.parse(e.data);
+    if (data && data.id) payment.value = data;
+  });
+
+  eventSource.addEventListener('close', () => {
+    stopSSE();
+  });
+
+  eventSource.addEventListener('timeout', () => {
+    // Сервер закрыл стрим по таймауту — переоткрываем через 1с
+    stopSSE();
+    setTimeout(startSSE, 1000);
+  });
+
+  eventSource.onerror = () => {
+    liveConnected.value = false;
+    // Браузер переоткроет автоматически при EventSource readyState=CONNECTING
+  };
+}
 
 const maxRefundable = computed(() =>
   (payment.value?.amount ?? 0) - (payment.value?.refunded_amount ?? 0)
@@ -164,12 +212,25 @@ function formatDate(iso) {
   return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function stopSSE() {
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+    liveConnected.value = false;
+  }
+}
+
 async function fetchPayment() {
   loading.value = true;
   error.value = '';
   try {
     const { data } = await paymentsApi.get(props.id);
     payment.value = data.data ?? data;
+
+    // Запускаем SSE только для нетерминальных статусов
+    if (!TERMINAL_STATUSES.includes(payment.value?.status)) {
+      startSSE();
+    }
   } catch (e) {
     error.value = e.response?.data?.message ?? 'Ошибка загрузки платежа';
   } finally {
@@ -217,4 +278,5 @@ function doRefund() {
 }
 
 onMounted(fetchPayment);
+onUnmounted(stopSSE);
 </script>
