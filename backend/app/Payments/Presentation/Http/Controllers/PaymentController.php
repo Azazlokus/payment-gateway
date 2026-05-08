@@ -145,7 +145,7 @@ final class PaymentController extends Controller
             provider: $request->input('provider'),
         ));
 
-        $this->auditLogger->log('payment.created', "Payment created: {$result->id}", ['id' => $result->id, 'amount' => $result->amount]);
+        $this->auditLogger->log('payment.created', 'payment', $result->id, ['amount' => $result->amount], $request);
 
         return response()->json(new PaymentResource($result), Response::HTTP_CREATED);
     }
@@ -208,7 +208,7 @@ final class PaymentController extends Controller
             reason: request()->input('reason', 'Отменено пользователем'),
         ));
 
-        $this->auditLogger->log('payment.cancelled', "Payment cancelled: {$id}", ['id' => $id]);
+        $this->auditLogger->log('payment.cancelled', 'payment', $id, [], request());
 
         return response()->json(new PaymentResource($result), Response::HTTP_OK);
     }
@@ -245,7 +245,7 @@ final class PaymentController extends Controller
             idempotencyKey: $request->header('Idempotency-Key'),
         ));
 
-        $this->auditLogger->log('payment.refunded', "Payment refunded: {$id}", ['id' => $id]);
+        $this->auditLogger->log('payment.refunded', 'payment', $id, [], $request);
 
         return response()->json(new PaymentResource($result), Response::HTTP_OK);
     }

@@ -109,7 +109,7 @@ final class DisputeController extends Controller
 
         $this->disputes->save($dispute);
         $this->metrics->disputeFiled($payment->provider());
-        $this->auditLogger->log('dispute.filed', "Dispute filed for payment: {$paymentId}", ['payment_id' => $paymentId]);
+        $this->auditLogger->log('dispute.filed', 'payment', $paymentId, [], $request);
 
         return response()->json($this->format($dispute), Response::HTTP_CREATED);
     }
@@ -198,7 +198,7 @@ final class DisputeController extends Controller
 
         $this->disputes->save($dispute);
         $this->metrics->disputeResolved($resolution);
-        $this->auditLogger->log('dispute.resolved', "Dispute resolved: {$id}", ['id' => $id, 'resolution' => $resolution]);
+        $this->auditLogger->log('dispute.resolved', 'dispute', $id, ['resolution' => $resolution], $request);
 
         return response()->json($this->format($dispute));
     }

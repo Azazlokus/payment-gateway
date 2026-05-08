@@ -34,6 +34,13 @@
           >
             Метрики
           </router-link>
+          <router-link
+            to="/audit-log"
+            class="text-sm text-gray-600 hover:text-gray-900"
+            active-class="text-blue-600 font-medium"
+          >
+            Аудит
+          </router-link>
         </div>
       </div>
     </nav>

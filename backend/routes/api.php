@@ -148,6 +148,12 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
         ->middleware('throttle:60,1')
         ->name('webhook-logs.index');
 
+    // ── Audit Logs ─────────────────────────────────────────────────────────
+
+    Route::get('/audit-logs', [\App\Payments\Presentation\Http\Controllers\AuditLogController::class, 'index'])
+        ->middleware('throttle:60,1')
+        ->name('audit-logs.index');
+
     // ── Payment Links ───────────────────────────────────────────────────────
 
     Route::get('/payment-links',        [PaymentLinkController::class, 'index'])->middleware('throttle:60,1')->name('payment-links.index');
