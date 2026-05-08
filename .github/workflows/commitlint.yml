@@ -1,0 +1,32 @@
+name: Commit Lint
+
+# Проверяет что все коммиты в PR написаны по Conventional Commits.
+# Без этого release-please не сможет правильно собрать changelog.
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  commitlint:
+    name: Lint commit messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # нужна полная история для проверки всех коммитов PR
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install commitlint
+        run: npm ci
+
+      - name: Lint commits in this PR
+        run: |
+          npx commitlint \
+            --from ${{ github.event.pull_request.base.sha }} \
+            --to   ${{ github.event.pull_request.head.sha }} \
+            --verbose

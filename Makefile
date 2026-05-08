@@ -48,6 +48,7 @@ GRAY   := \033[90m
         lint lint-fix analyse mutation \
         reconcile prune \
         k6-create k6-list k6-webhook \
+        hooks-install \
         helm-deps helm-lint helm-template \
         k8s-staging k8s-prod k8s-status k8s-rollback \
         horizon horizon-terminate horizon-pause horizon-continue horizon-status \
@@ -362,6 +363,16 @@ horizon-status: ## Show Horizon status
 # =============================================================================
 ## Maintenance
 # =============================================================================
+
+# =============================================================================
+## Git hooks & Changelog
+# =============================================================================
+
+hooks-install: ## Install commitlint + husky git hooks (run once after clone)
+	@printf "$(CYAN)Installing commitlint + husky...$(RESET)\n"
+	@npm install
+	@npm run prepare
+	@printf "$(GREEN)Git hooks active. Commits will be validated automatically.$(RESET)\n"
 
 # =============================================================================
 ## Kubernetes (Helm)

@@ -1,0 +1,46 @@
+name: Release Please
+
+# Запускается после каждого мерджа в master.
+# release-please читает conventional commits с момента последнего релиза,
+# создаёт (или обновляет) Release PR с changelog и версией.
+# Когда ты мерджишь Release PR — автоматически создаётся git тег v1.x.x
+# и GitHub Release. Тег подхватывается deploy.yml → деплой в production.
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write        # создавать теги и релизы
+  pull-requests: write   # создавать/обновлять Release PR
+
+jobs:
+  release-please:
+    name: Create Release PR
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name:        ${{ steps.release.outputs.tag_name }}
+
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # Тип репозитория: simple = только CHANGELOG + тег, без npm/composer версий
+          release-type: simple
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # После создания релиза можно делать дополнительные действия
+  post-release:
+    name: Post-release tasks
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log release
+        run: echo "Released ${{ needs.release-please.outputs.tag_name }}"
+        # Здесь можно добавить:
+        # - Отправку уведомления в Telegram/email
+        # - Обновление статуса в Linear/Jira
+        # - Триггер деплоя (уже делает deploy.yml по тегу)
