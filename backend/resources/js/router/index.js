@@ -7,6 +7,7 @@ import RecurringPage from '@/pages/RecurringPage.vue';
 import AuditLogPage from '@/pages/AuditLogPage.vue';
 import WebhookLogsPage from '@/pages/WebhookLogsPage.vue';
 import PaymentLinksPage from '@/pages/PaymentLinksPage.vue';
+import AnalyticsPage from '@/pages/AnalyticsPage.vue';
 
 const routes = [
     { path: '/', component: DashboardPage, name: 'dashboard' },
@@ -17,6 +18,7 @@ const routes = [
     { path: '/audit-log', component: AuditLogPage, name: 'audit-log' },
     { path: '/webhook-logs', component: WebhookLogsPage, name: 'webhook-logs' },
     { path: '/payment-links', component: PaymentLinksPage, name: 'payment-links' },
+    { path: '/analytics', component: AnalyticsPage, name: 'analytics' },
 ];
 
 export default createRouter({

@@ -148,6 +148,17 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
         ->middleware('throttle:60,1')
         ->name('webhook-logs.index');
 
+    // ── Analytics ──────────────────────────────────────────────────────────
+
+    Route::prefix('analytics')->name('analytics.')->group(function () {
+        Route::get('/revenue', [\App\Payments\Presentation\Http\Controllers\AnalyticsController::class, 'revenue'])
+            ->middleware('throttle:60,1')
+            ->name('revenue');
+        Route::get('/funnel', [\App\Payments\Presentation\Http\Controllers\AnalyticsController::class, 'funnel'])
+            ->middleware('throttle:60,1')
+            ->name('funnel');
+    });
+
     // ── Audit Logs ─────────────────────────────────────────────────────────
 
     Route::get('/audit-logs', [\App\Payments\Presentation\Http\Controllers\AuditLogController::class, 'index'])

@@ -55,6 +55,13 @@
           >
             Ссылки
           </router-link>
+          <router-link
+            to="/analytics"
+            class="text-sm text-gray-600 hover:text-gray-900"
+            active-class="text-blue-600 font-medium"
+          >
+            Аналитика
+          </router-link>
         </div>
       </div>
     </nav>

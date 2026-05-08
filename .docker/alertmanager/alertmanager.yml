@@ -16,12 +16,17 @@ route:
   receiver: 'email-default'
 
   routes:
-    # Критические — без задержки, повтор каждый час
+    # Критические — без задержки, повтор каждый час, дублируем в Telegram
     - match:
         severity: critical
-      receiver: 'email-critical'
+      receiver: 'email-and-telegram-critical'
       group_wait: 0s
       repeat_interval: 1h
+
+    # Warning — только Telegram (быстрее чем email)
+    - match:
+        severity: warning
+      receiver: 'telegram-default'
 
 receivers:
   - name: 'email-default'
@@ -38,7 +43,7 @@ receivers:
           <hr>
           {{ end }}
 
-  - name: 'email-critical'
+  - name: 'email-and-telegram-critical'
     email_configs:
       - to: '${ALERTMANAGER_SMTP_TO:-ops@payment-gateway.local}'
         send_resolved: true
@@ -51,6 +56,19 @@ receivers:
           {{ .Annotations.description }}</p>
           <hr>
           {{ end }}
+    webhook_configs:
+      # Telegram Bot — настрой TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID в .env
+      # Используем webhook-адаптер https://github.com/metalmatze/alertmanager-bot
+      # или самописный скрипт. Пример с curl:
+      #   docker run -e TOKEN=$TOKEN -e CHAT=$CHAT metalmatze/alertmanager-bot
+      - url: '${TELEGRAM_WEBHOOK_URL:-http://localhost:9119/alert}'
+        send_resolved: true
+
+  # Только Telegram для warning-алертов
+  - name: 'telegram-default'
+    webhook_configs:
+      - url: '${TELEGRAM_WEBHOOK_URL:-http://localhost:9119/alert}'
+        send_resolved: true
 
 inhibit_rules:
   # Если сервис полностью упал — не шлём алерты про конверсию и активность
