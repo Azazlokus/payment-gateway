@@ -41,6 +41,20 @@
           >
             Аудит
           </router-link>
+          <router-link
+            to="/webhook-logs"
+            class="text-sm text-gray-600 hover:text-gray-900"
+            active-class="text-blue-600 font-medium"
+          >
+            Webhooks
+          </router-link>
+          <router-link
+            to="/payment-links"
+            class="text-sm text-gray-600 hover:text-gray-900"
+            active-class="text-blue-600 font-medium"
+          >
+            Ссылки
+          </router-link>
         </div>
       </div>
     </nav>
