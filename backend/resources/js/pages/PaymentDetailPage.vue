@@ -75,6 +75,16 @@
             Синхронизировать
           </button>
 
+          <!-- Скачать PDF квитанцию -->
+          <a
+            v-if="payment.status === 'Succeeded'"
+            :href="`/api/v1/payments/${payment.id}/invoice`"
+            target="_blank"
+            class="text-sm border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors inline-block"
+          >
+            Скачать PDF
+          </a>
+
           <!-- Отмена -->
           <button
             v-if="payment.status === 'Pending'"

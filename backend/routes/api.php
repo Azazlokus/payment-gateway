@@ -10,6 +10,7 @@ use App\Payments\Presentation\Http\Controllers\HealthController;
 use App\Payments\Presentation\Http\Controllers\MetricsController;
 use App\Payments\Presentation\Http\Controllers\PaymentController;
 use App\PaymentLinks\Http\Controllers\PaymentLinkController;
+use App\Payments\Presentation\Http\Controllers\InvoiceController;
 use App\Payments\Presentation\Http\Controllers\PaymentStatusStreamController;
 use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
 use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
@@ -96,6 +97,11 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
         Route::get('/stream', PaymentStatusStreamController::class)
             ->middleware('throttle:10,1')
             ->name('stream');
+
+        // PDF квитанция
+        Route::get('/invoice', InvoiceController::class)
+            ->middleware('throttle:20,1')
+            ->name('invoice');
 
         Route::get('/disputes', [DisputeController::class, 'index'])
             ->middleware('throttle:60,1')
