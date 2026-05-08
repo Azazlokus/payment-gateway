@@ -1,0 +1,69 @@
+{
+  "name": "Payment Gateway",
+
+  // Используем docker-compose — поднимает app + postgres + redis + mailpit
+  "dockerComposeFile": ["../docker-compose.yml"],
+  "service": "app",
+  "workspaceFolder": "/var/www/html",
+
+  "features": {
+    // Node.js для фронтенда и npm-скриптов
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" },
+    // GitHub CLI
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // VS Code расширения устанавливаются автоматически
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",   // PHP IntelliSense
+        "xdebug.php-debug",                       // Xdebug
+        "esbenp.prettier-vscode",                 // Prettier
+        "Vue.volar",                              // Vue 3
+        "dbaeumer.vscode-eslint",                 // ESLint
+        "eamodio.gitlens",                        // GitLens
+        "humao.rest-client",                      // HTTP клиент для .http файлов
+        "ms-azuretools.vscode-docker",            // Docker
+        "redhat.vscode-yaml",                     // YAML
+        "mtxr.sqltools",                          // SQL
+        "mtxr.sqltools-driver-pg"                 // PostgreSQL
+      ],
+      "settings": {
+        "php.executablePath": "/usr/local/bin/php",
+        "intelephense.environment.phpVersion": "8.3.0",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[php]": {
+          "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
+        },
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+
+  // Команды после старта контейнера
+  "postCreateCommand": "composer install --no-interaction && php artisan migrate --seed --no-interaction || true",
+
+  // Проброс портов
+  "forwardPorts": [
+    8000,   // Nginx (основное приложение)
+    5173,   // Vite dev server
+    8025,   // Mailpit web UI
+    9090,   // Prometheus
+    3000    // Grafana
+  ],
+  "portsAttributes": {
+    "8000": { "label": "App", "onAutoForward": "openBrowser" },
+    "5173": { "label": "Vite" },
+    "8025": { "label": "Mailpit" },
+    "9090": { "label": "Prometheus" },
+    "3000": { "label": "Grafana" }
+  },
+
+  // Переменные окружения для разработки
+  "remoteEnv": {
+    "APP_ENV": "local",
+    "APP_DEBUG": "true"
+  }
+}

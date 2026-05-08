@@ -1,0 +1,23 @@
+{
+  "name": "@payment-gateway/sdk",
+  "version": "1.0.0",
+  "description": "TypeScript client for Payment Gateway API",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "files": ["dist", "src"],
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
