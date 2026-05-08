@@ -1,0 +1,30 @@
+# PersistentVolumeClaim — запрос на постоянное хранилище.
+#
+# Pod'ы эфемерны — их файловая система живёт пока жив pod.
+# PVC переживает перезапуски pod'ов — данные сохраняются.
+#
+# Laravel пишет в storage/: логи, кеш представлений, загруженные файлы.
+# Эти данные должны пережить деплой.
+{{- if .Values.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "payment-gateway.fullname" . }}-storage
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "payment-gateway.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode }}
+    # ReadWriteMany (RWX) — несколько pod'ов могут писать одновременно.
+    # Нужен StorageClass с поддержкой RWX: NFS, CephFS, AWS EFS.
+    # Если у тебя одна реплика — ReadWriteOnce достаточно.
+
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass }}
+  {{- end }}
+
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+{{- end }}

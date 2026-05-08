@@ -1,0 +1,167 @@
+# =============================================================================
+# values.yaml — дефолтные значения (переопределяются в values.production.yaml)
+# =============================================================================
+
+# -- Глобальные настройки образа
+image:
+  repository: ghcr.io/your-org/payment-gateway
+  tag: "latest"           # в CI заменяется на SHA коммита: ghcr.io/.../...:abc1234
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []      # [{name: ghcr-secret}] если registry приватный
+
+# -- Количество реплик
+replicaCount:
+  app:     2              # PHP-FPM + Nginx sidecar
+  horizon: 1              # Horizon worker
+
+# -- Namespace (создаётся автоматически)
+namespace: payment-gateway
+
+# -- Ingress — внешний доступ по доменному имени
+ingress:
+  enabled: true
+  className: nginx        # ingress-nginx controller
+  host: pay.example.com
+  tls:
+    enabled: true
+    secretName: payment-gateway-tls   # cert-manager создаст автоматически
+
+# -- Ресурсы для PHP-FPM контейнера
+resources:
+  app:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "512Mi"
+
+  # Nginx sidecar легче — только проксирует
+  nginx:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+  # Horizon — обрабатывает задачи, нужно чуть больше памяти
+  horizon:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# -- Horizontal Pod Autoscaler
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# -- Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1         # хотя бы 1 pod всегда работает при обновлении
+
+# -- Конфиг приложения (не секреты — секреты через Secret)
+config:
+  APP_ENV: production
+  APP_DEBUG: "false"
+  LOG_CHANNEL: stderr     # в k8s логи идут в stdout/stderr → Loki/ELK подхватит
+  LOG_LEVEL: warning
+  QUEUE_CONNECTION: redis
+  CACHE_DRIVER: redis
+  SESSION_DRIVER: redis
+  BROADCAST_CONNECTION: log
+
+# -- Имена Secret'ов (создаются вручную или через External Secrets Operator)
+# kubectl create secret generic payment-gateway-app \
+#   --from-literal=APP_KEY=base64:... \
+#   --from-literal=DB_PASSWORD=... \
+#   ...
+existingSecret: payment-gateway-app
+
+# -- Probes — проверки живости и готовности
+probes:
+  liveness:
+    path: /api/health
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    failureThreshold: 3
+  readiness:
+    path: /api/health
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 3
+
+# -- Хранилище для storage/ (логи, кеш представлений)
+persistence:
+  enabled: true
+  storageClass: ""        # "" = дефолтный StorageClass кластера
+  size: 5Gi
+  accessMode: ReadWriteMany  # RWX нужен когда несколько реплик пишут в одно место
+
+# -- ServiceAccount + RBAC
+serviceAccount:
+  create: true
+  name: ""                # авто-генерация имени
+
+# -- NetworkPolicy — разрешаем только нужный трафик
+networkPolicy:
+  enabled: true
+
+# -- Встроенный PostgreSQL (bitnami/postgresql)
+# В production замени на external (managed RDS/Cloud SQL)
+postgresql:
+  enabled: true
+  auth:
+    database: payment_gateway
+    username: postgres
+    existingSecret: payment-gateway-db   # kubectl create secret ...
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+  primary:
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+      limits:
+        cpu: "1000m"
+        memory: "512Mi"
+    persistence:
+      size: 20Gi
+
+# -- Внешняя БД (если postgresql.enabled: false)
+externalDatabase:
+  host: ""
+  port: 5432
+  database: payment_gateway
+  username: postgres
+
+# -- Встроенный Redis (bitnami/redis)
+redis:
+  enabled: true
+  architecture: standalone   # или replication для HA
+  auth:
+    enabled: true
+    existingSecret: payment-gateway-redis
+    existingSecretPasswordKey: password
+  master:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "256Mi"
+
+# -- Внешний Redis (если redis.enabled: false)
+externalRedis:
+  host: ""
+  port: 6379

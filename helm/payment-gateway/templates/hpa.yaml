@@ -1,0 +1,58 @@
+# HPA — Horizontal Pod Autoscaler.
+#
+# Следит за метриками (CPU, Memory) и автоматически
+# увеличивает/уменьшает количество реплик.
+#
+# Пример: нормально 2 реплики, пришла нагрузка → CPU > 70% → k8s добавляет реплики
+# до maxReplicas. Нагрузка спала → CPU < 30% → k8s убирает лишние реплики.
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "payment-gateway.fullname" . }}-app
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "payment-gateway.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "payment-gateway.fullname" . }}-app
+
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+
+  metrics:
+    # Масштабирование по CPU
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+
+    # Масштабирование по памяти
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage }}
+
+  behavior:
+    # Быстро масштабируемся вверх (всплески трафика)
+    scaleUp:
+      stabilizationWindowSeconds: 30   # ждём 30с прежде чем решить масштабироваться
+      policies:
+        - type: Pods
+          value: 2                     # добавляем не более 2 pods за раз
+          periodSeconds: 60
+
+    # Медленно масштабируемся вниз (чтобы не убить живые соединения)
+    scaleDown:
+      stabilizationWindowSeconds: 300  # ждём 5 минут перед уменьшением
+      policies:
+        - type: Pods
+          value: 1                     # убираем по 1 pod'у
+          periodSeconds: 60
+{{- end }}

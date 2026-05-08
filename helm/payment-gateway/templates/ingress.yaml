@@ -1,0 +1,51 @@
+# Ingress — точка входа из интернета.
+# ingress-nginx controller читает эти правила и настраивает nginx снаружи кластера.
+# cert-manager автоматически получает TLS сертификат от Let's Encrypt.
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "payment-gateway.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "payment-gateway.labels" . | nindent 4 }}
+  annotations:
+    # cert-manager автоматически выпустит Let's Encrypt сертификат
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # Таймауты для long-polling (SSE стримы могут длиться до 5 минут)
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "360"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "360"
+
+    # Отключаем буферизацию для SSE (Server-Sent Events)
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+
+    # Размер тела запроса (вебхуки от провайдеров могут быть большими)
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # HSTS — браузер всегда использует HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "payment-gateway.fullname" . }}-app
+                port:
+                  name: http
+{{- end }}

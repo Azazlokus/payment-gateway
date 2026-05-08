@@ -1,0 +1,22 @@
+apiVersion: v2
+name: payment-gateway
+description: Production-ready payment gateway on Laravel + Horizon
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+maintainers:
+  - name: Azamat Kusarbaev
+
+# Зависимости — Helm сам установит PostgreSQL и Redis
+# helm dependency update helm/payment-gateway
+dependencies:
+  - name: postgresql
+    version: "15.5.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled   # можно выключить если используешь внешний PG
+
+  - name: redis
+    version: "19.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled        # аналогично

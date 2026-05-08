@@ -1,0 +1,24 @@
+# Service — стабильный сетевой адрес для Pod'ов.
+# Pod'ы создаются/удаляются, их IP меняется.
+# Service всегда смотрит на живые Pod'ы через selector.
+#
+# ClusterIP = доступен только внутри кластера.
+# Ingress снаружи → Service → Pod'ы
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "payment-gateway.fullname" . }}-app
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "payment-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "payment-gateway.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+  ports:
+    - name: http
+      port: 80
+      targetPort: http      # containerPort: 80 в nginx sidecar
+      protocol: TCP

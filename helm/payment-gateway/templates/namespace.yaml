@@ -1,0 +1,8 @@
+# Namespace изолирует все ресурсы приложения.
+# В одном кластере могут жить payment-gateway-prod и payment-gateway-staging.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace }}
+  labels:
+    {{- include "payment-gateway.labels" . | nindent 4 }}

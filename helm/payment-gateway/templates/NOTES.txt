@@ -1,0 +1,39 @@
+Payment Gateway успешно установлен!
+
+Релиз: {{ .Release.Name }}
+Namespace: {{ .Values.namespace }}
+
+{{- if .Values.ingress.enabled }}
+URL: https://{{ .Values.ingress.host }}
+{{- end }}
+
+Полезные команды:
+
+  # Статус pod'ов
+  kubectl get pods -n {{ .Values.namespace }}
+
+  # Логи PHP-FPM
+  kubectl logs -n {{ .Values.namespace }} -l app.kubernetes.io/component=app -c app -f
+
+  # Логи Nginx
+  kubectl logs -n {{ .Values.namespace }} -l app.kubernetes.io/component=app -c nginx -f
+
+  # Логи Horizon
+  kubectl logs -n {{ .Values.namespace }} -l app.kubernetes.io/component=horizon -f
+
+  # Запустить artisan команду
+  kubectl exec -n {{ .Values.namespace }} deploy/{{ include "payment-gateway.fullname" . }}-app -c app -- php artisan migrate:status
+
+  # Статус HPA (автомасштабирование)
+  kubectl get hpa -n {{ .Values.namespace }}
+
+  # Статус Ingress (внешний IP)
+  kubectl get ingress -n {{ .Values.namespace }}
+
+Для создания секретов:
+  kubectl create secret generic {{ .Values.existingSecret }} \
+    --namespace {{ .Values.namespace }} \
+    --from-literal=APP_KEY='base64:...' \
+    --from-literal=DB_PASSWORD='...' \
+    --from-literal=REDIS_PASSWORD='...' \
+    --from-literal=API_KEY='...'

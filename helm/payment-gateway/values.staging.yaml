@@ -1,0 +1,34 @@
+# =============================================================================
+# values.staging.yaml — staging окружение (QA-стенд)
+# =============================================================================
+
+replicaCount:
+  app:     1
+  horizon: 1
+
+ingress:
+  host: staging-pay.yourdomain.com
+  tls:
+    enabled: true
+    secretName: payment-gateway-tls-staging
+
+config:
+  APP_ENV: staging
+  APP_DEBUG: "true"
+  LOG_LEVEL: debug
+
+autoscaling:
+  enabled: false   # на staging HPA не нужен — дорого и мешает отладке
+
+podDisruptionBudget:
+  enabled: false
+
+# Встроенные postgres/redis — нормально для staging
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      size: 5Gi
+
+redis:
+  enabled: true

@@ -48,6 +48,8 @@ GRAY   := \033[90m
         lint lint-fix analyse mutation \
         reconcile prune \
         k6-create k6-list k6-webhook \
+        helm-deps helm-lint helm-template \
+        k8s-staging k8s-prod k8s-status k8s-rollback \
         horizon horizon-terminate horizon-pause horizon-continue horizon-status \
         queue-flush queue-retry-all queue-failed \
         storage-link \
@@ -356,6 +358,57 @@ horizon-continue: ## Resume all paused Horizon workers
 
 horizon-status: ## Show Horizon status
 	@$(ARTISAN) horizon:status
+
+# =============================================================================
+## Maintenance
+# =============================================================================
+
+# =============================================================================
+## Kubernetes (Helm)
+# =============================================================================
+
+HELM_CHART := ./helm/payment-gateway
+HELM_RELEASE := payment-gateway
+
+helm-deps: ## Download Helm chart dependencies (bitnami postgresql + redis)
+	@helm dependency update $(HELM_CHART)
+
+helm-lint: ## Lint Helm chart for errors
+	@helm lint $(HELM_CHART) -f $(HELM_CHART)/values.yaml -f $(HELM_CHART)/values.staging.yaml
+	@helm lint $(HELM_CHART) -f $(HELM_CHART)/values.yaml -f $(HELM_CHART)/values.production.yaml
+
+helm-template: ## Render Helm templates locally (dry-run, no cluster needed)
+	@helm template $(HELM_RELEASE) $(HELM_CHART) \
+		-f $(HELM_CHART)/values.yaml \
+		-f $(HELM_CHART)/values.staging.yaml \
+		--debug
+
+k8s-staging: ## Deploy to staging namespace (TAG=sha IMAGE=ghcr.io/...)
+	@helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) \
+		--namespace payment-gateway-staging \
+		--create-namespace \
+		--values $(HELM_CHART)/values.yaml \
+		--values $(HELM_CHART)/values.staging.yaml \
+		$(if $(TAG),--set image.tag=$(TAG)) \
+		$(if $(IMAGE),--set image.repository=$(IMAGE)) \
+		--wait --timeout 5m
+
+k8s-prod: ## Deploy to production namespace (TAG= IMAGE= required)
+	@helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) \
+		--namespace payment-gateway-prod \
+		--create-namespace \
+		--values $(HELM_CHART)/values.yaml \
+		--values $(HELM_CHART)/values.production.yaml \
+		$(if $(TAG),--set image.tag=$(TAG)) \
+		$(if $(IMAGE),--set image.repository=$(IMAGE)) \
+		--atomic --timeout 10m
+
+k8s-status: ## Show pod/hpa/ingress status (NS=payment-gateway-staging or prod)
+	@kubectl get pods,hpa,ingress -n $(or $(NS),payment-gateway-staging)
+
+k8s-rollback: ## Rollback last Helm release (NS=... REV=N)
+	@helm rollback $(HELM_RELEASE) $(or $(REV),0) \
+		--namespace $(or $(NS),payment-gateway-staging)
 
 # =============================================================================
 ## Maintenance

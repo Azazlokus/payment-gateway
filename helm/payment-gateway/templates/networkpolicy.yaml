@@ -1,0 +1,59 @@
+# NetworkPolicy — файрвол внутри кластера.
+#
+# По умолчанию все Pod'ы могут общаться с любыми Pod'ами.
+# NetworkPolicy ограничивает: app может говорить с postgres/redis,
+# но не может говорить с pod'ами других namespace'ов.
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "payment-gateway.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "payment-gateway.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "payment-gateway.selectorLabels" . | nindent 6 }}
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Разрешаем входящий трафик только от ingress-nginx
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 80
+
+    # Pod'ы внутри namespace могут общаться между собой
+    - from:
+        - podSelector: {}
+
+  egress:
+    # Исходящий — только к postgres, redis и DNS
+    - to:
+        - podSelector: {}      # внутри namespace
+
+    # DNS резолвинг (kube-dns)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+
+    # Внешние вебхуки провайдеров (YooKassa, Robokassa etc.)
+    # Разрешаем исходящий HTTPS
+    - ports:
+        - port: 443
+          protocol: TCP
+        - port: 80
+          protocol: TCP
+{{- end }}

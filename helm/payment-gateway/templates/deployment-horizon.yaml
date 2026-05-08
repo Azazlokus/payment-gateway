@@ -1,0 +1,95 @@
+# Deployment для Horizon (queue worker).
+#
+# Horizon — отдельный процесс, не обрабатывает HTTP запросы.
+# Не нужен nginx sidecar, не нужен ingress.
+# Нужна только связь с Redis и PostgreSQL.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "payment-gateway.fullname" . }}-horizon
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "payment-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: horizon
+spec:
+  replicas: {{ .Values.replicaCount.horizon }}
+
+  selector:
+    matchLabels:
+      {{- include "payment-gateway.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: horizon
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0   # zero-downtime: сначала поднять новый, потом убить старый
+
+  template:
+    metadata:
+      labels:
+        {{- include "payment-gateway.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: horizon
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+
+    spec:
+      serviceAccountName: {{ include "payment-gateway.serviceAccountName" . }}
+
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      # Horizon — stateful по nature (обрабатывает задачи).
+      # terminationGracePeriodSeconds даёт время завершить текущую задачу.
+      terminationGracePeriodSeconds: 60
+
+      containers:
+        - name: horizon
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          # prod-worker target из Dockerfile запускает entrypoint-worker.sh
+          # который стартует `php artisan horizon`
+          command: ["php", "artisan", "horizon"]
+
+          envFrom:
+            - configMapRef:
+                name: {{ include "payment-gateway.fullname" . }}-config
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+
+          resources:
+            {{- toYaml .Values.resources.horizon | nindent 12 }}
+
+          # Liveness для Horizon: проверяем что horizon process жив
+          # через Redis ключ horizon:status
+          livenessProbe:
+            exec:
+              command:
+                - php
+                - artisan
+                - horizon:status
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+            timeoutSeconds: 10
+
+          volumeMounts:
+            - name: storage
+              mountPath: /var/www/html/storage
+
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+
+      volumes:
+        - name: storage
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "payment-gateway.fullname" . }}-storage
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

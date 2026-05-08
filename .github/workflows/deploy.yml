@@ -1,0 +1,140 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ─── Build и push Docker образа ──────────────────────────────────────────────
+  build:
+    name: Build & Push image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,format=short        # sha коммита: abc1234
+            type=semver,pattern={{version}}       # тег v1.2.3 → 1.2.3
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push (production stage)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: prod              # только prod слой, без dev/xdebug
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha     # GitHub Actions cache — быстрее повторные билды
+          cache-to: type=gha,mode=max
+
+  # ─── Deploy на staging ───────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy → Staging
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging           # требует approve если настроен в GitHub
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.14.0
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+
+      - name: Helm upgrade (staging)
+        run: |
+          helm upgrade --install payment-gateway ./helm/payment-gateway \
+            --namespace payment-gateway-staging \
+            --create-namespace \
+            --values helm/payment-gateway/values.yaml \
+            --values helm/payment-gateway/values.staging.yaml \
+            --set image.tag=${{ needs.build.outputs.image-tag }} \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --wait \
+            --timeout 5m
+
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/payment-gateway-app \
+            -n payment-gateway-staging --timeout=3m
+
+  # ─── Deploy на production (только с тега v*) ─────────────────────────────────
+  deploy-production:
+    name: Deploy → Production
+    needs: [build, deploy-staging]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: production        # требует ручного approve в GitHub
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.14.0
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+
+      - name: Helm upgrade (production)
+        run: |
+          helm upgrade --install payment-gateway ./helm/payment-gateway \
+            --namespace payment-gateway-prod \
+            --create-namespace \
+            --values helm/payment-gateway/values.yaml \
+            --values helm/payment-gateway/values.production.yaml \
+            --set image.tag=${{ needs.build.outputs.image-tag }} \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --atomic \
+            --timeout 10m
+          # --atomic: если деплой упал → автоматический rollback
+
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/payment-gateway-app \
+            -n payment-gateway-prod --timeout=5m
+
+      - name: Run post-deploy smoke test
+        run: |
+          HEALTH=$(curl -sf https://${{ vars.PROD_DOMAIN }}/api/health | jq -r '.status')
+          [ "$HEALTH" = "ok" ] || exit 1

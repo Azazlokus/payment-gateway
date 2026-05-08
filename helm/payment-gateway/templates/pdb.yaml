@@ -1,0 +1,21 @@
+# PodDisruptionBudget — защита от одновременного падения всех pod'ов.
+#
+# Когда k8s обновляет Node (drain) или ты катишь деплой,
+# PDB гарантирует что хотя бы minAvailable pod'ов всегда работает.
+#
+# Без PDB k8s может убить все pod'ы одновременно → даунтайм.
+{{- if .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "payment-gateway.fullname" . }}-app
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "payment-gateway.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "payment-gateway.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: app
+{{- end }}
