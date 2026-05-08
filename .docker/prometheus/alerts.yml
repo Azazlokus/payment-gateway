@@ -79,3 +79,41 @@ groups:
         annotations:
           summary: "Всплеск диспутов"
           description: "За последний час подано {{ $value | humanize }} диспутов."
+
+      # ─── Возвраты ──────────────────────────────────────────────────────────
+
+      - alert: HighRefundRate
+        expr: |
+          sum(rate(payments_refunded_total[1h])) /
+          clamp_min(sum(rate(payments_succeeded_total[1h])), 0.001) > 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокий процент возвратов"
+          description: "Доля возвратов от успешных платежей: {{ $value | humanizePercentage }}. Норма < 15%."
+
+      # ─── SLA обработки ─────────────────────────────────────────────────────
+
+      - alert: StalePaymentsPending
+        expr: |
+          sum(payments_pending_count) > 50
+        for: 20m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Много платежей зависло в Pending"
+          description: "{{ $value }} платежей в статусе Pending более 20 минут. Запусти: make reconcile"
+
+      # ─── Outbound уведомления ──────────────────────────────────────────────
+
+      - alert: OutboundWebhookHighFailureRate
+        expr: |
+          sum(rate(outbound_webhooks_failed_total[10m])) /
+          clamp_min(sum(rate(outbound_webhooks_sent_total[10m])), 0.001) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "30%+ исходящих уведомлений не доставляются"
+          description: "Клиентские эндпоинты не отвечают. Проверь /webhook-logs в UI."

@@ -1,0 +1,32 @@
+groups:
+  # Pre-computed metrics для быстрых дашбордов Grafana
+  # Recording rules вычисляются заранее → дешевле чем считать в каждом запросе
+  - name: payment_gateway_recording
+    interval: 60s
+    rules:
+
+      # Конверсия за последний час (succeeded / created)
+      - record: payment:conversion_rate:1h
+        expr: |
+          sum(rate(payments_succeeded_total[1h])) /
+          clamp_min(sum(rate(payments_created_total[1h])), 0.001)
+
+      # Конверсия за последние 24 часа
+      - record: payment:conversion_rate:24h
+        expr: |
+          sum(increase(payments_succeeded_total[24h])) /
+          clamp_min(sum(increase(payments_created_total[24h])), 1)
+
+      # Выручка (сумма успешных платежей в копейках) за последний час
+      - record: payment:revenue_kopecks:1h
+        expr: sum(increase(payments_succeeded_amount_total[1h]))
+
+      # Доля ошибок вебхуков по провайдеру
+      - record: webhook:error_rate:provider:5m
+        expr: |
+          rate(webhooks_failed_total[5m]) /
+          clamp_min(rate(webhooks_processed_total[5m]), 0.001)
+
+      # Активность: новых платежей в минуту
+      - record: payment:creation_rate:5m
+        expr: sum(rate(payments_created_total[5m])) * 60
