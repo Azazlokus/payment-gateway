@@ -21,6 +21,13 @@
             Создать
           </router-link>
           <router-link
+            to="/recurring"
+            class="text-sm text-gray-600 hover:text-gray-900"
+            active-class="text-blue-600 font-medium"
+          >
+            Рекуррентные
+          </router-link>
+          <router-link
             to="/metrics"
             class="text-sm text-gray-600 hover:text-gray-900"
             active-class="text-blue-600 font-medium"

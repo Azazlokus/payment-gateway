@@ -12,6 +12,7 @@ use App\Payments\Presentation\Http\Controllers\PaymentController;
 use App\PaymentLinks\Http\Controllers\PaymentLinkController;
 use App\Payments\Presentation\Http\Controllers\InvoiceController;
 use App\Payments\Presentation\Http\Controllers\PaymentStatusStreamController;
+use App\Payments\Presentation\Http\Controllers\RecurringController;
 use App\Payments\Presentation\Http\Controllers\WebhookLogController;
 use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
 use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
@@ -129,6 +130,11 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
             ->middleware('throttle:10,1')
             ->name('resolve');
     });
+
+    // ── Recurring payments ──────────────────────────────────────────────────
+
+    Route::get('/recurring/methods',  [RecurringController::class, 'methods'])->middleware('throttle:60,1')->name('recurring.methods');
+    Route::post('/recurring/charge',  [RecurringController::class, 'charge'])->middleware('throttle:30,1')->name('recurring.charge');
 
     // ── Webhook Logs (общий список) ─────────────────────────────────────────
 
