@@ -13,8 +13,10 @@ use App\Payments\Domain\ValueObjects\PaymentId;
 use App\Payments\Infrastructure\Observability\MetricsService;
 use App\Payments\Infrastructure\Observability\NotificationService;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Payments\Infrastructure\Persistence\Models\Refund;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class RefundPaymentHandler
@@ -66,6 +68,16 @@ final readonly class RefundPaymentHandler
 
             $payment->refund($refundAmount);
             $this->repository->save($payment);
+
+            // Записываем возврат в историю
+            Refund::create([
+                'payment_id'      => $command->paymentId,
+                'amount'          => $refundAmount->amount(),
+                'currency'        => $payment->amount()->currency()->value,
+                'reason'          => $command->reason ?: null,
+                'status'          => 'succeeded',
+                'idempotency_key' => $command->idempotencyKey ?? (string) Str::uuid(),
+            ]);
 
             activity()
                 ->withProperties(['payment_id' => $command->paymentId, 'refund_amount' => $refundAmount->formatted()])

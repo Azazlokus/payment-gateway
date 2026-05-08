@@ -13,6 +13,7 @@ use App\PaymentLinks\Http\Controllers\PaymentLinkController;
 use App\Payments\Presentation\Http\Controllers\InvoiceController;
 use App\Payments\Presentation\Http\Controllers\PaymentStatusStreamController;
 use App\Payments\Presentation\Http\Controllers\RecurringController;
+use App\Payments\Presentation\Http\Controllers\RefundHistoryController;
 use App\Payments\Presentation\Http\Controllers\WebhookLogController;
 use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
 use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
@@ -109,6 +110,11 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
         Route::get('/webhook-logs', [WebhookLogController::class, 'forPayment'])
             ->middleware('throttle:60,1')
             ->name('webhook-logs');
+
+        // История возвратов по платежу
+        Route::get('/refunds', RefundHistoryController::class)
+            ->middleware('throttle:60,1')
+            ->name('refunds');
 
         Route::get('/disputes', [DisputeController::class, 'index'])
             ->middleware('throttle:60,1')

@@ -133,6 +133,24 @@
         </div>
       </div>
 
+      <!-- История возвратов -->
+      <div v-if="refunds.length > 0" class="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 class="text-sm font-semibold text-gray-700 mb-4">История возвратов</h2>
+        <div class="space-y-2">
+          <div v-for="r in refunds" :key="r.id"
+               class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+            <div>
+              <p class="text-sm font-medium text-gray-800">{{ formatAmount(r.amount, r.currency) }}</p>
+              <p class="text-xs text-gray-400">{{ r.reason || 'Причина не указана' }} · {{ formatDate(r.created_at) }}</p>
+            </div>
+            <span class="text-xs px-2 py-1 rounded-full"
+                  :class="r.status === 'succeeded' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">
+              {{ r.status }}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <!-- Метаданные -->
       <div v-if="payment.metadata && Object.keys(payment.metadata).length > 0" class="bg-white rounded-xl border border-gray-200 p-6">
         <h2 class="text-sm font-semibold text-gray-700 mb-3">Метаданные</h2>
@@ -144,6 +162,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import axios from 'axios';
 import { paymentsApi } from '@/api/payments.js';
 import StatusBadge from '@/components/StatusBadge.vue';
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
@@ -160,6 +179,7 @@ const actionSuccess = ref('');
 const showRefundForm = ref(false);
 const refundAmount = ref('');
 const liveConnected = ref(false);
+const refunds = ref([]);
 
 /** Реф на активный EventSource (SSE). Закрываем при unmount или терминальном статусе. */
 let eventSource = null;
@@ -240,6 +260,14 @@ async function fetchPayment() {
     // Запускаем SSE только для нетерминальных статусов
     if (!TERMINAL_STATUSES.includes(payment.value?.status)) {
       startSSE();
+    }
+
+    // Загружаем историю возвратов
+    try {
+      const { data: r } = await axios.get(`/api/v1/payments/${props.id}/refunds`);
+      refunds.value = r.data ?? [];
+    } catch {
+      // история возвратов не критична
     }
   } catch (e) {
     error.value = e.response?.data?.message ?? 'Ошибка загрузки платежа';
