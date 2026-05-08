@@ -12,6 +12,7 @@ use App\Payments\Presentation\Http\Controllers\PaymentController;
 use App\PaymentLinks\Http\Controllers\PaymentLinkController;
 use App\Payments\Presentation\Http\Controllers\InvoiceController;
 use App\Payments\Presentation\Http\Controllers\PaymentStatusStreamController;
+use App\Payments\Presentation\Http\Controllers\WebhookLogController;
 use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
 use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
 use App\Payments\Presentation\Http\Controllers\WebhookController;
@@ -103,6 +104,11 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
             ->middleware('throttle:20,1')
             ->name('invoice');
 
+        // Лог исходящих уведомлений по платежу
+        Route::get('/webhook-logs', [WebhookLogController::class, 'forPayment'])
+            ->middleware('throttle:60,1')
+            ->name('webhook-logs');
+
         Route::get('/disputes', [DisputeController::class, 'index'])
             ->middleware('throttle:60,1')
             ->name('disputes.index');
@@ -123,6 +129,12 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
             ->middleware('throttle:10,1')
             ->name('resolve');
     });
+
+    // ── Webhook Logs (общий список) ─────────────────────────────────────────
+
+    Route::get('/webhook-logs', [WebhookLogController::class, 'index'])
+        ->middleware('throttle:60,1')
+        ->name('webhook-logs.index');
 
     // ── Payment Links ───────────────────────────────────────────────────────
 
