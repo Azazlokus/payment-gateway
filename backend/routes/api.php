@@ -9,6 +9,7 @@ use App\Payments\Presentation\Http\Controllers\DisputeController;
 use App\Payments\Presentation\Http\Controllers\HealthController;
 use App\Payments\Presentation\Http\Controllers\MetricsController;
 use App\Payments\Presentation\Http\Controllers\PaymentController;
+use App\PaymentLinks\Http\Controllers\PaymentLinkController;
 use App\Payments\Presentation\Http\Controllers\PaymentStatusStreamController;
 use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
 use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
@@ -116,6 +117,12 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
             ->middleware('throttle:10,1')
             ->name('resolve');
     });
+
+    // ── Payment Links ───────────────────────────────────────────────────────
+
+    Route::get('/payment-links',        [PaymentLinkController::class, 'index'])->middleware('throttle:60,1')->name('payment-links.index');
+    Route::post('/payment-links',       [PaymentLinkController::class, 'store'])->middleware('throttle:30,1')->name('payment-links.store');
+    Route::delete('/payment-links/{id}',[PaymentLinkController::class, 'destroy'])->middleware('throttle:30,1')->name('payment-links.destroy');
 
     // ── Crypto deposits (TON / USDT-TON) ────────────────────────────────────
 
