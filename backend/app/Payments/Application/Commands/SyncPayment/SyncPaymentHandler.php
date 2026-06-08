@@ -35,7 +35,7 @@ final readonly class SyncPaymentHandler
                 return PaymentResultDTO::fromAggregate($payment);
             }
 
-            $provider         = $this->registry->resolve($payment->provider());
+            $provider = $this->registry->resolve($payment->provider());
             $providerResponse = $provider->getPayment($payment->externalId());
 
             $this->logger->info('Syncing payment status', [
@@ -45,6 +45,7 @@ final readonly class SyncPaymentHandler
 
             try {
                 match ($providerResponse->status) {
+                    'waiting_for_capture' => $payment->authorize($payment->externalId()),
                     'succeeded' => $payment->markAsSucceeded($payment->externalId()),
                     'canceled' => $payment->cancel('Cancelled by provider'),
                     default => null,

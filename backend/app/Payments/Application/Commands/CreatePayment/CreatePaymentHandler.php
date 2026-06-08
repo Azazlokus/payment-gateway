@@ -8,6 +8,8 @@ use App\Payments\Application\DTOs\PaymentResultDTO;
 use App\Payments\Application\PaymentProviderRegistry;
 use App\Payments\Domain\Aggregates\Payment;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
+use App\Payments\Domain\Contracts\SupportsTwoPhasePayments;
+use App\Payments\Domain\Exceptions\PaymentException;
 use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Domain\ValueObjects\PaymentId;
 use App\Payments\Infrastructure\Observability\MetricsService;
@@ -26,7 +28,7 @@ final readonly class CreatePaymentHandler
 
     public function handle(CreatePaymentCommand $command): PaymentResultDTO
     {
-        $provider      = $command->provider
+        $provider = $command->provider
             ? $this->registry->resolve($command->provider)
             : $this->registry->default();
 
@@ -34,9 +36,9 @@ final readonly class CreatePaymentHandler
 
         $this->logger->info('Creating payment', [
             'correlation_id' => $correlationId,
-            'amount'         => $command->amountKopecks,
+            'amount' => $command->amountKopecks,
             'idempotency_key' => $command->idempotencyKey,
-            'provider'       => $provider->name(),
+            'provider' => $provider->name(),
         ]);
 
         return DB::transaction(function () use ($command, $provider, $correlationId): PaymentResultDTO {
@@ -47,21 +49,38 @@ final readonly class CreatePaymentHandler
                 provider: $provider->name(),
                 idempotencyKey: $command->idempotencyKey,
                 metadata: array_merge($command->metadata, [
-                    'user_id'        => $command->userId,
+                    'user_id' => $command->userId,
                     'correlation_id' => $correlationId,
                 ]),
             );
 
             $this->repository->save($payment);
 
-            $providerResponse = $provider->createPayment(
-                paymentId: $payment->id()->toString(),
-                amount: $payment->amount(),
-                description: $payment->description(),
-                returnUrl: $command->returnUrl,
-                idempotencyKey: $command->idempotencyKey,
-                options: $command->options,
-            );
+            if ($command->manualCapture) {
+                if (! $provider instanceof SupportsTwoPhasePayments) {
+                    throw new PaymentException(
+                        "Provider {$provider->name()} does not support manual capture",
+                    );
+                }
+
+                $providerResponse = $provider->authorizePayment(
+                    paymentId: $payment->id()->toString(),
+                    amount: $payment->amount(),
+                    description: $payment->description(),
+                    returnUrl: $command->returnUrl,
+                    idempotencyKey: $command->idempotencyKey,
+                    options: $command->options,
+                );
+            } else {
+                $providerResponse = $provider->createPayment(
+                    paymentId: $payment->id()->toString(),
+                    amount: $payment->amount(),
+                    description: $payment->description(),
+                    returnUrl: $command->returnUrl,
+                    idempotencyKey: $command->idempotencyKey,
+                    options: $command->options,
+                );
+            }
 
             $payment->assignExternalData(
                 externalId: $providerResponse->externalId,
@@ -80,9 +99,9 @@ final readonly class CreatePaymentHandler
 
             $this->logger->info('Payment created successfully', [
                 'correlation_id' => $correlationId,
-                'payment_id'     => $payment->id()->toString(),
-                'provider'       => $provider->name(),
-                'external_id'    => $providerResponse->externalId->toString(),
+                'payment_id' => $payment->id()->toString(),
+                'provider' => $provider->name(),
+                'external_id' => $providerResponse->externalId->toString(),
             ]);
 
             return PaymentResultDTO::fromAggregate($payment);

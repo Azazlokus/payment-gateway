@@ -36,6 +36,7 @@ final class CreatePaymentRequest extends FormRequest
             ])],
             'confirmation_type' => ['sometimes', 'string', Rule::in(['redirect', 'embedded', 'qr', 'mobile_application'])],
             'save_payment_method' => ['sometimes', 'boolean'],
+            'manual_capture' => ['sometimes', 'boolean'],
 
             // Recurring: списание по сохранённому методу (без редиректа)
             'payment_method_id' => ['sometimes', 'string'],

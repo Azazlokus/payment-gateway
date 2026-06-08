@@ -80,6 +80,10 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
             ->middleware('throttle:30,1')
             ->name('cancel');
 
+        Route::post('/capture', [PaymentController::class, 'capture'])
+            ->middleware('throttle:30,1')
+            ->name('capture');
+
         Route::post('/refund', [PaymentController::class, 'refund'])
             ->middleware('throttle:30,1')
             ->name('refund');

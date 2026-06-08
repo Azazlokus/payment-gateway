@@ -7,6 +7,7 @@ namespace App\Payments\Domain\Enums;
 enum PaymentStatus: string
 {
     case Pending = 'Pending';
+    case Authorized = 'Authorized';
     case Succeeded = 'Succeeded';
     case Cancelled = 'Cancelled';
     case Refunded = 'Refunded';
@@ -15,7 +16,7 @@ enum PaymentStatus: string
     {
         return match ($this) {
             self::Succeeded, self::Cancelled, self::Refunded => true,
-            self::Pending => false,
+            self::Pending, self::Authorized => false,
         };
     }
 }

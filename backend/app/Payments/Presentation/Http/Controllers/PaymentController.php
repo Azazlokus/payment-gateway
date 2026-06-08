@@ -6,6 +6,7 @@ namespace App\Payments\Presentation\Http\Controllers;
 
 use App\Payments\Application\Bus\CommandBus;
 use App\Payments\Application\Commands\CancelPayment\CancelPaymentCommand;
+use App\Payments\Application\Commands\CapturePayment\CapturePaymentCommand;
 use App\Payments\Application\Commands\CreatePayment\CreatePaymentCommand;
 use App\Payments\Application\Commands\RefundPayment\RefundPaymentCommand;
 use App\Payments\Application\Commands\RetryPayment\RetryPaymentCommand;
@@ -44,7 +45,7 @@ final class PaymentController extends Controller
         description: 'Возвращает постраничный список платежей с фильтрацией по статусу и дате',
         tags: ['Payments'],
         parameters: [
-            new OA\Parameter(name: 'status', in: 'query', required: false, description: 'Фильтр по статусу', schema: new OA\Schema(type: 'string', enum: ['Pending', 'Succeeded', 'Cancelled', 'Refunded'])),
+            new OA\Parameter(name: 'status', in: 'query', required: false, description: 'Фильтр по статусу', schema: new OA\Schema(type: 'string', enum: ['Pending', 'Authorized', 'Succeeded', 'Cancelled', 'Refunded'])),
             new OA\Parameter(name: 'provider', in: 'query', required: false, description: 'Фильтр по провайдеру', schema: new OA\Schema(type: 'string', enum: ['yookassa', 'robokassa', 'cloudpayments', 'sbp', 'alfabank'])),
             new OA\Parameter(name: 'from_date', in: 'query', required: false, description: 'Дата от (Y-m-d)', schema: new OA\Schema(type: 'string', format: 'date', example: '2024-01-01')),
             new OA\Parameter(name: 'to_date', in: 'query', required: false, description: 'Дата до (Y-m-d)', schema: new OA\Schema(type: 'string', format: 'date', example: '2024-12-31')),
@@ -62,22 +63,22 @@ final class PaymentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $perPage = min((int) $request->query('per_page', 15), 100);
-        $cursor  = $request->query('cursor');
+        $cursor = $request->query('cursor');
         $filters = array_filter([
-            'status'    => $request->query('status'),
-            'provider'  => $request->query('provider'),
+            'status' => $request->query('status'),
+            'provider' => $request->query('provider'),
             'from_date' => $request->query('from_date'),
-            'to_date'   => $request->query('to_date'),
+            'to_date' => $request->query('to_date'),
         ]);
 
         $result = $this->repository->cursorPaginate($perPage, $cursor ?: null, $filters);
 
         return response()->json([
-            'data'        => array_map(
+            'data' => array_map(
                 fn ($payment) => (new PaymentResource(PaymentResultDTO::fromAggregate($payment)))->resolve(),
                 $result['data']
             ),
-            'per_page'    => $result['per_page'],
+            'per_page' => $result['per_page'],
             'next_cursor' => $result['next_cursor'],
             'prev_cursor' => $result['prev_cursor'],
         ], Response::HTTP_OK);
@@ -143,6 +144,7 @@ final class PaymentController extends Controller
             metadata: $metadata,
             options: $this->buildOptions($request),
             provider: $request->input('provider'),
+            manualCapture: (bool) $request->input('manual_capture', false),
         ));
 
         $this->auditLogger->log('payment.created', 'payment', $result->id, ['amount' => $result->amount], $request);
@@ -209,6 +211,40 @@ final class PaymentController extends Controller
         ));
 
         $this->auditLogger->log('payment.cancelled', 'payment', $id, [], request());
+
+        return response()->json(new PaymentResource($result), Response::HTTP_OK);
+    }
+
+    #[OA\Post(
+        path: '/payments/{id}/capture',
+        summary: 'Подтвердить (capture) авторизованный платёж',
+        description: 'Списывает средства с карты клиента. Работает только для платежей в статусе Authorized (двухстадийная оплата). Можно подтвердить на сумму ≤ авторизованной.',
+        tags: ['Payments'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, description: 'ID платежа (ULID)', schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'amount', type: 'integer', description: 'Сумма capture в копейках. Если не указана — полная авторизованная сумма', example: 10000, minimum: 100, nullable: true),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Платёж подтверждён', content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/PaymentResponse')])),
+            new OA\Response(response: 404, description: 'Платёж не найден', content: new OA\JsonContent(ref: '#/components/schemas/PaymentError')),
+            new OA\Response(response: 409, description: 'Платёж не в статусе Authorized', content: new OA\JsonContent(ref: '#/components/schemas/PaymentError')),
+            new OA\Response(response: 422, description: 'Провайдер не поддерживает capture', content: new OA\JsonContent(ref: '#/components/schemas/PaymentError')),
+        ]
+    )]
+    public function capture(string $id, Request $request): JsonResponse
+    {
+        $result = $this->bus->dispatch(new CapturePaymentCommand(
+            paymentId: $id,
+            amountKopecks: $request->integer('amount') ?: null,
+        ));
+
+        $this->auditLogger->log('payment.captured', 'payment', $id, [], $request);
 
         return response()->json(new PaymentResource($result), Response::HTTP_OK);
     }

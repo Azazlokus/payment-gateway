@@ -8,6 +8,7 @@ use App\Payments\Application\DTOs\CreatePaymentOptionsDTO;
 use App\Payments\Application\DTOs\ReceiptItemDTO;
 use App\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Payments\Domain\Contracts\ProviderResponse;
+use App\Payments\Domain\Contracts\SupportsTwoPhasePayments;
 use App\Payments\Domain\Exceptions\PaymentException;
 use App\Payments\Domain\ValueObjects\ExternalId;
 use App\Payments\Domain\ValueObjects\Money;
@@ -15,7 +16,7 @@ use App\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Str;
 use YooKassa\Client;
 
-final class YooKassaProvider implements PaymentProviderInterface
+final class YooKassaProvider implements PaymentProviderInterface, SupportsTwoPhasePayments
 {
     private readonly Client $client;
 
@@ -42,78 +43,68 @@ final class YooKassaProvider implements PaymentProviderInterface
         string $idempotencyKey,
         CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO,
     ): ProviderResponse {
+        return $this->doCreatePayment($paymentId, $amount, $description, $returnUrl, $idempotencyKey, $options, capture: true);
+    }
+
+    public function authorizePayment(
+        string $paymentId,
+        Money $amount,
+        string $description,
+        string $returnUrl,
+        string $idempotencyKey,
+        CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO,
+    ): ProviderResponse {
+        return $this->doCreatePayment($paymentId, $amount, $description, $returnUrl, $idempotencyKey, $options, capture: false);
+    }
+
+    public function capturePayment(ExternalId $externalId, Money $amount): ProviderResponse
+    {
         try {
-            $this->logger->info('YooKassa: создание платежа', [
-                'payment_id' => $paymentId,
-                'amount' => $amount->formatted(),
-                'idempotency_key' => $idempotencyKey,
-                'save_method' => $options->savePaymentMethod,
-            ]);
-
-            $payload = [
-                'amount' => [
-                    'value' => number_format($amount->amount() / 100, 2, '.', ''),
-                    'currency' => $amount->currency()->value,
-                ],
-                'description' => $description,
-                'metadata' => ['internal_payment_id' => $paymentId],
-                'capture' => true,
-                'save_payment_method' => $options->savePaymentMethod,
-            ];
-
-            // Recurring: используем сохранённый метод — без подтверждения
-            if ($options->paymentMethodId !== null) {
-                $payload['payment_method_id'] = $options->paymentMethodId;
-            } else {
-                $payload['confirmation'] = $this->buildConfirmation($options, $returnUrl);
-
-                if ($options->paymentMethodType !== null) {
-                    $payload['payment_method_data'] = ['type' => $options->paymentMethodType];
-                }
-            }
-
-            if ($options->receipt !== null) {
-                $payload['receipt'] = $this->buildReceipt($options, $amount);
-            }
-
             $response = retry(
                 times: 3,
-                callback: fn () => $this->client->createPayment($payload, $idempotencyKey),
+                callback: fn () => $this->client->capturePayment(
+                    [
+                        'amount' => [
+                            'value' => number_format($amount->amount() / 100, 2, '.', ''),
+                            'currency' => $amount->currency()->value,
+                        ],
+                    ],
+                    $externalId->toString(),
+                    (string) Str::uuid(),
+                ),
                 sleepMilliseconds: 500,
                 when: fn (\Throwable $e) => $this->isRetryable($e),
             );
 
-            $this->logger->info('YooKassa: платёж создан', [
-                'payment_id' => $paymentId,
-                'external_id' => $response->getId(),
-                'status' => $response->getStatus(),
-            ]);
+            return new ProviderResponse(
+                externalId: ExternalId::fromString($response->getId()),
+                confirmationUrl: '',
+                status: $response->getStatus(),
+                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
+            );
+        } catch (\Throwable $e) {
+            throw new PaymentException("YooKassa capture failed: {$e->getMessage()}", previous: $e);
+        }
+    }
 
-            $paymentMethodId = null;
-            if ($options->savePaymentMethod && $response->getPaymentMethod()?->getSaved()) {
-                $paymentMethodId = $response->getPaymentMethod()->getId();
-            }
-
-            $confirmationUrl = $options->paymentMethodId !== null
-                ? ''
-                : ($response->getConfirmation()?->getConfirmationUrl() ?? '');
+    public function voidPayment(ExternalId $externalId): ProviderResponse
+    {
+        try {
+            $response = retry(
+                times: 3,
+                callback: fn () => $this->client->cancelPayment($externalId->toString(), (string) Str::uuid()),
+                sleepMilliseconds: 500,
+                when: fn (\Throwable $e) => $this->isRetryable($e),
+            );
 
             return new ProviderResponse(
                 externalId: ExternalId::fromString($response->getId()),
-                confirmationUrl: $confirmationUrl,
+                confirmationUrl: '',
                 status: $response->getStatus(),
-                paymentMethodId: $paymentMethodId,
                 rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
             );
-        } catch (PaymentException $e) {
-            throw $e;
         } catch (\Throwable $e) {
-            $this->logger->error('YooKassa: ошибка создания платежа', [
-                'payment_id' => $paymentId,
-                'error' => $e->getMessage(),
-            ]);
-
-            throw new PaymentException("YooKassa createPayment failed: {$e->getMessage()}", previous: $e);
+            throw new PaymentException("YooKassa void failed: {$e->getMessage()}", previous: $e);
         }
     }
 
@@ -165,8 +156,8 @@ final class YooKassaProvider implements PaymentProviderInterface
     }
 
     /**
-     * @param array<string, mixed>  $payload
-     * @param array<string, list<string|null>> $headers
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, list<string|null>>  $headers
      */
     public function verifyWebhook(array $payload, array $headers): bool
     {
@@ -214,6 +205,91 @@ final class YooKassaProvider implements PaymentProviderInterface
     }
 
     // ─── Private helpers ────────────────────────────────────────────────────
+
+    private function doCreatePayment(
+        string $paymentId,
+        Money $amount,
+        string $description,
+        string $returnUrl,
+        string $idempotencyKey,
+        CreatePaymentOptionsDTO $options,
+        bool $capture,
+    ): ProviderResponse {
+        try {
+            $this->logger->info('YooKassa: создание платежа', [
+                'payment_id' => $paymentId,
+                'amount' => $amount->formatted(),
+                'idempotency_key' => $idempotencyKey,
+                'capture' => $capture,
+                'save_method' => $options->savePaymentMethod,
+            ]);
+
+            $payload = [
+                'amount' => [
+                    'value' => number_format($amount->amount() / 100, 2, '.', ''),
+                    'currency' => $amount->currency()->value,
+                ],
+                'description' => $description,
+                'metadata' => ['internal_payment_id' => $paymentId],
+                'capture' => $capture,
+                'save_payment_method' => $options->savePaymentMethod,
+            ];
+
+            if ($options->paymentMethodId !== null) {
+                $payload['payment_method_id'] = $options->paymentMethodId;
+            } else {
+                $payload['confirmation'] = $this->buildConfirmation($options, $returnUrl);
+
+                if ($options->paymentMethodType !== null) {
+                    $payload['payment_method_data'] = ['type' => $options->paymentMethodType];
+                }
+            }
+
+            if ($options->receipt !== null) {
+                $payload['receipt'] = $this->buildReceipt($options, $amount);
+            }
+
+            $response = retry(
+                times: 3,
+                callback: fn () => $this->client->createPayment($payload, $idempotencyKey),
+                sleepMilliseconds: 500,
+                when: fn (\Throwable $e) => $this->isRetryable($e),
+            );
+
+            $this->logger->info('YooKassa: платёж создан', [
+                'payment_id' => $paymentId,
+                'external_id' => $response->getId(),
+                'status' => $response->getStatus(),
+                'capture' => $capture,
+            ]);
+
+            $paymentMethodId = null;
+            if ($options->savePaymentMethod && $response->getPaymentMethod()?->getSaved()) {
+                $paymentMethodId = $response->getPaymentMethod()->getId();
+            }
+
+            $confirmationUrl = $options->paymentMethodId !== null
+                ? ''
+                : ($response->getConfirmation()?->getConfirmationUrl() ?? '');
+
+            return new ProviderResponse(
+                externalId: ExternalId::fromString($response->getId()),
+                confirmationUrl: $confirmationUrl,
+                status: $response->getStatus(),
+                paymentMethodId: $paymentMethodId,
+                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
+            );
+        } catch (PaymentException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->logger->error('YooKassa: ошибка создания платежа', [
+                'payment_id' => $paymentId,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new PaymentException("YooKassa createPayment failed: {$e->getMessage()}", previous: $e);
+        }
+    }
 
     /** @return array<string, string> */
     private function buildConfirmation(CreatePaymentOptionsDTO $options, string $returnUrl): array

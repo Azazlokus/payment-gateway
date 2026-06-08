@@ -17,6 +17,7 @@ final readonly class PaymentResultDTO
         public ?string $externalId,
         public ?string $paymentMethodId = null,
         public int $refundedAmount = 0,
+        public int $capturedAmount = 0,
         public bool $threeDsRequired = false,
         public ?string $threeDsChallengeUrl = null,
     ) {}
@@ -32,6 +33,7 @@ final readonly class PaymentResultDTO
             externalId: $payment->externalId()?->toString(),
             paymentMethodId: $payment->paymentMethodId(),
             refundedAmount: $payment->refundedAmountKopecks(),
+            capturedAmount: $payment->capturedAmountKopecks(),
             threeDsRequired: $payment->threeDsRequired(),
             threeDsChallengeUrl: $payment->threeDsChallengeUrl(),
         );

@@ -6,7 +6,9 @@ namespace Tests\Unit\Domain;
 
 use App\Payments\Domain\Aggregates\Payment;
 use App\Payments\Domain\Enums\PaymentStatus;
+use App\Payments\Domain\Events\PaymentWasAuthorized;
 use App\Payments\Domain\Events\PaymentWasCancelled;
+use App\Payments\Domain\Events\PaymentWasCaptured;
 use App\Payments\Domain\Events\PaymentWasCreated;
 use App\Payments\Domain\Events\PaymentWasRefunded;
 use App\Payments\Domain\Events\PaymentWasSucceeded;
@@ -35,8 +37,19 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
     {
         $payment = $this->makePayment($kopecks);
         $externalId = ExternalId::fromString('22d65900-000f-5000-a000-10d000000099');
-        $payment->pullDomainEvents(); // сбрасываем созданные события
+        $payment->pullDomainEvents();
         $payment->markAsSucceeded($externalId);
+        $payment->pullDomainEvents();
+
+        return $payment;
+    }
+
+    private function makeAuthorizedPayment(int $kopecks = 10_000): Payment
+    {
+        $payment = $this->makePayment($kopecks);
+        $externalId = ExternalId::fromString('22d65900-000f-5000-a000-10d000000099');
+        $payment->pullDomainEvents();
+        $payment->authorize($externalId);
         $payment->pullDomainEvents();
 
         return $payment;
@@ -228,6 +241,137 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
         $this->expectExceptionMessageMatches('/Cannot refund payment in status/');
 
         $payment->refund(Money::ofRub(100));
+    }
+
+    // ─── authorize() ──────────────────────────────────────────────────────────
+
+    public function test_authorize_transitions_to_authorized(): void
+    {
+        $payment = $this->makePayment();
+        $externalId = ExternalId::fromString('22d65900-000f-5000-a000-10d000000099');
+        $payment->pullDomainEvents();
+
+        $payment->authorize($externalId);
+
+        $this->assertSame(PaymentStatus::Authorized, $payment->status());
+        $this->assertTrue($externalId->equals($payment->externalId()));
+    }
+
+    public function test_authorize_records_event(): void
+    {
+        $payment = $this->makePayment();
+        $externalId = ExternalId::fromString('22d65900-000f-5000-a000-10d000000099');
+        $payment->pullDomainEvents();
+
+        $payment->authorize($externalId);
+        $events = $payment->pullDomainEvents();
+
+        $this->assertCount(1, $events);
+        $this->assertInstanceOf(PaymentWasAuthorized::class, $events[0]);
+    }
+
+    public function test_authorize_throws_when_not_pending(): void
+    {
+        $payment = $this->makeSucceededPayment();
+
+        $this->expectException(InvalidPaymentStateException::class);
+
+        $payment->authorize(ExternalId::fromString('22d65900-000f-5000-a000-10d000000099'));
+    }
+
+    // ─── capture() ──────────────────────────────────────────────────────────
+
+    public function test_capture_full_amount_transitions_to_succeeded(): void
+    {
+        $payment = $this->makeAuthorizedPayment(10_000);
+
+        $payment->capture(Money::ofRub(10_000));
+
+        $this->assertSame(PaymentStatus::Succeeded, $payment->status());
+        $this->assertSame(10_000, $payment->capturedAmountKopecks());
+    }
+
+    public function test_capture_without_amount_captures_full(): void
+    {
+        $payment = $this->makeAuthorizedPayment(10_000);
+
+        $payment->capture();
+
+        $this->assertSame(PaymentStatus::Succeeded, $payment->status());
+        $this->assertSame(10_000, $payment->capturedAmountKopecks());
+    }
+
+    public function test_capture_partial_amount(): void
+    {
+        $payment = $this->makeAuthorizedPayment(10_000);
+
+        $payment->capture(Money::ofRub(7_000));
+
+        $this->assertSame(PaymentStatus::Succeeded, $payment->status());
+        $this->assertSame(7_000, $payment->capturedAmountKopecks());
+    }
+
+    public function test_capture_records_event(): void
+    {
+        $payment = $this->makeAuthorizedPayment(10_000);
+
+        $payment->capture(Money::ofRub(10_000));
+        $events = $payment->pullDomainEvents();
+
+        $this->assertCount(1, $events);
+        $this->assertInstanceOf(PaymentWasCaptured::class, $events[0]);
+        $this->assertSame(10_000, $events[0]->capturedAmountKopecks);
+    }
+
+    public function test_capture_throws_when_not_authorized(): void
+    {
+        $payment = $this->makePayment();
+
+        $this->expectException(InvalidPaymentStateException::class);
+
+        $payment->capture(Money::ofRub(10_000));
+    }
+
+    public function test_capture_throws_when_amount_exceeds_authorized(): void
+    {
+        $payment = $this->makeAuthorizedPayment(10_000);
+
+        $this->expectException(InvalidPaymentStateException::class);
+
+        $payment->capture(Money::ofRub(10_001));
+    }
+
+    public function test_cancel_authorized_payment_voids_hold(): void
+    {
+        $payment = $this->makeAuthorizedPayment(10_000);
+
+        $payment->cancel('Void hold');
+
+        $this->assertSame(PaymentStatus::Cancelled, $payment->status());
+    }
+
+    // ─── refund after partial capture ───────────────────────────────────────
+
+    public function test_refund_after_partial_capture_limited_to_captured_amount(): void
+    {
+        $payment = $this->makeAuthorizedPayment(10_000);
+        $payment->capture(Money::ofRub(7_000));
+        $payment->pullDomainEvents();
+
+        $payment->refund(Money::ofRub(7_000));
+
+        $this->assertSame(PaymentStatus::Refunded, $payment->status());
+    }
+
+    public function test_refund_after_partial_capture_throws_when_exceeds_captured(): void
+    {
+        $payment = $this->makeAuthorizedPayment(10_000);
+        $payment->capture(Money::ofRub(7_000));
+        $payment->pullDomainEvents();
+
+        $this->expectException(InvalidPaymentStateException::class);
+
+        $payment->refund(Money::ofRub(7_001));
     }
 
     // ─── assignExternalData() ────────────────────────────────────────────────

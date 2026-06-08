@@ -9,7 +9,9 @@ use App\Payments\Domain\Entities\RefundRequest;
 use App\Payments\Domain\Enums\PaymentStatus;
 use App\Payments\Domain\Events\DomainEvent;
 use App\Payments\Domain\Events\PaymentRequiresThreeDSecure;
+use App\Payments\Domain\Events\PaymentWasAuthorized;
 use App\Payments\Domain\Events\PaymentWasCancelled;
+use App\Payments\Domain\Events\PaymentWasCaptured;
 use App\Payments\Domain\Events\PaymentWasCreated;
 use App\Payments\Domain\Events\PaymentWasRefunded;
 use App\Payments\Domain\Events\PaymentWasSucceeded;
@@ -44,6 +46,7 @@ final class Payment
         private readonly array $metadata = [],
         private ?string $paymentMethodId = null, // ID сохранённого метода YooKassa
         private int $refundedAmountKopecks = 0,
+        private int $capturedAmountKopecks = 0,
         private bool $threeDsRequired = false,
         private ?string $threeDsChallengeUrl = null,
     ) {}
@@ -96,8 +99,7 @@ final class Payment
 
     public function requestRefund(Money $amount, string $reason): RefundRequest
     {
-        // Бизнес-правило: нельзя рефандить больше доступного остатка
-        $availableKopecks = $this->amount->amount() - $this->refundedAmountKopecks;
+        $availableKopecks = $this->refundableBase() - $this->refundedAmountKopecks;
         if ($amount->amount() > $availableKopecks) {
             throw new InvalidPaymentStateException(
                 "Refund amount {$amount->amount()} exceeds available amount {$availableKopecks}"
@@ -143,6 +145,50 @@ final class Payment
         return $this->refundRequests;
     }
 
+    public function authorize(ExternalId $externalId): void
+    {
+        if ($this->status !== PaymentStatus::Pending) {
+            throw new InvalidPaymentStateException(
+                "Cannot authorize payment in status: {$this->status->value}"
+            );
+        }
+
+        $this->status = PaymentStatus::Authorized;
+        $this->externalId = $externalId;
+
+        $this->recordEvent(new PaymentWasAuthorized(
+            paymentId: $this->id->toString(),
+            externalId: $externalId->toString(),
+            provider: $this->provider,
+        ));
+    }
+
+    public function capture(?Money $amount = null): void
+    {
+        if ($this->status !== PaymentStatus::Authorized) {
+            throw new InvalidPaymentStateException(
+                "Cannot capture payment in status: {$this->status->value}"
+            );
+        }
+
+        $captureAmount = $amount ?? $this->amount;
+
+        if ($captureAmount->amount() > $this->amount->amount()) {
+            throw new InvalidPaymentStateException(
+                "Capture amount {$captureAmount->amount()} exceeds authorized amount {$this->amount->amount()}"
+            );
+        }
+
+        $this->capturedAmountKopecks = $captureAmount->amount();
+        $this->status = PaymentStatus::Succeeded;
+
+        $this->recordEvent(new PaymentWasCaptured(
+            paymentId: $this->id->toString(),
+            capturedAmountKopecks: $this->capturedAmountKopecks,
+            provider: $this->provider,
+        ));
+    }
+
     public function markAsSucceeded(ExternalId $externalId): void
     {
         $this->guardAgainstTerminalStatus();
@@ -176,19 +222,19 @@ final class Payment
             );
         }
 
+        $refundableBase = $this->refundableBase();
         $newRefundedTotal = $this->refundedAmountKopecks + $refundAmount->amount();
 
-        if ($newRefundedTotal > $this->amount->amount()) {
+        if ($newRefundedTotal > $refundableBase) {
             throw new InvalidPaymentStateException(
                 "Refund would exceed payment amount: already refunded {$this->refundedAmountKopecks}, "
-                ."trying to refund {$refundAmount->amount()} more, total {$this->amount->amount()}"
+                ."trying to refund {$refundAmount->amount()} more, total {$refundableBase}"
             );
         }
 
         $this->refundedAmountKopecks = $newRefundedTotal;
 
-        // Переходим в Refunded только когда возвращена вся сумма
-        if ($this->refundedAmountKopecks === $this->amount->amount()) {
+        if ($this->refundedAmountKopecks === $refundableBase) {
             $this->status = PaymentStatus::Refunded;
         }
 
@@ -198,9 +244,25 @@ final class Payment
         ));
     }
 
+    /**
+     * Для двухстадийных платежей с частичным capture — рефандим только captured сумму.
+     * Для прямых платежей (capturedAmountKopecks = 0) — полная сумма.
+     */
+    private function refundableBase(): int
+    {
+        return $this->capturedAmountKopecks > 0
+            ? $this->capturedAmountKopecks
+            : $this->amount->amount();
+    }
+
     public function refundedAmountKopecks(): int
     {
         return $this->refundedAmountKopecks;
+    }
+
+    public function capturedAmountKopecks(): int
+    {
+        return $this->capturedAmountKopecks;
     }
 
     public function assignExternalData(ExternalId $externalId, string $confirmationUrl, ?string $paymentMethodId = null): void
@@ -212,8 +274,8 @@ final class Payment
 
     public function requireThreeDSecure(string $challengeUrl): void
     {
-        $this->threeDsRequired      = true;
-        $this->threeDsChallengeUrl  = $challengeUrl;
+        $this->threeDsRequired = true;
+        $this->threeDsChallengeUrl = $challengeUrl;
 
         $this->recordEvent(new PaymentRequiresThreeDSecure(
             paymentId: $this->id->toString(),
@@ -319,6 +381,7 @@ final class Payment
         array $metadata = [],
         ?string $paymentMethodId = null,
         int $refundedAmountKopecks = 0,
+        int $capturedAmountKopecks = 0,
         bool $threeDsRequired = false,
         ?string $threeDsChallengeUrl = null,
     ): self {
@@ -334,6 +397,7 @@ final class Payment
             metadata: $metadata,
             paymentMethodId: $paymentMethodId,
             refundedAmountKopecks: $refundedAmountKopecks,
+            capturedAmountKopecks: $capturedAmountKopecks,
             threeDsRequired: $threeDsRequired,
             threeDsChallengeUrl: $threeDsChallengeUrl,
         );

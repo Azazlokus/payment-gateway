@@ -25,6 +25,7 @@ final class PaymentModel extends Model
         'provider',
         'amount',
         'refunded_amount',
+        'captured_amount',
         'currency',
         'description',
         'status',

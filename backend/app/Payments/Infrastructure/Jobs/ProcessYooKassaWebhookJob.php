@@ -49,6 +49,8 @@ final class ProcessYooKassaWebhookJob implements ShouldQueue
 
         try {
             match ($event) {
+                'payment.waiting_for_capture' => $payment->authorize($providerResponse->externalId),
+
                 'payment.succeeded' => $payment->markAsSucceeded($providerResponse->externalId),
 
                 'payment.canceled' => $payment->cancel('Cancelled by YooKassa'),

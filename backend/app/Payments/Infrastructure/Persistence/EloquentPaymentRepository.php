@@ -25,6 +25,7 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
                 'provider' => $payment->provider(),
                 'amount' => $payment->amount()->amount(),
                 'refunded_amount' => $payment->refundedAmountKopecks(),
+                'captured_amount' => $payment->capturedAmountKopecks(),
                 'currency' => $payment->amount()->currency()->value,
                 'description' => $payment->description(),
                 'status' => $payment->status()->value,
@@ -147,6 +148,7 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
             metadata: $model->metadata ?? [],
             paymentMethodId: $model->payment_method_id,
             refundedAmountKopecks: (int) ($model->refunded_amount ?? 0),
+            capturedAmountKopecks: (int) ($model->captured_amount ?? 0),
             threeDsRequired: (bool) ($model->three_ds_required ?? false),
             threeDsChallengeUrl: $model->three_ds_challenge_url,
         );

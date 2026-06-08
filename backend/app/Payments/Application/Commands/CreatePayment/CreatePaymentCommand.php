@@ -18,5 +18,6 @@ final readonly class CreatePaymentCommand
         public array $metadata = [],
         public CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO,
         public ?string $provider = null, // null = использовать провайдер по умолчанию
+        public bool $manualCapture = false,
     ) {}
 }
