@@ -6,12 +6,13 @@ namespace App\Payments\Infrastructure\Persistence;
 
 use App\Payments\Domain\Aggregates\Payment;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
-use App\Payments\Domain\Enums\PaymentStatus;
 use App\Payments\Domain\ValueObjects\ExternalId;
 use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Domain\ValueObjects\PaymentId;
+use App\Payments\Domain\ValueObjects\SplitRule;
 use App\Payments\Infrastructure\Persistence\Models\PaymentEventModel;
 use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
+use App\Payments\Infrastructure\Persistence\Models\PaymentSplitModel;
 
 final class EloquentPaymentRepository implements PaymentRepositoryInterface
 {
@@ -36,6 +37,23 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
                 'metadata' => $payment->metadata(),
             ]
         );
+
+        if ($payment->hasSplits()) {
+            $paymentId = $payment->id()->toString();
+            $existingSplits = PaymentSplitModel::where('payment_id', $paymentId)->exists();
+
+            if (! $existingSplits) {
+                foreach ($payment->splits() as $split) {
+                    PaymentSplitModel::create([
+                        'payment_id' => $paymentId,
+                        'account_id' => $split->accountId(),
+                        'amount' => $split->amount()->amount(),
+                        'currency' => $split->amount()->currency()->value,
+                        'description' => $split->description(),
+                    ]);
+                }
+            }
+        }
 
         foreach ($payment->pullDomainEvents() as $event) {
             PaymentEventModel::create([
@@ -98,8 +116,8 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
         $paginator = $query->cursorPaginate(perPage: $perPage, cursor: $cursor);
 
         return [
-            'data'        => $paginator->getCollection()->map(fn ($m) => $this->hydrate($m))->all(),
-            'per_page'    => $paginator->perPage(),
+            'data' => $paginator->getCollection()->map(fn ($m) => $this->hydrate($m))->all(),
+            'per_page' => $paginator->perPage(),
             'next_cursor' => $paginator->nextCursor()?->encode(),
             'prev_cursor' => $paginator->previousCursor()?->encode(),
         ];
@@ -134,6 +152,16 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
 
     private function hydrate(PaymentModel $model): Payment
     {
+        $splits = $model->relationLoaded('splits')
+            ? $model->splits
+            : $model->splits()->get();
+
+        $splitRules = $splits->map(fn (PaymentSplitModel $s) => new SplitRule(
+            accountId: $s->account_id,
+            amount: Money::ofRub((int) $s->amount),
+            description: $s->description ?? '',
+        ))->all();
+
         return Payment::restore(
             id: PaymentId::fromString($model->id),
             amount: Money::ofRub($model->amount),
@@ -151,6 +179,7 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
             capturedAmountKopecks: (int) ($model->captured_amount ?? 0),
             threeDsRequired: (bool) ($model->three_ds_required ?? false),
             threeDsChallengeUrl: $model->three_ds_challenge_url,
+            splits: $splitRules,
         );
     }
 }

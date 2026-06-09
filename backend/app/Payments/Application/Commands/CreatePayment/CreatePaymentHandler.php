@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace App\Payments\Application\Commands\CreatePayment;
 
 use App\Payments\Application\DTOs\PaymentResultDTO;
+use App\Payments\Application\DTOs\SplitRuleDTO;
 use App\Payments\Application\PaymentProviderRegistry;
 use App\Payments\Domain\Aggregates\Payment;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
+use App\Payments\Domain\Contracts\SupportsSplitPayments;
 use App\Payments\Domain\Contracts\SupportsTwoPhasePayments;
 use App\Payments\Domain\Exceptions\PaymentException;
 use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Domain\ValueObjects\PaymentId;
+use App\Payments\Domain\ValueObjects\SplitRule;
 use App\Payments\Infrastructure\Observability\MetricsService;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +45,15 @@ final readonly class CreatePaymentHandler
         ]);
 
         return DB::transaction(function () use ($command, $provider, $correlationId): PaymentResultDTO {
+            $splitRules = array_map(
+                fn (SplitRuleDTO $dto) => new SplitRule(
+                    accountId: $dto->accountId,
+                    amount: Money::ofRub($dto->amountKopecks),
+                    description: $dto->description,
+                ),
+                $command->splits,
+            );
+
             $payment = Payment::create(
                 id: PaymentId::generate(),
                 amount: Money::ofRub($command->amountKopecks),
@@ -52,11 +64,28 @@ final readonly class CreatePaymentHandler
                     'user_id' => $command->userId,
                     'correlation_id' => $correlationId,
                 ]),
+                splits: $splitRules,
             );
 
             $this->repository->save($payment);
 
-            if ($command->manualCapture) {
+            if ($payment->hasSplits()) {
+                if (! $provider instanceof SupportsSplitPayments) {
+                    throw new PaymentException(
+                        "Provider {$provider->name()} does not support split payments",
+                    );
+                }
+
+                $providerResponse = $provider->createSplitPayment(
+                    paymentId: $payment->id()->toString(),
+                    amount: $payment->amount(),
+                    description: $payment->description(),
+                    returnUrl: $command->returnUrl,
+                    idempotencyKey: $command->idempotencyKey,
+                    splits: $splitRules,
+                    options: $command->options,
+                );
+            } elseif ($command->manualCapture) {
                 if (! $provider instanceof SupportsTwoPhasePayments) {
                     throw new PaymentException(
                         "Provider {$provider->name()} does not support manual capture",

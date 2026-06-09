@@ -8,15 +8,17 @@ use App\Payments\Application\DTOs\CreatePaymentOptionsDTO;
 use App\Payments\Application\DTOs\ReceiptItemDTO;
 use App\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Payments\Domain\Contracts\ProviderResponse;
+use App\Payments\Domain\Contracts\SupportsSplitPayments;
 use App\Payments\Domain\Contracts\SupportsTwoPhasePayments;
 use App\Payments\Domain\Exceptions\PaymentException;
 use App\Payments\Domain\ValueObjects\ExternalId;
 use App\Payments\Domain\ValueObjects\Money;
+use App\Payments\Domain\ValueObjects\SplitRule;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Str;
 use YooKassa\Client;
 
-final class YooKassaProvider implements PaymentProviderInterface, SupportsTwoPhasePayments
+final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitPayments, SupportsTwoPhasePayments
 {
     private readonly Client $client;
 
@@ -55,6 +57,82 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsTwoPha
         CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO,
     ): ProviderResponse {
         return $this->doCreatePayment($paymentId, $amount, $description, $returnUrl, $idempotencyKey, $options, capture: false);
+    }
+
+    /** @param SplitRule[] $splits */
+    public function createSplitPayment(
+        string $paymentId,
+        Money $amount,
+        string $description,
+        string $returnUrl,
+        string $idempotencyKey,
+        array $splits,
+        CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO,
+    ): ProviderResponse {
+        try {
+            $this->logger->info('YooKassa: создание split-платежа', [
+                'payment_id' => $paymentId,
+                'amount' => $amount->formatted(),
+                'splits_count' => count($splits),
+            ]);
+
+            $payload = [
+                'amount' => [
+                    'value' => number_format($amount->amount() / 100, 2, '.', ''),
+                    'currency' => $amount->currency()->value,
+                ],
+                'description' => $description,
+                'metadata' => ['internal_payment_id' => $paymentId],
+                'capture' => true,
+                'transfers' => array_map(fn (SplitRule $split) => [
+                    'account_id' => $split->accountId(),
+                    'amount' => [
+                        'value' => number_format($split->amount()->amount() / 100, 2, '.', ''),
+                        'currency' => $split->amount()->currency()->value,
+                    ],
+                    'description' => $split->description(),
+                ], $splits),
+            ];
+
+            if ($options->paymentMethodId !== null) {
+                $payload['payment_method_id'] = $options->paymentMethodId;
+            } else {
+                $payload['confirmation'] = $this->buildConfirmation($options, $returnUrl);
+
+                if ($options->paymentMethodType !== null) {
+                    $payload['payment_method_data'] = ['type' => $options->paymentMethodType];
+                }
+            }
+
+            if ($options->receipt !== null) {
+                $payload['receipt'] = $this->buildReceipt($options, $amount);
+            }
+
+            $response = retry(
+                times: 3,
+                callback: fn () => $this->client->createPayment($payload, $idempotencyKey),
+                sleepMilliseconds: 500,
+                when: fn (\Throwable $e) => $this->isRetryable($e),
+            );
+
+            $confirmationUrl = $options->paymentMethodId !== null
+                ? ''
+                : ($response->getConfirmation()?->getConfirmationUrl() ?? '');
+
+            return new ProviderResponse(
+                externalId: ExternalId::fromString($response->getId()),
+                confirmationUrl: $confirmationUrl,
+                status: $response->getStatus(),
+                rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
+            );
+        } catch (\Throwable $e) {
+            $this->logger->error('YooKassa: ошибка создания split-платежа', [
+                'payment_id' => $paymentId,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new PaymentException("YooKassa createSplitPayment failed: {$e->getMessage()}", previous: $e);
+        }
     }
 
     public function capturePayment(ExternalId $externalId, Money $amount): ProviderResponse

@@ -30,6 +30,7 @@ final class PaymentResource extends JsonResource
             'captured_amount' => $this->dto->capturedAmount,
             'three_ds_required' => $this->dto->threeDsRequired,
             'three_ds_challenge_url' => $this->dto->threeDsChallengeUrl,
+            'splits' => $this->dto->splits,
         ];
     }
 }

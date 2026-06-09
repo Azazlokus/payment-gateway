@@ -13,9 +13,11 @@ use App\Payments\Domain\Events\PaymentWasCreated;
 use App\Payments\Domain\Events\PaymentWasRefunded;
 use App\Payments\Domain\Events\PaymentWasSucceeded;
 use App\Payments\Domain\Exceptions\InvalidPaymentStateException;
+use App\Payments\Domain\Exceptions\PaymentException;
 use App\Payments\Domain\ValueObjects\ExternalId;
 use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Domain\ValueObjects\PaymentId;
+use App\Payments\Domain\ValueObjects\SplitRule;
 use PHPUnit\Framework\TestCase;
 
 class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel bootstrap needed
@@ -372,6 +374,84 @@ class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel boot
         $this->expectException(InvalidPaymentStateException::class);
 
         $payment->refund(Money::ofRub(7_001));
+    }
+
+    // ─── splits ─────────────────────────────────────────────────────────────
+
+    public function test_create_with_splits(): void
+    {
+        $splits = [
+            new SplitRule('acc_seller', Money::ofRub(7_000), 'Seller share'),
+            new SplitRule('acc_platform', Money::ofRub(3_000), 'Platform fee'),
+        ];
+
+        $payment = Payment::create(
+            id: PaymentId::generate(),
+            amount: Money::ofRub(10_000),
+            description: 'Split test',
+            provider: 'yookassa',
+            idempotencyKey: 'idem-split-1',
+            splits: $splits,
+        );
+
+        $this->assertTrue($payment->hasSplits());
+        $this->assertCount(2, $payment->splits());
+        $this->assertSame(10_000, $payment->splitsTotal());
+    }
+
+    public function test_splits_total_less_than_amount_is_allowed(): void
+    {
+        $splits = [
+            new SplitRule('acc_seller', Money::ofRub(6_000), 'Seller'),
+        ];
+
+        $payment = Payment::create(
+            id: PaymentId::generate(),
+            amount: Money::ofRub(10_000),
+            description: 'Partial split',
+            provider: 'yookassa',
+            idempotencyKey: 'idem-split-2',
+            splits: $splits,
+        );
+
+        $this->assertTrue($payment->hasSplits());
+        $this->assertSame(6_000, $payment->splitsTotal());
+    }
+
+    public function test_splits_total_exceeds_amount_throws(): void
+    {
+        $splits = [
+            new SplitRule('acc_a', Money::ofRub(6_000)),
+            new SplitRule('acc_b', Money::ofRub(5_000)),
+        ];
+
+        $this->expectException(InvalidPaymentStateException::class);
+        $this->expectExceptionMessage('exceeds payment amount');
+
+        Payment::create(
+            id: PaymentId::generate(),
+            amount: Money::ofRub(10_000),
+            description: 'Over-split',
+            provider: 'yookassa',
+            idempotencyKey: 'idem-split-3',
+            splits: $splits,
+        );
+    }
+
+    public function test_payment_without_splits_has_empty_array(): void
+    {
+        $payment = $this->makePayment();
+
+        $this->assertFalse($payment->hasSplits());
+        $this->assertSame([], $payment->splits());
+        $this->assertSame(0, $payment->splitsTotal());
+    }
+
+    public function test_split_rule_empty_account_throws(): void
+    {
+        $this->expectException(PaymentException::class);
+
+        new SplitRule('', Money::ofRub(1_000));
     }
 
     // ─── assignExternalData() ────────────────────────────────────────────────

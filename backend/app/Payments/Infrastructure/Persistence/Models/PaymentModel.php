@@ -46,4 +46,10 @@ final class PaymentModel extends Model
     {
         return $this->hasMany(PaymentEventModel::class, 'payment_id');
     }
+
+    /** @return HasMany<PaymentSplitModel, $this> */
+    public function splits(): HasMany
+    {
+        return $this->hasMany(PaymentSplitModel::class, 'payment_id');
+    }
 }

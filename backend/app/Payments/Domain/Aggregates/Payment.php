@@ -21,6 +21,7 @@ use App\Payments\Domain\ValueObjects\ExternalId;
 use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Domain\ValueObjects\PaymentId;
 use App\Payments\Domain\ValueObjects\RefundId;
+use App\Payments\Domain\ValueObjects\SplitRule;
 
 final class Payment
 {
@@ -32,6 +33,9 @@ final class Payment
 
     /** @var RefundRequest[] */
     private array $refundRequests = [];
+
+    /** @var SplitRule[] */
+    private array $splits = [];
 
     private function __construct(
         private readonly PaymentId $id,
@@ -51,7 +55,10 @@ final class Payment
         private ?string $threeDsChallengeUrl = null,
     ) {}
 
-    /** @param array<string, mixed> $metadata */
+    /**
+     * @param  array<string, mixed>  $metadata
+     * @param  SplitRule[]  $splits
+     */
     public static function create(
         PaymentId $id,
         Money $amount,
@@ -59,6 +66,7 @@ final class Payment
         string $provider,
         string $idempotencyKey,
         array $metadata = [],
+        array $splits = [],
     ): static {
         $payment = new self(
             id: $id,
@@ -69,6 +77,10 @@ final class Payment
             idempotencyKey: $idempotencyKey,
             metadata: $metadata,
         );
+
+        if ($splits !== []) {
+            $payment->setSplits($splits);
+        }
 
         $payment->recordEvent(new PaymentWasCreated(
             paymentId: $id->toString(),
@@ -81,7 +93,46 @@ final class Payment
         ));
 
         return $payment;
+    }
 
+    /** @param SplitRule[] $splits */
+    private function setSplits(array $splits): void
+    {
+        $totalSplitKopecks = 0;
+
+        foreach ($splits as $split) {
+            $totalSplitKopecks += $split->amount()->amount();
+        }
+
+        if ($totalSplitKopecks > $this->amount->amount()) {
+            throw new InvalidPaymentStateException(
+                "Splits total {$totalSplitKopecks} exceeds payment amount {$this->amount->amount()}"
+            );
+        }
+
+        $this->splits = $splits;
+    }
+
+    /** @return SplitRule[] */
+    public function splits(): array
+    {
+        return $this->splits;
+    }
+
+    public function hasSplits(): bool
+    {
+        return $this->splits !== [];
+    }
+
+    public function splitsTotal(): int
+    {
+        $total = 0;
+
+        foreach ($this->splits as $split) {
+            $total += $split->amount()->amount();
+        }
+
+        return $total;
     }
 
     public function addAttempt(string $provider, Money $amount): PaymentAttempt
@@ -368,7 +419,10 @@ final class Payment
         return $this->metadata;
     }
 
-    /** @param array<string, mixed> $metadata */
+    /**
+     * @param  array<string, mixed>  $metadata
+     * @param  SplitRule[]  $splits
+     */
     public static function restore(
         PaymentId $id,
         Money $amount,
@@ -384,8 +438,9 @@ final class Payment
         int $capturedAmountKopecks = 0,
         bool $threeDsRequired = false,
         ?string $threeDsChallengeUrl = null,
+        array $splits = [],
     ): self {
-        return new self(
+        $payment = new self(
             id: $id,
             amount: $amount,
             status: $status,
@@ -401,5 +456,9 @@ final class Payment
             threeDsRequired: $threeDsRequired,
             threeDsChallengeUrl: $threeDsChallengeUrl,
         );
+
+        $payment->splits = $splits;
+
+        return $payment;
     }
 }

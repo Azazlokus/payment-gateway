@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Payments\Application\DTOs;
 
 use App\Payments\Domain\Aggregates\Payment;
+use App\Payments\Domain\ValueObjects\SplitRule;
 
 final readonly class PaymentResultDTO
 {
@@ -20,6 +21,8 @@ final readonly class PaymentResultDTO
         public int $capturedAmount = 0,
         public bool $threeDsRequired = false,
         public ?string $threeDsChallengeUrl = null,
+        /** @var array<array{account_id: string, amount: int, currency: string, description: string}> */
+        public array $splits = [],
     ) {}
 
     public static function fromAggregate(Payment $payment): self
@@ -36,6 +39,10 @@ final readonly class PaymentResultDTO
             capturedAmount: $payment->capturedAmountKopecks(),
             threeDsRequired: $payment->threeDsRequired(),
             threeDsChallengeUrl: $payment->threeDsChallengeUrl(),
+            splits: array_map(
+                fn (SplitRule $s) => $s->toArray(),
+                $payment->splits(),
+            ),
         );
     }
 }

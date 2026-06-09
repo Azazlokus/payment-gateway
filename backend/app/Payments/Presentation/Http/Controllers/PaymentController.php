@@ -15,6 +15,7 @@ use App\Payments\Application\DTOs\CreatePaymentOptionsDTO;
 use App\Payments\Application\DTOs\PaymentResultDTO;
 use App\Payments\Application\DTOs\ReceiptDTO;
 use App\Payments\Application\DTOs\ReceiptItemDTO;
+use App\Payments\Application\DTOs\SplitRuleDTO;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Payments\Domain\ValueObjects\PaymentId;
 use App\Payments\Infrastructure\Observability\AuditLogger;
@@ -111,6 +112,19 @@ final class PaymentController extends Controller
                     new OA\Property(property: 'confirmation_type', type: 'string', nullable: true, enum: ['redirect', 'embedded', 'qr', 'mobile_application']),
                     new OA\Property(property: 'save_payment_method', type: 'boolean', nullable: true, description: 'Сохранить метод для рекуррентных платежей'),
                     new OA\Property(property: 'payment_method_id', type: 'string', nullable: true, description: 'ID сохранённого метода для рекуррентного списания'),
+                    new OA\Property(
+                        property: 'splits',
+                        type: 'array',
+                        description: 'Правила разделения платежа между получателями (маркетплейс). Сумма splits ≤ amount.',
+                        items: new OA\Items(
+                            properties: [
+                                new OA\Property(property: 'account_id', type: 'string', description: 'ID аккаунта получателя в платёжной системе', example: '100500'),
+                                new OA\Property(property: 'amount', type: 'integer', description: 'Сумма в копейках', example: 30000, minimum: 100),
+                                new OA\Property(property: 'description', type: 'string', description: 'Описание перевода', example: 'Доля продавца'),
+                            ]
+                        ),
+                        nullable: true,
+                    ),
                 ]
             )
         ),
@@ -145,6 +159,14 @@ final class PaymentController extends Controller
             options: $this->buildOptions($request),
             provider: $request->input('provider'),
             manualCapture: (bool) $request->input('manual_capture', false),
+            splits: array_map(
+                fn (array $s) => new SplitRuleDTO(
+                    accountId: $s['account_id'],
+                    amountKopecks: (int) $s['amount'],
+                    description: $s['description'] ?? '',
+                ),
+                $request->input('splits', []),
+            ),
         ));
 
         $this->auditLogger->log('payment.created', 'payment', $result->id, ['amount' => $result->amount], $request);

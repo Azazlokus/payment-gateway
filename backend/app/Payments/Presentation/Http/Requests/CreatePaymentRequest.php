@@ -58,6 +58,12 @@ final class CreatePaymentRequest extends FormRequest
             'receipt.items.*.vat_code' => ['required', 'integer', Rule::in([1, 2, 3, 4, 5, 6])],
             'receipt.items.*.payment_subject' => ['sometimes', 'string'],
             'receipt.items.*.payment_mode' => ['sometimes', 'string'],
+
+            // Split-платежи (маркетплейс)
+            'splits' => ['sometimes', 'array', 'min:1'],
+            'splits.*.account_id' => ['required_with:splits', 'string', 'max:64'],
+            'splits.*.amount' => ['required_with:splits', 'integer', 'min:100'],
+            'splits.*.description' => ['sometimes', 'string', 'max:255'],
         ];
     }
 }
