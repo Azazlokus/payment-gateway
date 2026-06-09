@@ -6,7 +6,10 @@ namespace App\Providers;
 
 use App\Payments\Application\PaymentProviderRegistry;
 use App\Payments\Domain\Contracts\DisputeRepositoryInterface;
+use App\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
+use App\Payments\Infrastructure\CircuitBreaker\CircuitBreaker;
+use App\Payments\Infrastructure\CircuitBreaker\CircuitBreakerProviderProxy;
 use App\Payments\Infrastructure\Observability\AuditLogger;
 use App\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
 use App\Payments\Infrastructure\Observability\MetricsService;
@@ -37,6 +40,15 @@ class PaymentServiceProvider extends ServiceProvider
         $this->app->singleton(AuditLogger::class);
         $this->app->singleton(ReplayProtector::class, function ($app) {
             return new ReplayProtector($app->make(Repository::class));
+        });
+
+        $this->app->singleton(CircuitBreaker::class, function () {
+            $config = config('payments.circuit_breaker', []);
+
+            return new CircuitBreaker(
+                failureThreshold: (int) ($config['failure_threshold'] ?? 5),
+                recoveryTimeoutSeconds: (int) ($config['recovery_timeout_seconds'] ?? 30),
+            );
         });
 
         // ─── Individual provider singletons ───────────────────────────────────
@@ -91,24 +103,45 @@ class PaymentServiceProvider extends ServiceProvider
 
         $this->app->singleton(PaymentProviderRegistry::class, function () {
             $registry = new PaymentProviderRegistry;
-            $registry->register($this->app->make(YooKassaProvider::class));
-            $registry->register($this->app->make(RobokassaProvider::class));
-            $registry->register($this->app->make(SbpProvider::class));
-            $registry->register($this->app->make(AlfaBankProvider::class));
-            $registry->register($this->app->make(CloudPaymentsProvider::class));
+
+            $providers = [
+                $this->app->make(YooKassaProvider::class),
+                $this->app->make(RobokassaProvider::class),
+                $this->app->make(SbpProvider::class),
+                $this->app->make(AlfaBankProvider::class),
+                $this->app->make(CloudPaymentsProvider::class),
+            ];
+
+            foreach ($providers as $provider) {
+                $registry->register($this->wrapWithCircuitBreaker($provider));
+            }
 
             return $registry;
         });
+    }
+
+    private function wrapWithCircuitBreaker(PaymentProviderInterface $provider): PaymentProviderInterface
+    {
+        if (! config('payments.circuit_breaker.enabled', true)) {
+            return $provider;
+        }
+
+        return new CircuitBreakerProviderProxy(
+            inner: $provider,
+            circuitBreaker: $this->app->make(CircuitBreaker::class),
+            logger: $this->app->make(PaymentLogger::class),
+            metrics: $this->app->make(MetricsService::class),
+        );
     }
 
     public function boot(): void
     {
         $this->app['router']->aliasMiddleware('correlation', CorrelationIdMiddleware::class);
 
-        RateLimiter::for('webhook.yookassa',      fn () => Limit::perMinute(300));
-        RateLimiter::for('webhook.robokassa',     fn () => Limit::perMinute(200));
+        RateLimiter::for('webhook.yookassa', fn () => Limit::perMinute(300));
+        RateLimiter::for('webhook.robokassa', fn () => Limit::perMinute(200));
         RateLimiter::for('webhook.cloudpayments', fn () => Limit::perMinute(300));
-        RateLimiter::for('webhook.sbp',           fn () => Limit::perMinute(300));
-        RateLimiter::for('webhook.alfabank',      fn () => Limit::perMinute(200));
+        RateLimiter::for('webhook.sbp', fn () => Limit::perMinute(300));
+        RateLimiter::for('webhook.alfabank', fn () => Limit::perMinute(200));
     }
 }

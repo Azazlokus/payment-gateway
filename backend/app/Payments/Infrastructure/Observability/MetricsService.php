@@ -67,7 +67,7 @@ class MetricsService
     {
         $this->increment('webhooks_processed_total', [
             'provider' => $provider,
-            'event'    => $event,
+            'event' => $event,
         ]);
     }
 
@@ -96,11 +96,19 @@ class MetricsService
         $this->increment('disputes_resolved_total', ['resolution' => $resolution]);
     }
 
+    public function circuitBreakerStateChanged(string $provider, string $state): void
+    {
+        $this->increment('circuit_breaker_state_changes_total', [
+            'provider' => $provider,
+            'state' => $state,
+        ]);
+    }
+
     // ─── Сериализация в Prometheus text format ────────────────────────────────
 
     public function dump(): string
     {
-        $keys = Redis::keys(self::PREFIX . '*');
+        $keys = Redis::keys(self::PREFIX.'*');
 
         if (empty($keys)) {
             return "# No metrics yet\n";
@@ -110,7 +118,7 @@ class MetricsService
 
         foreach ($keys as $redisKey) {
             // Убираем возможный префикс Redis (при использовании Redis::connection с префиксом)
-            $key   = preg_replace('/^[^:]*:' . preg_quote(self::PREFIX, '/') . '/', self::PREFIX, $redisKey);
+            $key = preg_replace('/^[^:]*:'.preg_quote(self::PREFIX, '/').'/', self::PREFIX, $redisKey);
             $value = Redis::get($redisKey);
 
             if ($value === null) {
@@ -120,7 +128,7 @@ class MetricsService
             $parsed = $this->parseKey((string) $key);
             $metrics[$parsed['name']][] = [
                 'labels' => $parsed['labels'],
-                'value'  => $value,
+                'value' => $value,
             ];
         }
 
@@ -131,7 +139,7 @@ class MetricsService
 
             foreach ($series as $entry) {
                 $labelStr = $this->formatLabels($entry['labels']);
-                $output   .= "{$name}{$labelStr} {$entry['value']}\n";
+                $output .= "{$name}{$labelStr} {$entry['value']}\n";
             }
         }
 
@@ -148,7 +156,7 @@ class MetricsService
     /** @param array<string, string> $labels */
     private function key(string $name, array $labels): string
     {
-        $key = self::PREFIX . $name;
+        $key = self::PREFIX.$name;
 
         foreach ($labels as $k => $v) {
             $key .= ":{$k}={$v}";
@@ -162,14 +170,14 @@ class MetricsService
      */
     private function parseKey(string $key): array
     {
-        $key    = substr($key, strlen(self::PREFIX));
-        $parts  = explode(':', $key);
-        $name   = array_shift($parts);
+        $key = substr($key, strlen(self::PREFIX));
+        $parts = explode(':', $key);
+        $name = array_shift($parts);
         $labels = [];
 
         foreach ($parts as $part) {
             if (str_contains($part, '=')) {
-                [$k, $v]    = explode('=', $part, 2);
+                [$k, $v] = explode('=', $part, 2);
                 $labels[$k] = $v;
             }
         }
@@ -190,6 +198,6 @@ class MetricsService
             $parts[] = "{$k}=\"{$v}\"";
         }
 
-        return '{' . implode(',', $parts) . '}';
+        return '{'.implode(',', $parts).'}';
     }
 }
