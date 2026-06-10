@@ -15,6 +15,7 @@ use App\Payments\Domain\Exceptions\PaymentException;
 use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Domain\ValueObjects\PaymentId;
 use App\Payments\Domain\ValueObjects\SplitRule;
+use App\Payments\Infrastructure\Antifraud\VelocityChecker;
 use App\Payments\Infrastructure\Observability\MetricsService;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,7 @@ final readonly class CreatePaymentHandler
         private PaymentProviderRegistry $registry,
         private PaymentLogger $logger,
         private MetricsService $metrics,
+        private VelocityChecker $velocityChecker,
     ) {}
 
     public function handle(CreatePaymentCommand $command): PaymentResultDTO
@@ -44,7 +46,15 @@ final readonly class CreatePaymentHandler
             'provider' => $provider->name(),
         ]);
 
-        return DB::transaction(function () use ($command, $provider, $correlationId): PaymentResultDTO {
+        // Antifraud velocity checks — before transaction, before provider call
+        $dimensions = [
+            'ip' => request()->ip(),
+            'user_id' => $command->userId !== null ? (string) $command->userId : null,
+            'payment_method_id' => $command->options->paymentMethodId,
+        ];
+        $this->velocityChecker->check($dimensions, $command->amountKopecks);
+
+        return DB::transaction(function () use ($command, $provider, $correlationId, $dimensions): PaymentResultDTO {
             $splitRules = array_map(
                 fn (SplitRuleDTO $dto) => new SplitRule(
                     accountId: $dto->accountId,
@@ -125,6 +135,9 @@ final readonly class CreatePaymentHandler
 
             $this->metrics->paymentCreated($provider->name());
             $this->metrics->paymentAmount($provider->name(), $payment->amount()->currency()->value, $command->amountKopecks);
+
+            // Record velocity event after successful creation
+            $this->velocityChecker->record($dimensions, $command->amountKopecks, $payment->id()->toString());
 
             $this->logger->info('Payment created successfully', [
                 'correlation_id' => $correlationId,

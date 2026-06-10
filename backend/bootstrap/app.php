@@ -6,6 +6,7 @@ use App\Payments\Domain\Exceptions\IdempotencyViolationException;
 use App\Payments\Domain\Exceptions\InvalidPaymentStateException;
 use App\Payments\Domain\Exceptions\PaymentException;
 use App\Payments\Domain\Exceptions\WebhookVerificationFailedException;
+use App\Payments\Infrastructure\Antifraud\VelocityLimitExceededException;
 use App\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
 use App\Payments\Infrastructure\Observability\MetricsService;
 use App\Payments\Presentation\Http\Middleware\RequireApiKey;
@@ -61,6 +62,14 @@ return Application::configure(basePath: dirname(__DIR__))
             Request $request,
         ) use ($traceId, $errorJson) {
             return $errorJson('webhook_verification_failed', $e->getMessage(), Response::HTTP_FORBIDDEN, $traceId($request));
+        });
+
+        // VelocityLimitExceededException — 429 Too Many Requests
+        $exceptions->render(function (
+            VelocityLimitExceededException $e,
+            Request $request,
+        ) use ($traceId, $errorJson) {
+            return $errorJson('velocity_limit_exceeded', $e->getMessage(), Response::HTTP_TOO_MANY_REQUESTS, $traceId($request));
         });
 
         // IdempotencyViolationException — 409 Conflict

@@ -3,6 +3,22 @@
 return [
     'default' => env('PAYMENT_PROVIDER', 'yookassa'),
 
+    'antifraud' => [
+        'enabled' => env('ANTIFRAUD_ENABLED', true),
+        'rules' => [
+            // Max 10 платежей с одного IP за 1 минуту
+            ['dimension' => 'ip', 'max_count' => 10, 'window_seconds' => 60],
+            // Max 50 платежей с одного IP за 1 час
+            ['dimension' => 'ip', 'max_count' => 50, 'window_seconds' => 3600],
+            // Max 5 платежей от одного user_id за 1 минуту
+            ['dimension' => 'user_id', 'max_count' => 5, 'window_seconds' => 60],
+            // Max 500 000 руб (50 000 000 коп) с одного user_id за 24 часа
+            ['dimension' => 'user_id', 'max_count' => 100, 'window_seconds' => 86400, 'max_amount_kopecks' => 50_000_000],
+            // Max 3 платежа с одного payment_method_id за 5 минут (recurring)
+            ['dimension' => 'payment_method_id', 'max_count' => 3, 'window_seconds' => 300],
+        ],
+    ],
+
     'circuit_breaker' => [
         'enabled' => env('CIRCUIT_BREAKER_ENABLED', true),
         'failure_threshold' => (int) env('CIRCUIT_BREAKER_FAILURE_THRESHOLD', 5),

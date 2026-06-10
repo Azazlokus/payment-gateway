@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Payments\Application\PaymentProviderRegistry;
+use App\Payments\Infrastructure\Antifraud\VelocityChecker;
+use App\Payments\Infrastructure\Antifraud\VelocityRule;
 use App\Payments\Domain\Contracts\DisputeRepositoryInterface;
 use App\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
@@ -40,6 +42,26 @@ class PaymentServiceProvider extends ServiceProvider
         $this->app->singleton(AuditLogger::class);
         $this->app->singleton(ReplayProtector::class, function ($app) {
             return new ReplayProtector($app->make(Repository::class));
+        });
+
+        $this->app->singleton(VelocityChecker::class, function () {
+            $checker = new VelocityChecker(
+                logger: $this->app->make(PaymentLogger::class),
+                metrics: $this->app->make(MetricsService::class),
+            );
+
+            if (config('payments.antifraud.enabled', true)) {
+                foreach (config('payments.antifraud.rules', []) as $rule) {
+                    $checker->addRule(new VelocityRule(
+                        dimension: $rule['dimension'],
+                        maxCount: (int) $rule['max_count'],
+                        windowSeconds: (int) $rule['window_seconds'],
+                        maxAmountKopecks: isset($rule['max_amount_kopecks']) ? (int) $rule['max_amount_kopecks'] : null,
+                    ));
+                }
+            }
+
+            return $checker;
         });
 
         $this->app->singleton(CircuitBreaker::class, function () {
