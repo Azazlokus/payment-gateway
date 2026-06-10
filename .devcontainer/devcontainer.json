@@ -8,7 +8,7 @@
 
   "features": {
     // Node.js для фронтенда и npm-скриптов
-    "ghcr.io/devcontainers/features/node:1": { "version": "20" },
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
     // GitHub CLI
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
@@ -31,7 +31,7 @@
       ],
       "settings": {
         "php.executablePath": "/usr/local/bin/php",
-        "intelephense.environment.phpVersion": "8.3.0",
+        "intelephense.environment.phpVersion": "8.4.0",
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "[php]": {
