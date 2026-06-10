@@ -21,9 +21,9 @@ final class CreateCryptoDepositRequest extends FormRequest
         $assetValues = array_map(fn (CryptoAsset $a) => $a->value, CryptoAsset::cases());
 
         return [
-            'payment_id'          => ['required', 'string', 'max:255'],
+            'payment_id' => ['required', 'string', 'max:255'],
             'fiat_amount_kopecks' => ['required', 'integer', 'min:100'],
-            'asset'               => ['required', 'string', Rule::in($assetValues)],
+            'asset' => ['required', 'string', Rule::in($assetValues)],
         ];
     }
 }

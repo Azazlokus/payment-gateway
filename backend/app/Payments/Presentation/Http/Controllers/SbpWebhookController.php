@@ -50,7 +50,7 @@ final class SbpWebhookController extends Controller
 
         if (! $this->provider->verifyWebhook($payload, $request->headers->all())) {
             $this->logger->warning('СБП: webhook отклонён', [
-                'ip'    => $request->ip(),
+                'ip' => $request->ip(),
                 'qr_id' => $payload['qrId'] ?? 'unknown',
             ]);
 
@@ -58,7 +58,7 @@ final class SbpWebhookController extends Controller
         }
 
         $this->logger->info('СБП: webhook получен, постановка в очередь', [
-            'qr_id'  => $payload['qrId'] ?? 'unknown',
+            'qr_id' => $payload['qrId'] ?? 'unknown',
             'status' => $payload['status'] ?? 'unknown',
         ]);
 

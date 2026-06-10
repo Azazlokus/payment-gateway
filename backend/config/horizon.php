@@ -179,11 +179,11 @@ return [
     'defaults' => [
         'supervisor-1' => [
             'connection' => 'redis',
-            'queue'      => ['default', 'webhooks', 'crypto'],
-            'balance'    => 'auto',
-            'processes'  => 5,
-            'tries'      => 5,
-            'timeout'    => 60,
+            'queue' => ['default', 'webhooks', 'crypto'],
+            'balance' => 'auto',
+            'processes' => 5,
+            'tries' => 5,
+            'timeout' => 60,
         ],
         'supervisor-payments-critical' => [
             'connection' => 'redis',
@@ -224,11 +224,11 @@ return [
         'production' => [
             'supervisor-1' => [
                 'connection' => 'redis',
-                'queue'      => ['default', 'webhooks', 'crypto'],
-                'balance'    => 'auto',
-                'processes'  => 5,
-                'tries'      => 5,
-                'timeout'    => 60,
+                'queue' => ['default', 'webhooks', 'crypto'],
+                'balance' => 'auto',
+                'processes' => 5,
+                'tries' => 5,
+                'timeout' => 60,
             ],
             'supervisor-payments-critical' => [
                 'minProcesses' => 3,
@@ -247,11 +247,11 @@ return [
         'local' => [
             'supervisor-1' => [
                 'connection' => 'redis',
-                'queue'      => ['default', 'webhooks', 'crypto'],
-                'balance'    => 'simple',
-                'processes'  => 3,
-                'tries'      => 3,
-                'timeout'    => 60,
+                'queue' => ['default', 'webhooks', 'crypto'],
+                'balance' => 'simple',
+                'processes' => 3,
+                'tries' => 3,
+                'timeout' => 60,
             ],
             'supervisor-payments-critical' => [
                 'minProcesses' => 1,

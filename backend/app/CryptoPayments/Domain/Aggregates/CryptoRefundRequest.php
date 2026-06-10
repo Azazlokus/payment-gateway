@@ -92,8 +92,8 @@ final class CryptoRefundRequest
 
     public function markAsCompleted(TxHash $hash): void
     {
-        $this->txHash  = $hash;
-        $this->status  = CryptoRefundStatus::Completed;
+        $this->txHash = $hash;
+        $this->status = CryptoRefundStatus::Completed;
         $this->events[] = new RefundWasCompleted(
             refundId: $this->id->toString(),
             txHash: $hash->toString(),
@@ -103,8 +103,8 @@ final class CryptoRefundRequest
     public function markAsFailed(string $reason): void
     {
         $this->failureReason = $reason;
-        $this->status        = CryptoRefundStatus::Failed;
-        $this->events[]       = new RefundHasFailed(
+        $this->status = CryptoRefundStatus::Failed;
+        $this->events[] = new RefundHasFailed(
             refundId: $this->id->toString(),
             reason: $reason,
         );
@@ -155,7 +155,7 @@ final class CryptoRefundRequest
     /** @return list<DomainEvent> */
     public function pullDomainEvents(): array
     {
-        $events       = $this->events;
+        $events = $this->events;
         $this->events = [];
 
         return $events;

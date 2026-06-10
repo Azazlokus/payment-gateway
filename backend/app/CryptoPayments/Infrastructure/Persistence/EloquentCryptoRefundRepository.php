@@ -18,22 +18,22 @@ final class EloquentCryptoRefundRepository implements CryptoRefundRepositoryInte
         CryptoRefundModel::updateOrCreate(
             ['id' => $refund->id()->toString()],
             [
-                'deposit_id'     => $refund->depositId(),
-                'to_address'     => $refund->toAddress()->toString(),
-                'amount_units'   => $refund->amount()->units(),
-                'asset'          => $refund->asset()->value,
-                'status'         => $refund->status()->value,
-                'tx_hash'        => $refund->txHash()?->toString(),
+                'deposit_id' => $refund->depositId(),
+                'to_address' => $refund->toAddress()->toString(),
+                'amount_units' => $refund->amount()->units(),
+                'asset' => $refund->asset()->value,
+                'status' => $refund->status()->value,
+                'tx_hash' => $refund->txHash()?->toString(),
                 'failure_reason' => $refund->failureReason(),
             ]
         );
 
         foreach ($refund->pullDomainEvents() as $event) {
             PaymentEventModel::create([
-                'payment_id'  => $refund->depositId(),
-                'event_id'    => $event->eventId,
-                'event_name'  => $event->eventName(),
-                'event_data'  => $event->toArray(),
+                'payment_id' => $refund->depositId(),
+                'event_id' => $event->eventId,
+                'event_name' => $event->eventName(),
+                'event_data' => $event->toArray(),
                 'occurred_at' => $event->occurredAt,
             ]);
         }
@@ -56,12 +56,13 @@ final class EloquentCryptoRefundRepository implements CryptoRefundRepositoryInte
     /** @return list<CryptoRefundRequest> */
     public function findPending(): array
     {
-        return CryptoRefundModel::where('status', CryptoRefundStatus::Pending->value)
-            ->orderBy('created_at')
-            ->get()
-            ->map(fn (CryptoRefundModel $m) => $this->hydrate($m))
-            ->values()
-            ->all();
+        return array_values(
+            CryptoRefundModel::where('status', CryptoRefundStatus::Pending->value)
+                ->orderBy('created_at')
+                ->get()
+                ->map(fn (CryptoRefundModel $m) => $this->hydrate($m))
+                ->all(),
+        );
     }
 
     private function hydrate(CryptoRefundModel $model): CryptoRefundRequest
@@ -71,8 +72,8 @@ final class EloquentCryptoRefundRepository implements CryptoRefundRepositoryInte
             depositId: (string) $model->deposit_id,
             toAddress: (string) $model->to_address,
             amountUnits: (int) $model->amount_units,
-            asset: ((string) ($model->asset instanceof \BackedEnum ? $model->asset->value : $model->asset)),
-            status: ((string) ($model->status instanceof \BackedEnum ? $model->status->value : $model->status)),
+            asset: $model->asset->value,
+            status: $model->status->value,
             txHash: isset($model->tx_hash) ? (string) $model->tx_hash : null,
             failureReason: isset($model->failure_reason) ? (string) $model->failure_reason : null,
         );

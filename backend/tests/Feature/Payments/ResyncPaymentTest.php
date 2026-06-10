@@ -23,16 +23,16 @@ class ResyncPaymentTest extends TestCase
         $id = PaymentId::generate()->toString();
 
         PaymentModel::create([
-            'id'              => $id,
-            'external_id'     => 'ext-' . $id,
-            'provider'        => 'yookassa',
-            'amount'          => 50000,
+            'id' => $id,
+            'external_id' => 'ext-'.$id,
+            'provider' => 'yookassa',
+            'amount' => 50000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => 'Succeeded',
-            'description'     => 'Test payment',
+            'currency' => 'RUB',
+            'status' => 'Succeeded',
+            'description' => 'Test payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => $metadata,
+            'metadata' => $metadata,
         ]);
 
         return $id;

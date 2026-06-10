@@ -155,9 +155,9 @@ class CreatePaymentTest extends TestCase
 
         // Create a payment through the API (provider = yookassa from mock)
         $this->postJson('/api/v1/payments', [
-            'amount'      => 10000,
+            'amount' => 10000,
             'description' => 'Test order',
-            'return_url'  => 'https://example.com/success',
+            'return_url' => 'https://example.com/success',
         ]);
 
         // Filter by matching provider

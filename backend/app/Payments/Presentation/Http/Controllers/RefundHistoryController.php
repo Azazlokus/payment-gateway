@@ -20,13 +20,13 @@ final class RefundHistoryController extends Controller
             ->latest()
             ->get()
             ->map(fn ($r) => [
-                'id'          => $r->id,
+                'id' => $r->id,
                 'external_id' => $r->external_id,
-                'amount'      => $r->amount,
-                'currency'    => $r->currency,
-                'reason'      => $r->reason,
-                'status'      => $r->status,
-                'created_at'  => $r->created_at?->toIso8601String(),
+                'amount' => $r->amount,
+                'currency' => $r->currency,
+                'reason' => $r->reason,
+                'status' => $r->status,
+                'created_at' => $r->created_at?->toIso8601String(),
             ]);
 
         return response()->json(['data' => $refunds]);

@@ -32,7 +32,7 @@ final class RequireApiKey
         }
 
         return response()->json([
-            'code'    => 'unauthorized',
+            'code' => 'unauthorized',
             'message' => 'Invalid or missing API key',
         ], Response::HTTP_UNAUTHORIZED);
     }

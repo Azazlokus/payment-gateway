@@ -43,11 +43,11 @@ final class RecurringController extends Controller
             ->unique('payment_method_id')
             ->map(fn ($p) => [
                 'payment_method_id' => $p->payment_method_id,
-                'provider'          => $p->provider,
-                'last_payment_id'   => $p->id,
-                'last_amount'       => $p->amount,
-                'currency'          => $p->currency,
-                'last_used_at'      => $p->created_at?->toIso8601String(),
+                'provider' => $p->provider,
+                'last_payment_id' => $p->id,
+                'last_amount' => $p->amount,
+                'currency' => $p->currency,
+                'last_used_at' => $p->created_at?->toIso8601String(),
             ])
             ->values();
 
@@ -64,10 +64,10 @@ final class RecurringController extends Controller
     {
         $data = $request->validate([
             'payment_method_id' => ['required', 'string'],
-            'amount'            => ['required', 'integer', 'min:100'],
-            'description'       => ['required', 'string', 'max:255'],
-            'return_url'        => ['sometimes', 'url'],
-            'metadata'          => ['sometimes', 'nullable', 'array'],
+            'amount' => ['required', 'integer', 'min:100'],
+            'description' => ['required', 'string', 'max:255'],
+            'return_url' => ['sometimes', 'url'],
+            'metadata' => ['sometimes', 'nullable', 'array'],
         ]);
 
         // Определяем провайдера по последнему платежу с этим методом
@@ -78,21 +78,21 @@ final class RecurringController extends Controller
 
         if ($lastPayment === null) {
             return response()->json([
-                'error'   => 'invalid_payment_method',
+                'error' => 'invalid_payment_method',
                 'message' => 'Payment method not found or not usable',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $result = $this->bus->dispatch(new CreatePaymentCommand(
-            amountKopecks:  $data['amount'],
-            description:    $data['description'],
-            returnUrl:      $data['return_url'] ?? '',
+            amountKopecks: $data['amount'],
+            description: $data['description'],
+            returnUrl: $data['return_url'] ?? '',
             idempotencyKey: $request->header('Idempotency-Key') ?? (string) Str::uuid(),
-            userId:         null,
-            metadata:       $data['metadata'] ?? [],
-            options:        new CreatePaymentOptionsDTO(
+            userId: null,
+            metadata: $data['metadata'] ?? [],
+            options: new CreatePaymentOptionsDTO(
                 confirmationType: 'redirect',
-                paymentMethodId:  $data['payment_method_id'],
+                paymentMethodId: $data['payment_method_id'],
             ),
             provider: $lastPayment->provider,
         ));

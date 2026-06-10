@@ -26,7 +26,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         config(['api.key' => '']);
 
         $request = Request::create('/test', 'GET');
-        $called  = false;
+        $called = false;
 
         $this->middleware->handle($request, function () use (&$called) {
             $called = true;
@@ -41,7 +41,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
     {
         config(['api.key' => null]);
 
-        $request  = Request::create('/test', 'GET');
+        $request = Request::create('/test', 'GET');
         $response = $this->middleware->handle($request, fn () => new Response('ok'));
 
         $this->assertSame(200, $response->getStatusCode());
@@ -56,7 +56,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $request->headers->set('X-Api-Key', 'secret-key-123');
 
-        $called   = false;
+        $called = false;
         $response = $this->middleware->handle($request, function () use (&$called) {
             $called = true;
 
@@ -85,7 +85,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
     {
         config(['api.key' => 'secret']);
 
-        $request  = Request::create('/test', 'GET');
+        $request = Request::create('/test', 'GET');
         $response = $this->middleware->handle($request, fn () => new Response('ok'));
 
         $this->assertSame(401, $response->getStatusCode());
@@ -107,7 +107,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
     {
         config(['api.key' => 'secret']);
 
-        $request  = Request::create('/test', 'GET');
+        $request = Request::create('/test', 'GET');
         $response = $this->middleware->handle($request, fn () => new Response('ok'));
 
         $body = json_decode((string) $response->getContent(), true);
@@ -121,7 +121,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         config(['api.key' => 'secret']);
 
         $request = Request::create('/test', 'GET');
-        $called  = false;
+        $called = false;
 
         $this->middleware->handle($request, function () use (&$called) {
             $called = true;

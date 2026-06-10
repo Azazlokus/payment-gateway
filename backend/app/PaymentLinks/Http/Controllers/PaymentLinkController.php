@@ -8,7 +8,9 @@ use App\PaymentLinks\Models\PaymentLink;
 use App\Payments\Application\Bus\CommandBus;
 use App\Payments\Application\Commands\CreatePayment\CreatePaymentCommand;
 use App\Payments\Application\DTOs\CreatePaymentOptionsDTO;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -26,25 +28,25 @@ final class PaymentLinkController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'amount'      => ['required', 'integer', 'min:100'],
+            'amount' => ['required', 'integer', 'min:100'],
             'description' => ['required', 'string', 'max:255'],
-            'provider'    => ['sometimes', 'string', 'in:yookassa,robokassa,cloudpayments,sbp,alfabank'],
-            'return_url'  => ['sometimes', 'nullable', 'url'],
-            'metadata'    => ['sometimes', 'nullable', 'array'],
-            'max_uses'    => ['sometimes', 'integer', 'min:1', 'max:1000'],
-            'expires_at'  => ['sometimes', 'nullable', 'date', 'after:now'],
+            'provider' => ['sometimes', 'string', 'in:yookassa,robokassa,cloudpayments,sbp,alfabank'],
+            'return_url' => ['sometimes', 'nullable', 'url'],
+            'metadata' => ['sometimes', 'nullable', 'array'],
+            'max_uses' => ['sometimes', 'integer', 'min:1', 'max:1000'],
+            'expires_at' => ['sometimes', 'nullable', 'date', 'after:now'],
         ]);
 
         $link = PaymentLink::create([
-            'token'       => Str::random(32),
-            'amount'      => $data['amount'],
-            'currency'    => 'RUB',
+            'token' => Str::random(32),
+            'amount' => $data['amount'],
+            'currency' => 'RUB',
             'description' => $data['description'],
-            'provider'    => $data['provider'] ?? 'yookassa',
-            'return_url'  => $data['return_url'] ?? null,
-            'metadata'    => $data['metadata'] ?? null,
-            'max_uses'    => $data['max_uses'] ?? 1,
-            'expires_at'  => isset($data['expires_at']) ? $data['expires_at'] : null,
+            'provider' => $data['provider'] ?? 'yookassa',
+            'return_url' => $data['return_url'] ?? null,
+            'metadata' => $data['metadata'] ?? null,
+            'max_uses' => $data['max_uses'] ?? 1,
+            'expires_at' => isset($data['expires_at']) ? $data['expires_at'] : null,
         ]);
 
         return response()->json([
@@ -61,9 +63,9 @@ final class PaymentLinkController extends Controller
         $links = PaymentLink::latest()->paginate(20);
 
         return response()->json([
-            'data'  => $links->map(fn ($l) => $this->formatLink($l))->values(),
+            'data' => $links->map(fn ($l) => $this->formatLink($l))->values(),
             'total' => $links->total(),
-            'page'  => $links->currentPage(),
+            'page' => $links->currentPage(),
         ]);
     }
 
@@ -83,7 +85,7 @@ final class PaymentLinkController extends Controller
      * GET /pay/{token}
      * Публичная страница оплаты — показывает Blade-шаблон.
      */
-    public function show(string $token)
+    public function show(string $token): View
     {
         $link = PaymentLink::where('token', $token)->firstOrFail();
 
@@ -98,7 +100,7 @@ final class PaymentLinkController extends Controller
      * POST /pay/{token}
      * Клиент подтверждает оплату — создаём платёж и редиректим.
      */
-    public function pay(string $token, Request $request)
+    public function pay(string $token, Request $request): RedirectResponse|View
     {
         $link = PaymentLink::where('token', $token)->firstOrFail();
 
@@ -106,17 +108,17 @@ final class PaymentLinkController extends Controller
             return view('payment-link-expired', ['link' => $link]);
         }
 
-        $returnUrl = $link->return_url ?? url('/pay/' . $token . '/success');
+        $returnUrl = $link->return_url ?? url('/pay/'.$token.'/success');
 
         $result = DB::transaction(function () use ($link, $returnUrl) {
             $payment = $this->bus->dispatch(new CreatePaymentCommand(
-                amountKopecks:  $link->amount,
-                description:    $link->description,
-                returnUrl:      $returnUrl,
+                amountKopecks: $link->amount,
+                description: $link->description,
+                returnUrl: $returnUrl,
                 idempotencyKey: (string) Str::uuid(),
-                userId:         null,
-                metadata:       array_merge($link->metadata ?? [], ['payment_link_id' => $link->id]),
-                options:        new CreatePaymentOptionsDTO(
+                userId: null,
+                metadata: array_merge($link->metadata ?? [], ['payment_link_id' => $link->id]),
+                options: new CreatePaymentOptionsDTO(
                     confirmationType: 'redirect',
                 ),
                 provider: $link->provider,
@@ -133,14 +135,14 @@ final class PaymentLinkController extends Controller
             return redirect()->away($result->confirmationUrl);
         }
 
-        return redirect('/pay/' . $token . '/success');
+        return redirect('/pay/'.$token.'/success');
     }
 
     /**
      * GET /pay/{token}/success
      * Страница после успешной оплаты.
      */
-    public function success(string $token)
+    public function success(string $token): View
     {
         $link = PaymentLink::where('token', $token)->firstOrFail();
 
@@ -151,19 +153,19 @@ final class PaymentLinkController extends Controller
     private function formatLink(PaymentLink $link): array
     {
         return [
-            'id'              => $link->id,
-            'url'             => url('/pay/' . $link->token),
-            'token'           => $link->token,
-            'amount'          => $link->amount,
-            'currency'        => $link->currency,
-            'description'     => $link->description,
-            'provider'        => $link->provider,
-            'max_uses'        => $link->max_uses,
-            'uses'            => $link->uses,
-            'is_active'       => $link->isActive(),
-            'expires_at'      => $link->expires_at?->toIso8601String(),
+            'id' => $link->id,
+            'url' => url('/pay/'.$link->token),
+            'token' => $link->token,
+            'amount' => $link->amount,
+            'currency' => $link->currency,
+            'description' => $link->description,
+            'provider' => $link->provider,
+            'max_uses' => $link->max_uses,
+            'uses' => $link->uses,
+            'is_active' => $link->isActive(),
+            'expires_at' => $link->expires_at?->toIso8601String(),
             'last_payment_id' => $link->last_payment_id,
-            'created_at'      => $link->created_at?->toIso8601String(),
+            'created_at' => $link->created_at?->toIso8601String(),
         ];
     }
 }

@@ -138,9 +138,7 @@ final class ProcessRefundJob implements ShouldQueue
                 return;
             }
 
-            $nextRetryAt = $attempt < self::MAX_ATTEMPTS
-                ? now()->addSeconds(self::BACKOFF_SECONDS[$attempt - 1] ?? 300)
-                : null;
+            $nextRetryAt = now()->addSeconds(self::BACKOFF_SECONDS[$attempt - 1] ?? 300);
 
             $refund->update([
                 'status' => RefundStatus::Failed,
@@ -153,16 +151,10 @@ final class ProcessRefundJob implements ShouldQueue
                 'payment_id' => $refund->payment_id,
                 'attempt' => $attempt,
                 'error' => $e->getMessage(),
-                'next_retry_at' => $nextRetryAt?->toIso8601String(),
+                'next_retry_at' => $nextRetryAt->toIso8601String(),
             ]);
 
-            // Schedule retry
-            if ($nextRetryAt !== null) {
-                self::dispatch($this->refundId)->delay($nextRetryAt);
-            } else {
-                $refund->update(['status' => RefundStatus::RequiresReview]);
-                $metrics->increment('refunds_requires_review_total', ['provider' => $payment->provider()]);
-            }
+            self::dispatch($this->refundId)->delay($nextRetryAt);
         }
     }
 

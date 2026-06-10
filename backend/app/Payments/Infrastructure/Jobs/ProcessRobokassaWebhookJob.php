@@ -33,7 +33,7 @@ final class ProcessRobokassaWebhookJob implements ShouldQueue
         PaymentLogger $logger,
     ): void {
         $internalId = (string) ($this->payload['Shp_paymentId'] ?? '');
-        $invId      = (string) ($this->payload['InvId'] ?? '');
+        $invId = (string) ($this->payload['InvId'] ?? '');
 
         try {
             $paymentId = PaymentId::fromString($internalId);
@@ -50,7 +50,7 @@ final class ProcessRobokassaWebhookJob implements ShouldQueue
         if ($payment === null) {
             $logger->warning('Robokassa webhook job: payment not found', [
                 'shp_payment_id' => $internalId,
-                'inv_id'         => $invId,
+                'inv_id' => $invId,
             ]);
 
             return;
@@ -68,20 +68,20 @@ final class ProcessRobokassaWebhookJob implements ShouldQueue
             activity()
                 ->withProperties([
                     'shp_payment_id' => $internalId,
-                    'inv_id'         => $invId,
-                    'event'          => 'robokassa.payment.succeeded',
+                    'inv_id' => $invId,
+                    'event' => 'robokassa.payment.succeeded',
                 ])
                 ->log('webhook.processed');
 
             $logger->info('Robokassa webhook job processed', [
                 'payment_id' => $payment->id()->toString(),
-                'inv_id'     => $invId,
+                'inv_id' => $invId,
             ]);
         } catch (InvalidPaymentStateException $e) {
             // Idempotency: payment already in a terminal state — do not retry
             $logger->info('Robokassa webhook job: payment already in terminal status (skipped)', [
                 'payment_id' => $payment->id()->toString(),
-                'inv_id'     => $invId,
+                'inv_id' => $invId,
             ]);
         }
     }
@@ -93,13 +93,13 @@ final class ProcessRobokassaWebhookJob implements ShouldQueue
     public function failed(Throwable $exception): void
     {
         $internalId = $this->payload['Shp_paymentId'] ?? 'unknown';
-        $invId      = $this->payload['InvId'] ?? 'unknown';
+        $invId = $this->payload['InvId'] ?? 'unknown';
 
         logger()->critical('Robokassa webhook processing permanently failed', [
             'shp_payment_id' => $internalId,
-            'inv_id'         => $invId,
-            'error'          => $exception->getMessage(),
-            'payload'        => $this->payload,
+            'inv_id' => $invId,
+            'error' => $exception->getMessage(),
+            'payload' => $this->payload,
         ]);
 
         $slackUrl = config('services.slack.webhook_url');
@@ -108,7 +108,7 @@ final class ProcessRobokassaWebhookJob implements ShouldQueue
             Http::post($slackUrl, [
                 'text' => sprintf(
                     ':x: *Robokassa webhook failed* after %d attempts'
-                    . "\nInvId: `%s`\nInternal PaymentId: `%s`\nError: `%s`",
+                    ."\nInvId: `%s`\nInternal PaymentId: `%s`\nError: `%s`",
                     $this->tries,
                     $invId,
                     $internalId,

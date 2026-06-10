@@ -37,7 +37,7 @@ final class InvoiceController extends Controller
         $pdf = Pdf::loadView('invoice', ['payment' => $payment])
             ->setPaper('a4', 'portrait');
 
-        $filename = 'invoice-' . strtoupper(substr($id, -8)) . '.pdf';
+        $filename = 'invoice-'.strtoupper(substr($id, -8)).'.pdf';
 
         return $pdf->download($filename);
     }

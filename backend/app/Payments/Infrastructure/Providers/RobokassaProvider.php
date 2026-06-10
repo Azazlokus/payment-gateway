@@ -39,32 +39,32 @@ final class RobokassaProvider implements PaymentProviderInterface
         CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO,
     ): ProviderResponse {
         $outSum = $this->kopecksToRubles($amount->amount());
-        $invId  = 0; // Robokassa auto-assigns; the real InvId arrives in the webhook
+        $invId = 0; // Robokassa auto-assigns; the real InvId arrives in the webhook
 
         $signature = md5("{$this->login}:{$outSum}:{$invId}:{$this->password1}:Shp_paymentId={$paymentId}");
 
         $params = http_build_query([
             'MerchantLogin' => $this->login,
-            'OutSum'        => $outSum,
-            'InvId'         => $invId,
-            'Description'   => mb_substr($description, 0, 100),
+            'OutSum' => $outSum,
+            'InvId' => $invId,
+            'Description' => mb_substr($description, 0, 100),
             'SignatureValue' => $signature,
-            'IsTest'        => $this->isTest ? 1 : 0,
+            'IsTest' => $this->isTest ? 1 : 0,
             'Shp_paymentId' => $paymentId,
         ]);
 
-        $confirmationUrl = self::BASE_URL . '/Index.aspx?' . $params;
+        $confirmationUrl = self::BASE_URL.'/Index.aspx?'.$params;
 
         $this->logger->info('Robokassa: создание платежа', [
             'payment_id' => $paymentId,
-            'amount'     => $outSum,
+            'amount' => $outSum,
         ]);
 
         // Use internal paymentId as a placeholder external_id until the real InvId arrives via webhook
         return new ProviderResponse(
-            externalId:      ExternalId::fromString($paymentId),
+            externalId: ExternalId::fromString($paymentId),
             confirmationUrl: $confirmationUrl,
-            status:          'pending',
+            status: 'pending',
         );
     }
 
@@ -78,15 +78,15 @@ final class RobokassaProvider implements PaymentProviderInterface
 
     public function refundPayment(ExternalId $externalId, Money $amount): ProviderResponse
     {
-        $invId     = $externalId->toString();
-        $outSum    = $this->kopecksToRubles($amount->amount());
+        $invId = $externalId->toString();
+        $outSum = $this->kopecksToRubles($amount->amount());
         $signature = md5("{$this->login}:{$outSum}:{$invId}:{$this->password1}");
 
-        $response = Http::asForm()->post(self::BASE_URL . '/Payment/Return', [
+        $response = Http::asForm()->post(self::BASE_URL.'/Payment/Return', [
             'MerchantLogin' => $this->login,
-            'InvoiceID'     => $invId,
-            'Amount'        => $outSum,
-            'Signature'     => $signature,
+            'InvoiceID' => $invId,
+            'Amount' => $outSum,
+            'Signature' => $signature,
         ]);
 
         if (! $response->successful()) {
@@ -101,21 +101,21 @@ final class RobokassaProvider implements PaymentProviderInterface
         ]);
 
         return new ProviderResponse(
-            externalId:      $externalId,
+            externalId: $externalId,
             confirmationUrl: '',
-            status:          'succeeded',
-            rawData:         ['response' => $response->body()],
+            status: 'succeeded',
+            rawData: ['response' => $response->body()],
         );
     }
 
     /**
-     * @param array<string, mixed>  $payload
-     * @param array<string, list<string|null>> $headers
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, list<string|null>>  $headers
      */
     public function verifyWebhook(array $payload, array $headers): bool
     {
         $allowedCidrs = config('payments.robokassa.webhook_ips', []);
-        $requestIp    = request()->ip();
+        $requestIp = request()->ip();
 
         if (! empty($allowedCidrs) && ! $this->ipInAllowedRanges($requestIp, $allowedCidrs)) {
             $this->logger->warning('Robokassa: webhook с неизвестного IP', ['ip' => $requestIp]);
@@ -123,10 +123,10 @@ final class RobokassaProvider implements PaymentProviderInterface
             return false;
         }
 
-        $outSum    = (string) ($payload['OutSum'] ?? '');
-        $invId     = (string) ($payload['InvId'] ?? '');
+        $outSum = (string) ($payload['OutSum'] ?? '');
+        $invId = (string) ($payload['InvId'] ?? '');
         $paymentId = (string) ($payload['Shp_paymentId'] ?? '');
-        $received  = strtoupper((string) ($payload['SignatureValue'] ?? ''));
+        $received = strtoupper((string) ($payload['SignatureValue'] ?? ''));
 
         $expected = strtoupper(md5("{$outSum}:{$invId}:{$this->password2}:Shp_paymentId={$paymentId}"));
 
@@ -143,14 +143,14 @@ final class RobokassaProvider implements PaymentProviderInterface
     public function parseWebhook(array $payload): ProviderResponse
     {
         $paymentId = (string) ($payload['Shp_paymentId'] ?? '');
-        $invId     = (string) ($payload['InvId'] ?? '0');
-        $outSum    = (string) ($payload['OutSum'] ?? '0');
+        $invId = (string) ($payload['InvId'] ?? '0');
+        $outSum = (string) ($payload['OutSum'] ?? '0');
 
         return new ProviderResponse(
-            externalId:      ExternalId::fromString($paymentId),
+            externalId: ExternalId::fromString($paymentId),
             confirmationUrl: '',
-            status:          'succeeded',
-            rawData:         array_merge($payload, ['inv_id' => $invId, 'out_sum' => $outSum]),
+            status: 'succeeded',
+            rawData: array_merge($payload, ['inv_id' => $invId, 'out_sum' => $outSum]),
         );
     }
 

@@ -24,26 +24,26 @@ final class EloquentCryptoDepositRepository implements CryptoDepositRepositoryIn
         CryptoDepositModel::updateOrCreate(
             ['id' => $deposit->id()->toString()],
             [
-                'payment_id'          => $deposit->paymentId(),
-                'status'              => $deposit->status()->value,
-                'asset'               => $deposit->asset()->value,
-                'expected_units'      => $deposit->expectedAmount()->units(),
-                'actual_units'        => $deposit->actualAmount()?->units(),
+                'payment_id' => $deposit->paymentId(),
+                'status' => $deposit->status()->value,
+                'asset' => $deposit->asset()->value,
+                'expected_units' => $deposit->expectedAmount()->units(),
+                'actual_units' => $deposit->actualAmount()?->units(),
                 'fiat_amount_kopecks' => $deposit->fiatAmountKopecks(),
-                'deposit_address'     => $deposit->depositAddress()->toString(),
-                'memo'                => $deposit->memo()?->toString(),
-                'tx_hash'             => $deposit->txHash()?->toString(),
-                'expires_at'          => $deposit->expiresAt()->format('Y-m-d H:i:s'),
-                'created_at_ts'       => $deposit->createdAtTimestamp(),
+                'deposit_address' => $deposit->depositAddress()->toString(),
+                'memo' => $deposit->memo()?->toString(),
+                'tx_hash' => $deposit->txHash()?->toString(),
+                'expires_at' => $deposit->expiresAt()->format('Y-m-d H:i:s'),
+                'created_at_ts' => $deposit->createdAtTimestamp(),
             ]
         );
 
         foreach ($deposit->pullDomainEvents() as $event) {
             PaymentEventModel::create([
-                'payment_id'  => $deposit->paymentId(),
-                'event_id'    => $event->eventId,
-                'event_name'  => $event->eventName(),
-                'event_data'  => $event->toArray(),
+                'payment_id' => $deposit->paymentId(),
+                'event_id' => $event->eventId,
+                'event_name' => $event->eventName(),
+                'event_data' => $event->toArray(),
                 'occurred_at' => $event->occurredAt,
             ]);
         }
@@ -90,7 +90,7 @@ final class EloquentCryptoDepositRepository implements CryptoDepositRepositoryIn
     /** @return string[] */
     public function findActiveAddressesByNetwork(string $network): array
     {
-        $assets      = array_filter(CryptoAsset::cases(), fn (CryptoAsset $a) => $a->network() === $network);
+        $assets = array_filter(CryptoAsset::cases(), fn (CryptoAsset $a) => $a->network() === $network);
         $assetValues = array_map(fn (CryptoAsset $a) => $a->value, $assets);
 
         return CryptoDepositModel::whereIn('asset', $assetValues)

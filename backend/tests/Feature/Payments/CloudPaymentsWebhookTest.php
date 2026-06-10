@@ -10,7 +10,6 @@ use App\Payments\Infrastructure\Jobs\ProcessCloudPaymentsWebhookJob;
 use App\Payments\Infrastructure\Observability\MetricsService;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
-use App\Payments\Infrastructure\Providers\CloudPaymentsProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -22,15 +21,17 @@ class CloudPaymentsWebhookTest extends TestCase
     use RefreshDatabase;
 
     private string $transactionId = '12345678';
-    private string $publicId      = 'pk_test_public';
-    private string $apiSecret     = 'test-api-secret';
+
+    private string $publicId = 'pk_test_public';
+
+    private string $apiSecret = 'test-api-secret';
 
     protected function setUp(): void
     {
         parent::setUp();
         config([
-            'payments.cloudpayments.public_id'  => $this->publicId,
-            'payments.cloudpayments.api_secret'  => $this->apiSecret,
+            'payments.cloudpayments.public_id' => $this->publicId,
+            'payments.cloudpayments.api_secret' => $this->apiSecret,
         ]);
     }
 
@@ -39,16 +40,16 @@ class CloudPaymentsWebhookTest extends TestCase
         $id = PaymentId::generate()->toString();
 
         PaymentModel::create([
-            'id'              => $id,
-            'external_id'     => $this->transactionId,
-            'provider'        => 'cloudpayments',
-            'amount'          => 50000,
+            'id' => $id,
+            'external_id' => $this->transactionId,
+            'provider' => 'cloudpayments',
+            'amount' => 50000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => $status,
-            'description'     => 'Test CloudPayments payment',
+            'currency' => 'RUB',
+            'status' => $status,
+            'description' => 'Test CloudPayments payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
 
         return $id;
@@ -69,10 +70,10 @@ class CloudPaymentsWebhookTest extends TestCase
 
         $payload = [
             'TransactionId' => (int) $this->transactionId,
-            'Status'        => 'Completed',
-            'Amount'        => 500.00,
+            'Status' => 'Completed',
+            'Amount' => 500.00,
         ];
-        $body    = json_encode($payload);
+        $body = json_encode($payload);
         $headers = $this->validHmacHeaders($body);
 
         $response = $this->postJson('/api/webhook/cloudpayments', $payload, $headers);
@@ -89,7 +90,7 @@ class CloudPaymentsWebhookTest extends TestCase
 
         $response = $this->postJson('/api/webhook/cloudpayments', [
             'TransactionId' => (int) $this->transactionId,
-            'Status'        => 'Completed',
+            'Status' => 'Completed',
         ], ['Content-HMAC' => 'invalid-signature']);
 
         $response->assertStatus(Response::HTTP_FORBIDDEN)
@@ -103,7 +104,7 @@ class CloudPaymentsWebhookTest extends TestCase
         Queue::fake();
 
         $payload = ['Status' => 'Completed'];
-        $body    = json_encode($payload);
+        $body = json_encode($payload);
         $headers = $this->validHmacHeaders($body);
 
         $response = $this->postJson('/api/webhook/cloudpayments', $payload, $headers);
@@ -121,7 +122,7 @@ class CloudPaymentsWebhookTest extends TestCase
         $this->runJob(['TransactionId' => $this->transactionId, 'Status' => 'Completed']);
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $paymentId,
+            'id' => $paymentId,
             'status' => 'Succeeded',
         ]);
     }
@@ -159,8 +160,8 @@ class CloudPaymentsWebhookTest extends TestCase
 
         $this->runJob([
             'TransactionId' => $this->transactionId,
-            'Status'        => 'Refunded',
-            'Amount'        => 500.00,
+            'Status' => 'Refunded',
+            'Amount' => 500.00,
         ]);
 
         $this->assertDatabaseHas('payments', ['id' => $paymentId, 'status' => 'Refunded']);

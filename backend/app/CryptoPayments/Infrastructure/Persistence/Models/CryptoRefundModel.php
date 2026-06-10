@@ -28,8 +28,8 @@ final class CryptoRefundModel extends Model
     ];
 
     protected $casts = [
-        'status'       => CryptoRefundStatus::class,
-        'asset'        => CryptoAsset::class,
+        'status' => CryptoRefundStatus::class,
+        'asset' => CryptoAsset::class,
         'amount_units' => 'integer',
     ];
 }

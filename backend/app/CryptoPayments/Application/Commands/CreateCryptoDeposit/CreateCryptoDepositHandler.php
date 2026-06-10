@@ -33,9 +33,9 @@ final readonly class CreateCryptoDepositHandler
     public function handle(CreateCryptoDepositCommand $command): CryptoDepositResultDTO
     {
         $this->logger->info('Creating crypto deposit', [
-            'payment_id'          => $command->paymentId,
+            'payment_id' => $command->paymentId,
             'fiat_amount_kopecks' => $command->fiatAmountKopecks,
-            'asset'               => $command->asset->value,
+            'asset' => $command->asset->value,
         ]);
 
         return DB::transaction(function () use ($command): CryptoDepositResultDTO {
@@ -46,17 +46,17 @@ final readonly class CreateCryptoDepositHandler
 
             $expectedAmount = NativeCryptoAmount::of($cryptoUnits, $command->asset);
 
-            $client     = $this->blockchain->getForAsset($command->asset);
+            $client = $this->blockchain->getForAsset($command->asset);
             $ttlMinutes = (int) config('crypto.deposit_ttl_minutes', 20);
-            $expiresAt  = new DateTimeImmutable("+{$ttlMinutes} minutes");
+            $expiresAt = new DateTimeImmutable("+{$ttlMinutes} minutes");
 
             if ($client->depositMode() === DepositMode::Memo) {
                 $depositAddress = $client->masterDepositAddress();
-                $memo           = Memo::generate();
+                $memo = Memo::generate();
             } else {
-                $usedAddresses  = $this->deposits->findActiveAddressesByNetwork($client->network());
-                $pool           = $client->depositAddressPool();
-                $available      = array_filter($pool, fn (string $addr) => ! in_array($addr, $usedAddresses, true));
+                $usedAddresses = $this->deposits->findActiveAddressesByNetwork($client->network());
+                $pool = $client->depositAddressPool();
+                $available = array_filter($pool, fn (string $addr) => ! in_array($addr, $usedAddresses, true));
 
                 if (empty($available)) {
                     throw new RuntimeException(
@@ -65,7 +65,7 @@ final readonly class CreateCryptoDepositHandler
                 }
 
                 $depositAddress = CryptoAddress::fromString(reset($available));
-                $memo           = null;
+                $memo = null;
             }
 
             $deposit = CryptoDeposit::create(
@@ -86,8 +86,8 @@ final readonly class CreateCryptoDepositHandler
             $this->logger->info('Crypto deposit created', [
                 'deposit_id' => $deposit->id()->toString(),
                 'payment_id' => $command->paymentId,
-                'asset'      => $command->asset->value,
-                'memo'       => $memo?->toString(),
+                'asset' => $command->asset->value,
+                'memo' => $memo?->toString(),
             ]);
 
             return CryptoDepositResultDTO::fromAggregate($deposit);

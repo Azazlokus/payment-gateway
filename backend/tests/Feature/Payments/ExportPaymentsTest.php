@@ -17,16 +17,16 @@ class ExportPaymentsTest extends TestCase
     private function createPayment(string $status = 'Succeeded', string $provider = 'yookassa'): void
     {
         PaymentModel::create([
-            'id'              => PaymentId::generate()->toString(),
-            'external_id'     => (string) Str::uuid(),
-            'provider'        => $provider,
-            'amount'          => 50000,
+            'id' => PaymentId::generate()->toString(),
+            'external_id' => (string) Str::uuid(),
+            'provider' => $provider,
+            'amount' => 50000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => $status,
-            'description'     => 'Test payment',
+            'currency' => 'RUB',
+            'status' => $status,
+            'description' => 'Test payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
     }
 
@@ -98,7 +98,7 @@ class ExportPaymentsTest extends TestCase
         $content = $this->get('/api/v1/payments/export')->streamedContent();
 
         $firstLine = explode("\n", trim($content))[0];
-        $columns   = str_getcsv($firstLine);
+        $columns = str_getcsv($firstLine);
 
         $this->assertSame(['id', 'status', 'provider', 'amount', 'currency', 'description', 'external_id', 'created_at'], $columns);
     }
@@ -116,25 +116,25 @@ class ExportPaymentsTest extends TestCase
     {
         // Платёж с датой в прошлом
         PaymentModel::create([
-            'id'              => PaymentId::generate()->toString(),
-            'external_id'     => (string) Str::uuid(),
-            'provider'        => 'yookassa',
-            'amount'          => 50000,
+            'id' => PaymentId::generate()->toString(),
+            'external_id' => (string) Str::uuid(),
+            'provider' => 'yookassa',
+            'amount' => 50000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => 'Succeeded',
-            'description'     => 'Old payment',
+            'currency' => 'RUB',
+            'status' => 'Succeeded',
+            'description' => 'Old payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
-            'created_at'      => now()->subDays(10),
-            'updated_at'      => now()->subDays(10),
+            'metadata' => [],
+            'created_at' => now()->subDays(10),
+            'updated_at' => now()->subDays(10),
         ]);
 
         // Платёж сегодня
         $this->createPayment();
 
         $fromDate = now()->subDays(1)->format('Y-m-d');
-        $content  = $this->get("/api/v1/payments/export?from_date={$fromDate}")->streamedContent();
+        $content = $this->get("/api/v1/payments/export?from_date={$fromDate}")->streamedContent();
 
         $lines = array_filter(explode("\n", trim($content)));
         $this->assertCount(2, $lines); // header + 1 новый платёж
@@ -144,24 +144,24 @@ class ExportPaymentsTest extends TestCase
     {
         // Платёж с датой в прошлом
         PaymentModel::create([
-            'id'              => PaymentId::generate()->toString(),
-            'external_id'     => (string) Str::uuid(),
-            'provider'        => 'yookassa',
-            'amount'          => 50000,
+            'id' => PaymentId::generate()->toString(),
+            'external_id' => (string) Str::uuid(),
+            'provider' => 'yookassa',
+            'amount' => 50000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => 'Succeeded',
-            'description'     => 'Old payment',
+            'currency' => 'RUB',
+            'status' => 'Succeeded',
+            'description' => 'Old payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
-            'created_at'      => now()->subDays(10),
-            'updated_at'      => now()->subDays(10),
+            'metadata' => [],
+            'created_at' => now()->subDays(10),
+            'updated_at' => now()->subDays(10),
         ]);
 
         // Платёж сегодня
         $this->createPayment();
 
-        $toDate  = now()->subDays(5)->format('Y-m-d');
+        $toDate = now()->subDays(5)->format('Y-m-d');
         $content = $this->get("/api/v1/payments/export?to_date={$toDate}")->streamedContent();
 
         $lines = array_filter(explode("\n", trim($content)));

@@ -20,16 +20,16 @@ class ReconcilePaymentsCommandTest extends TestCase
     private function makePayment(string $status, int $hoursAgo = 0): PaymentModel
     {
         $model = PaymentModel::create([
-            'id'              => PaymentId::generate()->toString(),
-            'external_id'     => (string) Str::uuid(),
-            'provider'        => 'yookassa',
-            'amount'          => 10000,
+            'id' => PaymentId::generate()->toString(),
+            'external_id' => (string) Str::uuid(),
+            'provider' => 'yookassa',
+            'amount' => 10000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => $status,
-            'description'     => 'Test',
+            'currency' => 'RUB',
+            'status' => $status,
+            'description' => 'Test',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
 
         if ($hoursAgo > 0) {
@@ -73,7 +73,7 @@ class ReconcilePaymentsCommandTest extends TestCase
     {
         $this->makePayment('Succeeded', 5);
         $this->makePayment('Cancelled', 5);
-        $this->makePayment('Refunded',  5);
+        $this->makePayment('Refunded', 5);
 
         $this->mock(CommandBus::class, function (MockInterface $mock) {
             $mock->shouldNotReceive('dispatch');
@@ -99,7 +99,7 @@ class ReconcilePaymentsCommandTest extends TestCase
 
     public function test_reconcile_filters_by_provider(): void
     {
-        $yookassa  = $this->makePayment('Pending', 5);
+        $yookassa = $this->makePayment('Pending', 5);
         $yookassa->update(['provider' => 'yookassa']);
 
         $robokassa = $this->makePayment('Pending', 5);

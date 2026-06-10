@@ -21,7 +21,8 @@ use Tests\TestCase;
 class BitcoinBlockchainClientTest extends TestCase
 {
     private const BTC_ADDRESS = 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
-    private const TX_ID       = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
+
+    private const TX_ID = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
 
     private BitcoinBlockchainClient $client;
 
@@ -42,7 +43,7 @@ class BitcoinBlockchainClientTest extends TestCase
     public function test_find_confirmed_transaction_for_address(): void
     {
         $address = CryptoAddress::fromString(self::BTC_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         Http::fake([
             '*/address/*/txs*' => Http::response([
@@ -67,7 +68,7 @@ class BitcoinBlockchainClientTest extends TestCase
     public function test_unconfirmed_transaction_is_ignored(): void
     {
         $address = CryptoAddress::fromString(self::BTC_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         Http::fake([
             '*/address/*/txs*' => Http::response([
@@ -89,7 +90,7 @@ class BitcoinBlockchainClientTest extends TestCase
     public function test_old_transaction_before_since_is_ignored(): void
     {
         $address = CryptoAddress::fromString(self::BTC_ADDRESS);
-        $since   = new DateTimeImmutable('@9999999999');
+        $since = new DateTimeImmutable('@9999999999');
 
         Http::fake([
             '*/address/*/txs*' => Http::response([
@@ -111,7 +112,7 @@ class BitcoinBlockchainClientTest extends TestCase
     public function test_api_error_returns_null(): void
     {
         $address = CryptoAddress::fromString(self::BTC_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         Http::fake([
             '*/address/*/txs*' => Http::response([], 500),
@@ -125,7 +126,7 @@ class BitcoinBlockchainClientTest extends TestCase
     public function test_transaction_with_zero_value_for_address_is_ignored(): void
     {
         $address = CryptoAddress::fromString(self::BTC_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         // The tx is confirmed and recent but all vout go to a different address
         Http::fake([
@@ -148,12 +149,12 @@ class BitcoinBlockchainClientTest extends TestCase
     public function test_accumulates_multiple_vout_to_same_address(): void
     {
         $address = CryptoAddress::fromString(self::BTC_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         $tx = [
-            'txid'   => self::TX_ID,
+            'txid' => self::TX_ID,
             'status' => ['confirmed' => true, 'block_time' => 1_700_000_000],
-            'vout'   => [
+            'vout' => [
                 ['scriptpubkey_address' => self::BTC_ADDRESS, 'value' => 60_000],
                 ['scriptpubkey_address' => 'bc1q_other', 'value' => 40_000],
                 ['scriptpubkey_address' => self::BTC_ADDRESS, 'value' => 40_000],
@@ -183,15 +184,15 @@ class BitcoinBlockchainClientTest extends TestCase
         int $value,
     ): array {
         return [
-            'txid'   => $txid,
+            'txid' => $txid,
             'status' => [
-                'confirmed'  => $confirmed,
+                'confirmed' => $confirmed,
                 'block_time' => $blockTime,
             ],
             'vout' => [
                 [
                     'scriptpubkey_address' => $address,
-                    'value'                => $value,
+                    'value' => $value,
                 ],
             ],
         ];

@@ -75,8 +75,8 @@ final readonly class RetryPaymentHandler
 
             $this->logger->info('Payment retried', [
                 'original_id' => $original->id()->toString(),
-                'new_id'      => $newPayment->id()->toString(),
-                'provider'    => $provider->name(),
+                'new_id' => $newPayment->id()->toString(),
+                'provider' => $provider->name(),
             ]);
 
             return PaymentResultDTO::fromAggregate($newPayment);

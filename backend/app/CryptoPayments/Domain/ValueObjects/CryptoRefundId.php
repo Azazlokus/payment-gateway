@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\CryptoPayments\Domain\ValueObjects;
 
-use Illuminate\Support\Str;
+use Symfony\Component\Uid\Ulid;
 
 final readonly class CryptoRefundId
 {
-    private function __construct(public readonly string $value) {}
+    private function __construct(private string $value) {}
 
     public static function generate(): self
     {
-        return new self(Str::ulid()->toBase32());
+        return new self((string) new Ulid);
     }
 
     public static function fromString(string $value): self

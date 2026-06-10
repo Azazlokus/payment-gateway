@@ -12,8 +12,8 @@ use App\CryptoPayments\Domain\Events\DepositConfirmed;
 use App\CryptoPayments\Domain\Events\DepositExpired;
 use App\CryptoPayments\Domain\Events\DepositOverpaid;
 use App\CryptoPayments\Domain\Exceptions\DepositExpiredException;
-use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
 use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
+use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
 use App\CryptoPayments\Domain\ValueObjects\Memo;
 use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
 use App\CryptoPayments\Domain\ValueObjects\TxHash;
@@ -64,7 +64,7 @@ class CryptoDepositAggregateTest extends TestCase
         $deposit = $this->makeDeposit();
         $deposit->pullDomainEvents();
 
-        $hash   = TxHash::fromString('abc123def456abc123def456abc123def456abc123def456abc123def456abc1');
+        $hash = TxHash::fromString('abc123def456abc123def456abc123def456abc123def456abc123def456abc1');
         $actual = NativeCryptoAmount::ofNanotons(125_000_000);
 
         $deposit->confirm($hash, $actual);

@@ -77,7 +77,7 @@ class SecurityHeadersMiddlewareTest extends TestCase
     public function test_csp_contains_default_src_self(): void
     {
         $response = $this->handle(Request::create('/test'));
-        $csp      = (string) $response->headers->get('Content-Security-Policy');
+        $csp = (string) $response->headers->get('Content-Security-Policy');
 
         $this->assertStringContainsString("default-src 'self'", $csp);
     }
@@ -85,7 +85,7 @@ class SecurityHeadersMiddlewareTest extends TestCase
     public function test_csp_blocks_framing_via_frame_ancestors_none(): void
     {
         $response = $this->handle(Request::create('/test'));
-        $csp      = (string) $response->headers->get('Content-Security-Policy');
+        $csp = (string) $response->headers->get('Content-Security-Policy');
 
         $this->assertStringContainsString("frame-ancestors 'none'", $csp);
     }
@@ -93,7 +93,7 @@ class SecurityHeadersMiddlewareTest extends TestCase
     public function test_csp_restricts_base_uri(): void
     {
         $response = $this->handle(Request::create('/test'));
-        $csp      = (string) $response->headers->get('Content-Security-Policy');
+        $csp = (string) $response->headers->get('Content-Security-Policy');
 
         $this->assertStringContainsString("base-uri 'self'", $csp);
     }
@@ -101,7 +101,7 @@ class SecurityHeadersMiddlewareTest extends TestCase
     public function test_csp_restricts_form_action(): void
     {
         $response = $this->handle(Request::create('/test'));
-        $csp      = (string) $response->headers->get('Content-Security-Policy');
+        $csp = (string) $response->headers->get('Content-Security-Policy');
 
         $this->assertStringContainsString("form-action 'self'", $csp);
     }

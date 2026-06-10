@@ -51,7 +51,7 @@ final class ExpireCryptoDepositsJob implements ShouldQueue
             } catch (Throwable $e) {
                 $logger->warning('ExpireCryptoDepositsJob: could not expire deposit', [
                     'deposit_id' => $deposit->id()->toString(),
-                    'error'      => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
             }
         }

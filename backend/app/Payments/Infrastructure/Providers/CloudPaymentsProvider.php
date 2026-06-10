@@ -38,19 +38,19 @@ final class CloudPaymentsProvider implements PaymentProviderInterface
     ): ProviderResponse {
         $this->logger->info('CloudPayments: создание ссылки на оплату', [
             'payment_id' => $paymentId,
-            'amount'     => $amount->amount(),
+            'amount' => $amount->amount(),
         ]);
 
         $response = retry(
             times: 3,
             callback: fn () => Http::withBasicAuth($this->publicId, $this->apiSecret)
-                ->post(self::BASE_URL . '/payments/link/create', [
-                    'Amount'             => $this->kopecksToRubles($amount->amount()),
-                    'Currency'           => $amount->currency()->value,
-                    'Description'        => mb_substr($description, 0, 255),
-                    'InvoiceId'          => $paymentId,
+                ->post(self::BASE_URL.'/payments/link/create', [
+                    'Amount' => $this->kopecksToRubles($amount->amount()),
+                    'Currency' => $amount->currency()->value,
+                    'Description' => mb_substr($description, 0, 255),
+                    'InvoiceId' => $paymentId,
                     'SuccessRedirectUrl' => $returnUrl,
-                    'FailRedirectUrl'    => $returnUrl,
+                    'FailRedirectUrl' => $returnUrl,
                 ]),
             sleepMilliseconds: 500,
             when: fn (\Throwable $e) => $this->isRetryable($e),
@@ -67,19 +67,19 @@ final class CloudPaymentsProvider implements PaymentProviderInterface
             throw new PaymentException("CloudPayments: {$message}");
         }
 
-        $paymentUrl    = $data['Model']['Url'] ?? throw new PaymentException('CloudPayments: ответ не содержит Url');
+        $paymentUrl = $data['Model']['Url'] ?? throw new PaymentException('CloudPayments: ответ не содержит Url');
         $transactionId = (string) ($data['Model']['TransactionId'] ?? $paymentId);
 
         $this->logger->info('CloudPayments: ссылка создана', [
-            'payment_id'     => $paymentId,
+            'payment_id' => $paymentId,
             'transaction_id' => $transactionId,
         ]);
 
         return new ProviderResponse(
-            externalId:      ExternalId::fromString($transactionId),
+            externalId: ExternalId::fromString($transactionId),
             confirmationUrl: $paymentUrl,
-            status:          'pending',
-            rawData:         $data['Model'] ?? [],
+            status: 'pending',
+            rawData: $data['Model'] ?? [],
         );
     }
 
@@ -87,7 +87,7 @@ final class CloudPaymentsProvider implements PaymentProviderInterface
     {
         // CloudPayments: поиск по InvoiceId (наш paymentId хранится в externalId до первого вебхука)
         $response = Http::withBasicAuth($this->publicId, $this->apiSecret)
-            ->post(self::BASE_URL . '/payments/find', [
+            ->post(self::BASE_URL.'/payments/find', [
                 'InvoiceId' => $externalId->toString(),
             ]);
 
@@ -95,14 +95,14 @@ final class CloudPaymentsProvider implements PaymentProviderInterface
             throw new PaymentException("CloudPayments: ошибка запроса статуса [{$response->status()}]");
         }
 
-        $data  = $response->json();
+        $data = $response->json();
         $model = $data['Model'] ?? [];
 
         return new ProviderResponse(
-            externalId:      ExternalId::fromString((string) ($model['TransactionId'] ?? $externalId->toString())),
+            externalId: ExternalId::fromString((string) ($model['TransactionId'] ?? $externalId->toString())),
             confirmationUrl: '',
-            status:          $this->mapStatus((string) ($model['Status'] ?? '')),
-            rawData:         $model,
+            status: $this->mapStatus((string) ($model['Status'] ?? '')),
+            rawData: $model,
         );
     }
 
@@ -111,9 +111,9 @@ final class CloudPaymentsProvider implements PaymentProviderInterface
         $response = retry(
             times: 3,
             callback: fn () => Http::withBasicAuth($this->publicId, $this->apiSecret)
-                ->post(self::BASE_URL . '/payments/refund', [
+                ->post(self::BASE_URL.'/payments/refund', [
                     'TransactionId' => $externalId->toString(),
-                    'Amount'        => $this->kopecksToRubles($amount->amount()),
+                    'Amount' => $this->kopecksToRubles($amount->amount()),
                 ]),
             sleepMilliseconds: 500,
             when: fn (\Throwable $e) => $this->isRetryable($e),
@@ -126,29 +126,29 @@ final class CloudPaymentsProvider implements PaymentProviderInterface
         $data = $response->json();
 
         if (! ($data['Success'] ?? false)) {
-            throw new PaymentException("CloudPayments: ошибка возврата: " . ($data['Message'] ?? 'Unknown error'));
+            throw new PaymentException('CloudPayments: ошибка возврата: '.($data['Message'] ?? 'Unknown error'));
         }
 
         $this->logger->info('CloudPayments: возврат выполнен', [
             'transaction_id' => $externalId->toString(),
-            'amount'         => $amount->amount(),
+            'amount' => $amount->amount(),
         ]);
 
         return new ProviderResponse(
-            externalId:      $externalId,
+            externalId: $externalId,
             confirmationUrl: '',
-            status:          'succeeded',
-            rawData:         $data,
+            status: 'succeeded',
+            rawData: $data,
         );
     }
 
     /**
-     * @param array<string, mixed>  $payload
-     * @param array<string, list<string|null>> $headers
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, list<string|null>>  $headers
      */
     public function verifyWebhook(array $payload, array $headers): bool
     {
-        $body     = request()->getContent();
+        $body = request()->getContent();
         $received = $headers['content-hmac'][0] ?? ($headers['Content-HMAC'][0] ?? '');
         $expected = base64_encode(hash_hmac('sha256', $body, $this->apiSecret, true));
 
@@ -165,18 +165,18 @@ final class CloudPaymentsProvider implements PaymentProviderInterface
     public function parseWebhook(array $payload): ProviderResponse
     {
         $transactionId = (string) ($payload['TransactionId'] ?? '');
-        $status        = $this->mapStatus((string) ($payload['Status'] ?? ''));
+        $status = $this->mapStatus((string) ($payload['Status'] ?? ''));
 
         $kopecks = isset($payload['Amount'])
             ? (int) round((float) $payload['Amount'] * 100)
             : null;
 
         return new ProviderResponse(
-            externalId:           ExternalId::fromString($transactionId),
-            confirmationUrl:      '',
-            status:               $status,
-            refundAmountKopecks:  $status === 'refunded' ? $kopecks : null,
-            rawData:              $payload,
+            externalId: ExternalId::fromString($transactionId),
+            confirmationUrl: '',
+            status: $status,
+            refundAmountKopecks: $status === 'refunded' ? $kopecks : null,
+            rawData: $payload,
         );
     }
 
@@ -186,9 +186,9 @@ final class CloudPaymentsProvider implements PaymentProviderInterface
     {
         return match ($status) {
             'Completed', 'Authorized' => 'succeeded',
-            'Cancelled', 'Declined'   => 'canceled',
-            'Refunded'                => 'refunded',
-            default                   => 'pending',
+            'Cancelled', 'Declined' => 'canceled',
+            'Refunded' => 'refunded',
+            default => 'pending',
         };
     }
 

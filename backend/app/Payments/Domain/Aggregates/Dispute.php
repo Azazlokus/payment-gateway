@@ -56,7 +56,7 @@ final class Dispute
         $this->guardAgainstResolved();
 
         $this->status = DisputeStatus::Won;
-        $this->note   = $note;
+        $this->note = $note;
 
         $this->recordEvent(new DisputeWasResolved(
             disputeId: $this->id->toString(),
@@ -71,7 +71,7 @@ final class Dispute
         $this->guardAgainstResolved();
 
         $this->status = DisputeStatus::Lost;
-        $this->note   = $note;
+        $this->note = $note;
 
         $this->recordEvent(new DisputeWasResolved(
             disputeId: $this->id->toString(),
@@ -102,7 +102,7 @@ final class Dispute
     /** @return DomainEvent[] */
     public function pullDomainEvents(): array
     {
-        $events            = $this->domainEvents;
+        $events = $this->domainEvents;
         $this->domainEvents = [];
 
         return $events;

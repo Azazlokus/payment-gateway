@@ -34,11 +34,11 @@ class SbpProviderTest extends TestCase
         $this->logger->shouldReceive('error')->andReturnNull()->byDefault();
 
         $this->provider = new SbpProvider(
-            merchantId:    'merchant-001',
-            apiKey:        'api-key-test',
+            merchantId: 'merchant-001',
+            apiKey: 'api-key-test',
             webhookSecret: $this->webhookSecret,
-            baseUrl:       'https://api.nspk.ru/sbp/v1/merchant-integrations',
-            logger:        $this->logger,
+            baseUrl: 'https://api.nspk.ru/sbp/v1/merchant-integrations',
+            logger: $this->logger,
         );
     }
 
@@ -51,16 +51,16 @@ class SbpProviderTest extends TestCase
     {
         Http::fake([
             '*/qrc/dynamic' => Http::response([
-                'qrId'    => 'QR-001',
+                'qrId' => 'QR-001',
                 'payload' => 'https://qr.nspk.ru/QR-001',
             ], 200),
         ]);
 
         $result = $this->provider->createPayment(
-            paymentId:      'pay-123',
-            amount:         Money::ofRub(50000),
-            description:    'Test SBP payment',
-            returnUrl:      'https://example.com/return',
+            paymentId: 'pay-123',
+            amount: Money::ofRub(50000),
+            description: 'Test SBP payment',
+            returnUrl: 'https://example.com/return',
             idempotencyKey: 'idem-key-1',
         );
 
@@ -80,10 +80,10 @@ class SbpProviderTest extends TestCase
         $this->expectExceptionMessageMatches('/СБП: ошибка создания QR/');
 
         $this->provider->createPayment(
-            paymentId:      'pay-123',
-            amount:         Money::ofRub(50000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'pay-123',
+            amount: Money::ofRub(50000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key-1',
         );
     }
@@ -98,10 +98,10 @@ class SbpProviderTest extends TestCase
         $this->expectExceptionMessageMatches('/qrId/');
 
         $this->provider->createPayment(
-            paymentId:      'pay-123',
-            amount:         Money::ofRub(50000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'pay-123',
+            amount: Money::ofRub(50000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key-1',
         );
     }
@@ -113,10 +113,10 @@ class SbpProviderTest extends TestCase
         ]);
 
         $this->provider->createPayment(
-            paymentId:      'pay-123',
-            amount:         Money::ofRub(10000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'pay-123',
+            amount: Money::ofRub(10000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key',
         );
 
@@ -177,7 +177,7 @@ class SbpProviderTest extends TestCase
 
         $result = $this->provider->refundPayment(
             externalId: ExternalId::fromString('QR-001'),
-            amount:     Money::ofRub(50000),
+            amount: Money::ofRub(50000),
         );
 
         $this->assertSame('succeeded', $result->status);
@@ -194,7 +194,7 @@ class SbpProviderTest extends TestCase
 
         $this->provider->refundPayment(
             externalId: ExternalId::fromString('QR-001'),
-            amount:     Money::ofRub(50000),
+            amount: Money::ofRub(50000),
         );
     }
 
@@ -209,7 +209,7 @@ class SbpProviderTest extends TestCase
 
         $this->provider->refundPayment(
             externalId: ExternalId::fromString('QR-001'),
-            amount:     Money::ofRub(50000),
+            amount: Money::ofRub(50000),
         );
     }
 
@@ -249,7 +249,7 @@ class SbpProviderTest extends TestCase
     public function test_parse_webhook_maps_paid_to_succeeded(): void
     {
         $result = $this->provider->parseWebhook([
-            'qrId'   => 'QR-001',
+            'qrId' => 'QR-001',
             'status' => 'PAID',
         ]);
 
@@ -260,7 +260,7 @@ class SbpProviderTest extends TestCase
     public function test_parse_webhook_maps_cancelled_to_canceled(): void
     {
         $result = $this->provider->parseWebhook([
-            'qrId'   => 'QR-002',
+            'qrId' => 'QR-002',
             'status' => 'CANCELLED',
         ]);
 
@@ -270,7 +270,7 @@ class SbpProviderTest extends TestCase
     public function test_parse_webhook_maps_unknown_to_pending(): void
     {
         $result = $this->provider->parseWebhook([
-            'qrId'   => 'QR-003',
+            'qrId' => 'QR-003',
             'status' => 'IN_PROGRESS',
         ]);
 

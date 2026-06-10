@@ -62,7 +62,7 @@ class CorrelationIdMiddlewareTest extends TestCase
     public function test_middleware_passes_request_to_next(): void
     {
         $request = Request::create('/test', 'GET');
-        $called  = false;
+        $called = false;
 
         $this->middleware->handle($request, function () use (&$called) {
             $called = true;

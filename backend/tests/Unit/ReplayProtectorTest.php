@@ -21,7 +21,7 @@ class ReplayProtectorTest extends TestCase
     {
         parent::setUp();
 
-        $this->cache    = Mockery::mock(Repository::class);
+        $this->cache = Mockery::mock(Repository::class);
         $this->protector = new ReplayProtector($this->cache);
     }
 

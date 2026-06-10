@@ -5,6 +5,7 @@ namespace Tests;
 use App\Payments\Infrastructure\Observability\MetricsService;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Mockery;
+use Tests\Feature\Observability\MetricsServiceTest;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -16,7 +17,7 @@ abstract class TestCase extends BaseTestCase
         config(['logging.channels.payments' => ['driver' => 'stack', 'channels' => ['null']]]);
 
         // Bind a no-op MetricsService so feature tests don't require a running Redis
-        if (! $this instanceof \Tests\Feature\Observability\MetricsServiceTest) {
+        if (! $this instanceof MetricsServiceTest) {
             $mock = Mockery::mock(MetricsService::class);
             $mock->shouldReceive('paymentCreated', 'paymentSucceeded', 'paymentCancelled',
                 'paymentRefunded', 'paymentAmount', 'webhookProcessed', 'webhookFailed',

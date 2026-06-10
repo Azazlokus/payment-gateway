@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Application\DTOs\CreatePaymentOptionsDTO;
 use App\Payments\Domain\Contracts\PaymentProviderInterface;
+use App\Payments\Domain\Contracts\ProviderResponse;
 use App\Payments\Domain\ValueObjects\ExternalId;
-use App\Payments\Domain\ValueObjects\Money;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use App\Payments\Infrastructure\Providers\AlfaBankProvider;
 use App\Payments\Infrastructure\Providers\CloudPaymentsProvider;
@@ -15,6 +14,7 @@ use App\Payments\Infrastructure\Providers\RobokassaProvider;
 use App\Payments\Infrastructure\Providers\SbpProvider;
 use App\Payments\Infrastructure\Providers\YooKassaProvider;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 use YooKassa\Client;
 
@@ -53,60 +53,60 @@ class ProviderContractTest extends TestCase
         ];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('providerDataset')]
+    #[DataProvider('providerDataset')]
     public function test_implements_provider_interface(PaymentProviderInterface $provider, string $name): void
     {
         $this->assertInstanceOf(PaymentProviderInterface::class, $provider);
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('providerDataset')]
+    #[DataProvider('providerDataset')]
     public function test_name_returns_non_empty_string(PaymentProviderInterface $provider, string $expectedName): void
     {
         $this->assertSame($expectedName, $provider->name());
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('providerDataset')]
+    #[DataProvider('providerDataset')]
     public function test_name_is_lowercase_alphanumeric(PaymentProviderInterface $provider, string $name): void
     {
         $this->assertMatchesRegularExpression('/^[a-z0-9_]+$/', $provider->name());
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('providerDataset')]
+    #[DataProvider('providerDataset')]
     public function test_verify_webhook_returns_bool(PaymentProviderInterface $provider, string $name): void
     {
         $result = $provider->verifyWebhook([], []);
         $this->assertIsBool($result);
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('providerDataset')]
+    #[DataProvider('providerDataset')]
     public function test_parse_webhook_returns_provider_response(PaymentProviderInterface $provider, string $name): void
     {
         $payload = match ($name) {
-            'yookassa'      => ['object' => ['id' => 'ext-1', 'status' => 'succeeded', 'amount' => ['value' => '100.00']]],
-            'robokassa'     => ['Shp_paymentId' => 'pay-1', 'InvId' => '42', 'OutSum' => '100.00'],
+            'yookassa' => ['object' => ['id' => 'ext-1', 'status' => 'succeeded', 'amount' => ['value' => '100.00']]],
+            'robokassa' => ['Shp_paymentId' => 'pay-1', 'InvId' => '42', 'OutSum' => '100.00'],
             'cloudpayments' => ['TransactionId' => '12345', 'Status' => 'Completed'],
-            'sbp'           => ['qrId' => 'QR-1', 'status' => 'PAID'],
-            'alfabank'      => ['mdOrder' => 'order-1', 'operation' => 'deposited'],
-            default         => [],
+            'sbp' => ['qrId' => 'QR-1', 'status' => 'PAID'],
+            'alfabank' => ['mdOrder' => 'order-1', 'operation' => 'deposited'],
+            default => [],
         };
 
         $response = $provider->parseWebhook($payload);
 
-        $this->assertInstanceOf(\App\Payments\Domain\Contracts\ProviderResponse::class, $response);
+        $this->assertInstanceOf(ProviderResponse::class, $response);
         $this->assertNotEmpty($response->status);
         $this->assertInstanceOf(ExternalId::class, $response->externalId);
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('providerDataset')]
+    #[DataProvider('providerDataset')]
     public function test_parse_webhook_status_is_known_value(PaymentProviderInterface $provider, string $name): void
     {
         $payload = match ($name) {
-            'yookassa'      => ['object' => ['id' => 'ext-1', 'status' => 'pending', 'amount' => ['value' => '100.00']]],
-            'robokassa'     => ['Shp_paymentId' => 'pay-1', 'InvId' => '42', 'OutSum' => '100.00'],
+            'yookassa' => ['object' => ['id' => 'ext-1', 'status' => 'pending', 'amount' => ['value' => '100.00']]],
+            'robokassa' => ['Shp_paymentId' => 'pay-1', 'InvId' => '42', 'OutSum' => '100.00'],
             'cloudpayments' => ['TransactionId' => '1', 'Status' => 'Created'],
-            'sbp'           => ['qrId' => 'QR-1', 'status' => 'IN_PROGRESS'],
-            'alfabank'      => ['mdOrder' => 'order-1', 'operation' => 'unknown'],
-            default         => [],
+            'sbp' => ['qrId' => 'QR-1', 'status' => 'IN_PROGRESS'],
+            'alfabank' => ['mdOrder' => 'order-1', 'operation' => 'unknown'],
+            default => [],
         };
 
         $response = $provider->parseWebhook($payload);
@@ -114,16 +114,16 @@ class ProviderContractTest extends TestCase
         $this->assertContains($response->status, ['pending', 'succeeded', 'canceled', 'refunded']);
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('providerDataset')]
+    #[DataProvider('providerDataset')]
     public function test_parse_webhook_maps_success_status(PaymentProviderInterface $provider, string $name): void
     {
         $payload = match ($name) {
-            'yookassa'      => ['object' => ['id' => 'ext-1', 'status' => 'succeeded', 'amount' => ['value' => '500.00']]],
-            'robokassa'     => ['Shp_paymentId' => 'pay-1', 'InvId' => '42', 'OutSum' => '500.00'],
+            'yookassa' => ['object' => ['id' => 'ext-1', 'status' => 'succeeded', 'amount' => ['value' => '500.00']]],
+            'robokassa' => ['Shp_paymentId' => 'pay-1', 'InvId' => '42', 'OutSum' => '500.00'],
             'cloudpayments' => ['TransactionId' => '1', 'Status' => 'Completed'],
-            'sbp'           => ['qrId' => 'QR-1', 'status' => 'PAID'],
-            'alfabank'      => ['mdOrder' => 'order-1', 'operation' => 'deposited'],
-            default         => [],
+            'sbp' => ['qrId' => 'QR-1', 'status' => 'PAID'],
+            'alfabank' => ['mdOrder' => 'order-1', 'operation' => 'deposited'],
+            default => [],
         };
 
         $response = $provider->parseWebhook($payload);
@@ -131,16 +131,16 @@ class ProviderContractTest extends TestCase
         $this->assertSame('succeeded', $response->status);
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('providerDataset')]
+    #[DataProvider('providerDataset')]
     public function test_parse_webhook_maps_cancel_status(PaymentProviderInterface $provider, string $name): void
     {
         $payload = match ($name) {
-            'yookassa'      => ['object' => ['id' => 'ext-1', 'status' => 'canceled', 'amount' => ['value' => '100.00']]],
-            'robokassa'     => ['Shp_paymentId' => 'pay-1', 'InvId' => '42', 'OutSum' => '100.00', '_force_canceled' => true],
+            'yookassa' => ['object' => ['id' => 'ext-1', 'status' => 'canceled', 'amount' => ['value' => '100.00']]],
+            'robokassa' => ['Shp_paymentId' => 'pay-1', 'InvId' => '42', 'OutSum' => '100.00', '_force_canceled' => true],
             'cloudpayments' => ['TransactionId' => '1', 'Status' => 'Cancelled'],
-            'sbp'           => ['qrId' => 'QR-1', 'status' => 'CANCELLED'],
-            'alfabank'      => ['mdOrder' => 'order-1', 'operation' => 'reversed'],
-            default         => [],
+            'sbp' => ['qrId' => 'QR-1', 'status' => 'CANCELLED'],
+            'alfabank' => ['mdOrder' => 'order-1', 'operation' => 'reversed'],
+            default => [],
         };
 
         // Robokassa всегда возвращает succeeded (платёж уже оплачен при получении ResultURL)

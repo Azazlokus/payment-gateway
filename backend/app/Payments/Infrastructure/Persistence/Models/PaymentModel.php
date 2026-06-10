@@ -36,8 +36,8 @@ final class PaymentModel extends Model
     ];
 
     protected $casts = [
-        'status'           => PaymentStatus::class,
-        'metadata'         => 'array',
+        'status' => PaymentStatus::class,
+        'metadata' => 'array',
         'three_ds_required' => 'boolean',
     ];
 

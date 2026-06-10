@@ -56,8 +56,8 @@ final class AlfaBankWebhookController extends Controller
 
         if (! $this->provider->verifyWebhook($payload, $request->headers->all())) {
             $this->logger->warning('Альфа-Банк: webhook отклонён', [
-                'ip'        => $request->ip(),
-                'md_order'  => $payload['mdOrder'] ?? 'unknown',
+                'ip' => $request->ip(),
+                'md_order' => $payload['mdOrder'] ?? 'unknown',
                 'operation' => $payload['operation'] ?? 'unknown',
             ]);
 
@@ -65,7 +65,7 @@ final class AlfaBankWebhookController extends Controller
         }
 
         $this->logger->info('Альфа-Банк: webhook получен, постановка в очередь', [
-            'md_order'  => $payload['mdOrder'] ?? 'unknown',
+            'md_order' => $payload['mdOrder'] ?? 'unknown',
             'operation' => $payload['operation'] ?? 'unknown',
         ]);
 

@@ -17,7 +17,8 @@ use PHPUnit\Framework\TestCase;
 
 class CryptoRefundAggregateTest extends TestCase
 {
-    private const ADDRESS    = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
+    private const ADDRESS = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
+
     private const DEPOSIT_ID = '01HXXXXXXXXXXXXXXXXXXXXXXXX';
 
     private function makeRefund(): CryptoRefundRequest
@@ -84,7 +85,7 @@ class CryptoRefundAggregateTest extends TestCase
 
     public function test_mark_as_completed_stores_hash_and_emits_event(): void
     {
-        $hash   = TxHash::fromString(str_repeat('a', 64));
+        $hash = TxHash::fromString(str_repeat('a', 64));
         $refund = $this->makeRefund();
         $refund->pullDomainEvents();
         $refund->markAsBroadcasting();

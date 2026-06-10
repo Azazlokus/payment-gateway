@@ -87,7 +87,7 @@ final class CryptoDeposit
             throw new DepositExpiredException($this->id->toString());
         }
 
-        $this->txHash       = $hash;
+        $this->txHash = $hash;
         $this->actualAmount = $actual;
 
         if ($actual->units() > $this->expectedAmount->units()) {
@@ -118,9 +118,9 @@ final class CryptoDeposit
             throw new DepositExpiredException($this->id->toString());
         }
 
-        $this->txHash       = $hash;
+        $this->txHash = $hash;
         $this->actualAmount = $actual;
-        $this->status       = CryptoDepositStatus::Confirmed;
+        $this->status = CryptoDepositStatus::Confirmed;
 
         $this->recordEvent(new DepositConfirmed(
             depositId: $this->id->toString(),
@@ -145,7 +145,7 @@ final class CryptoDeposit
 
     private function isExpired(): bool
     {
-        return new DateTimeImmutable() > $this->expiresAt;
+        return new DateTimeImmutable > $this->expiresAt;
     }
 
     private function recordEvent(DomainEvent $event): void
@@ -156,7 +156,7 @@ final class CryptoDeposit
     /** @return DomainEvent[] */
     public function pullDomainEvents(): array
     {
-        $events             = $this->domainEvents;
+        $events = $this->domainEvents;
         $this->domainEvents = [];
 
         return $events;
@@ -246,7 +246,7 @@ final class CryptoDeposit
 
     public function createdAt(): DateTimeImmutable
     {
-        return new DateTimeImmutable('@' . $this->createdAtTimestamp);
+        return new DateTimeImmutable('@'.$this->createdAtTimestamp);
     }
 
     public function txHash(): ?TxHash

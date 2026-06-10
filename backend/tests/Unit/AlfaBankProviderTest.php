@@ -32,10 +32,10 @@ class AlfaBankProviderTest extends TestCase
         $this->logger->shouldReceive('error')->andReturnNull()->byDefault();
 
         $this->provider = new AlfaBankProvider(
-            login:    'test_login',
+            login: 'test_login',
             password: 'test_password',
-            baseUrl:  'https://pay.alfabank.ru/payment/rest',
-            logger:   $this->logger,
+            baseUrl: 'https://pay.alfabank.ru/payment/rest',
+            logger: $this->logger,
         );
     }
 
@@ -54,10 +54,10 @@ class AlfaBankProviderTest extends TestCase
         ]);
 
         $result = $this->provider->createPayment(
-            paymentId:      'internal-pay-123',
-            amount:         Money::ofRub(75000),
-            description:    'Test Alfa-Bank payment',
-            returnUrl:      'https://example.com/return',
+            paymentId: 'internal-pay-123',
+            amount: Money::ofRub(75000),
+            description: 'Test Alfa-Bank payment',
+            returnUrl: 'https://example.com/return',
             idempotencyKey: 'idem-key-1',
         );
 
@@ -77,10 +77,10 @@ class AlfaBankProviderTest extends TestCase
         $this->expectExceptionMessageMatches('/Альфа-Банк: HTTP ошибка/');
 
         $this->provider->createPayment(
-            paymentId:      'internal-pay-123',
-            amount:         Money::ofRub(75000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'internal-pay-123',
+            amount: Money::ofRub(75000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key-1',
         );
     }
@@ -89,7 +89,7 @@ class AlfaBankProviderTest extends TestCase
     {
         Http::fake([
             '*/register.do' => Http::response([
-                'errorCode'    => '7',
+                'errorCode' => '7',
                 'errorMessage' => 'Merchant not found',
             ], 200),
         ]);
@@ -98,10 +98,10 @@ class AlfaBankProviderTest extends TestCase
         $this->expectExceptionMessageMatches('/Merchant not found/');
 
         $this->provider->createPayment(
-            paymentId:      'internal-pay-123',
-            amount:         Money::ofRub(75000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'internal-pay-123',
+            amount: Money::ofRub(75000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key-1',
         );
     }
@@ -116,10 +116,10 @@ class AlfaBankProviderTest extends TestCase
         $this->expectExceptionMessageMatches('/orderId/');
 
         $this->provider->createPayment(
-            paymentId:      'internal-pay-123',
-            amount:         Money::ofRub(75000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'internal-pay-123',
+            amount: Money::ofRub(75000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key-1',
         );
     }
@@ -131,15 +131,14 @@ class AlfaBankProviderTest extends TestCase
         ]);
 
         $this->provider->createPayment(
-            paymentId:      'internal-pay-123',
-            amount:         Money::ofRub(75000),
-            description:    'Test payment',
-            returnUrl:      'https://example.com/return',
+            paymentId: 'internal-pay-123',
+            amount: Money::ofRub(75000),
+            description: 'Test payment',
+            returnUrl: 'https://example.com/return',
             idempotencyKey: 'idem-key',
         );
 
-        Http::assertSent(fn (Request $request) =>
-            $request->url() === 'https://pay.alfabank.ru/payment/rest/register.do' &&
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://pay.alfabank.ru/payment/rest/register.do' &&
             $request->isForm() &&
             $request['orderNumber'] === 'internal-pay-123' &&
             $request['amount'] === 75000 &&
@@ -200,7 +199,7 @@ class AlfaBankProviderTest extends TestCase
 
         $result = $this->provider->refundPayment(
             externalId: ExternalId::fromString('alfa-order-001'),
-            amount:     Money::ofRub(30000),
+            amount: Money::ofRub(30000),
         );
 
         $this->assertSame('succeeded', $result->status);
@@ -210,7 +209,7 @@ class AlfaBankProviderTest extends TestCase
     {
         Http::fake([
             '*/refund.do' => Http::response([
-                'errorCode'    => '7',
+                'errorCode' => '7',
                 'errorMessage' => 'Refund not allowed',
             ], 200),
         ]);
@@ -220,7 +219,7 @@ class AlfaBankProviderTest extends TestCase
 
         $this->provider->refundPayment(
             externalId: ExternalId::fromString('alfa-order-001'),
-            amount:     Money::ofRub(30000),
+            amount: Money::ofRub(30000),
         );
     }
 
@@ -235,7 +234,7 @@ class AlfaBankProviderTest extends TestCase
 
         $this->provider->refundPayment(
             externalId: ExternalId::fromString('alfa-order-001'),
-            amount:     Money::ofRub(30000),
+            amount: Money::ofRub(30000),
         );
     }
 
@@ -272,7 +271,7 @@ class AlfaBankProviderTest extends TestCase
     public function test_parse_webhook_maps_deposited_to_succeeded(): void
     {
         $result = $this->provider->parseWebhook([
-            'mdOrder'   => 'alfa-order-001',
+            'mdOrder' => 'alfa-order-001',
             'operation' => 'deposited',
         ]);
 
@@ -283,7 +282,7 @@ class AlfaBankProviderTest extends TestCase
     public function test_parse_webhook_maps_refunded_to_refunded(): void
     {
         $result = $this->provider->parseWebhook([
-            'mdOrder'   => 'alfa-order-001',
+            'mdOrder' => 'alfa-order-001',
             'operation' => 'refunded',
         ]);
 
@@ -293,7 +292,7 @@ class AlfaBankProviderTest extends TestCase
     public function test_parse_webhook_maps_reversed_to_canceled(): void
     {
         $result = $this->provider->parseWebhook([
-            'mdOrder'   => 'alfa-order-001',
+            'mdOrder' => 'alfa-order-001',
             'operation' => 'reversed',
         ]);
 
@@ -303,7 +302,7 @@ class AlfaBankProviderTest extends TestCase
     public function test_parse_webhook_maps_declined_by_timeout_to_canceled(): void
     {
         $result = $this->provider->parseWebhook([
-            'mdOrder'   => 'alfa-order-001',
+            'mdOrder' => 'alfa-order-001',
             'operation' => 'declinedByTimeout',
         ]);
 
@@ -313,7 +312,7 @@ class AlfaBankProviderTest extends TestCase
     public function test_parse_webhook_maps_unknown_operation_to_pending(): void
     {
         $result = $this->provider->parseWebhook([
-            'mdOrder'   => 'alfa-order-001',
+            'mdOrder' => 'alfa-order-001',
             'operation' => 'somethingElse',
         ]);
 

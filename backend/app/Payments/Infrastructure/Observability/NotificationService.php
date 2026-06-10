@@ -23,7 +23,7 @@ class NotificationService
     /**
      * Отправить уведомление если в метаданных платежа указан notification_url.
      *
-     * @param array<string, mixed> $metadata
+     * @param  array<string, mixed>  $metadata
      */
     public function notify(PaymentResultDTO $payment, array $metadata): void
     {
@@ -34,21 +34,21 @@ class NotificationService
         }
 
         $payload = [
-            'event'       => 'payment.status_changed',
-            'payment_id'  => $payment->paymentId,
-            'status'      => $payment->status,
-            'amount'      => $payment->amount,
-            'currency'    => $payment->currency,
+            'event' => 'payment.status_changed',
+            'payment_id' => $payment->paymentId,
+            'status' => $payment->status,
+            'amount' => $payment->amount,
+            'currency' => $payment->currency,
             'external_id' => $payment->externalId,
         ];
 
         $startedAt = microtime(true);
-        $success   = false;
-        $logData   = [
+        $success = false;
+        $logData = [
             'payment_id' => $payment->paymentId,
-            'url'        => $url,
-            'payload'    => $payload,
-            'sent_at'    => now(),
+            'url' => $url,
+            'payload' => $payload,
+            'sent_at' => now(),
         ];
 
         try {
@@ -57,19 +57,19 @@ class NotificationService
                 ->post($url, $payload);
 
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
-            $success    = $response->successful();
+            $success = $response->successful();
 
             OutboundWebhookLog::create(array_merge($logData, [
                 'response_status' => $response->status(),
-                'response_body'   => mb_substr((string) $response->body(), 0, 2000),
-                'duration_ms'     => $durationMs,
-                'success'         => $success,
+                'response_body' => mb_substr((string) $response->body(), 0, 2000),
+                'duration_ms' => $durationMs,
+                'success' => $success,
             ]));
 
             $this->logger->info('Outbound notification sent', [
                 'payment_id' => $payment->paymentId,
-                'url'        => $url,
-                'status'     => $response->status(),
+                'url' => $url,
+                'status' => $response->status(),
                 'duration_ms' => $durationMs,
             ]);
 
@@ -79,14 +79,14 @@ class NotificationService
 
             OutboundWebhookLog::create(array_merge($logData, [
                 'duration_ms' => $durationMs,
-                'success'     => false,
-                'error'       => $e->getMessage(),
+                'success' => false,
+                'error' => $e->getMessage(),
             ]));
 
             $this->logger->warning('Outbound notification failed', [
                 'payment_id' => $payment->paymentId,
-                'url'        => $url,
-                'error'      => $e->getMessage(),
+                'url' => $url,
+                'error' => $e->getMessage(),
             ]);
 
             $this->metrics->notificationSent(false);
@@ -97,7 +97,7 @@ class NotificationService
      * Подпись для верификации на стороне клиента.
      * Клиент может проверить: HMAC-SHA256(json_body, APP_KEY)
      *
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     private function sign(array $payload): string
     {

@@ -32,11 +32,11 @@ final class CryptoDepositModel extends Model
     ];
 
     protected $casts = [
-        'status'              => CryptoDepositStatus::class,
-        'asset'               => CryptoAsset::class,
-        'expected_units'      => 'integer',
-        'actual_units'        => 'integer',
+        'status' => CryptoDepositStatus::class,
+        'asset' => CryptoAsset::class,
+        'expected_units' => 'integer',
+        'actual_units' => 'integer',
         'fiat_amount_kopecks' => 'integer',
-        'created_at_ts'       => 'integer',
+        'created_at_ts' => 'integer',
     ];
 }

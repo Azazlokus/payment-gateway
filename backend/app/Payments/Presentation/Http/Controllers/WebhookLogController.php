@@ -22,15 +22,15 @@ final class WebhookLogController extends Controller
             ->limit(50)
             ->get()
             ->map(fn ($log) => [
-                'id'              => $log->id,
-                'url'             => $log->url,
-                'attempt'         => $log->attempt,
-                'success'         => $log->success,
+                'id' => $log->id,
+                'url' => $log->url,
+                'attempt' => $log->attempt,
+                'success' => $log->success,
                 'response_status' => $log->response_status,
-                'response_body'   => $log->response_body,
-                'duration_ms'     => $log->duration_ms,
-                'error'           => $log->error,
-                'sent_at'         => $log->sent_at?->toIso8601String(),
+                'response_body' => $log->response_body,
+                'duration_ms' => $log->duration_ms,
+                'error' => $log->error,
+                'sent_at' => $log->sent_at->toIso8601String(),
             ]);
 
         return response()->json(['data' => $logs]);
@@ -55,19 +55,19 @@ final class WebhookLogController extends Controller
         $logs = $query->paginate(30);
 
         return response()->json([
-            'data'  => $logs->map(fn ($log) => [
-                'id'              => $log->id,
-                'payment_id'      => $log->payment_id,
-                'url'             => $log->url,
-                'success'         => $log->success,
+            'data' => $logs->map(fn ($log) => [
+                'id' => $log->id,
+                'payment_id' => $log->payment_id,
+                'url' => $log->url,
+                'success' => $log->success,
                 'response_status' => $log->response_status,
-                'duration_ms'     => $log->duration_ms,
-                'error'           => $log->error,
-                'sent_at'         => $log->sent_at?->toIso8601String(),
+                'duration_ms' => $log->duration_ms,
+                'error' => $log->error,
+                'sent_at' => $log->sent_at->toIso8601String(),
             ])->values(),
-            'total'        => $logs->total(),
+            'total' => $logs->total(),
             'current_page' => $logs->currentPage(),
-            'last_page'    => $logs->lastPage(),
+            'last_page' => $logs->lastPage(),
         ]);
     }
 }

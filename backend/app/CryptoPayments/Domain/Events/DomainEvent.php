@@ -17,7 +17,7 @@ abstract readonly class DomainEvent
     public function __construct()
     {
         $this->occurredAt = (new DateTimeImmutable)->format(DateTimeInterface::ATOM);
-        $this->eventId    = Uuid::v4()->toRfc4122();
+        $this->eventId = Uuid::v4()->toRfc4122();
     }
 
     abstract public function eventName(): string;

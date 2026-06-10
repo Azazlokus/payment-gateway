@@ -31,7 +31,7 @@ final class ProcessSbpWebhookJob implements ShouldQueue
         PaymentRepositoryInterface $repository,
         PaymentLogger $logger,
     ): void {
-        $qrId  = (string) ($this->payload['qrId'] ?? '');
+        $qrId = (string) ($this->payload['qrId'] ?? '');
         $status = (string) ($this->payload['status'] ?? '');
 
         $payment = $repository->findByExternalId($qrId);
@@ -44,9 +44,9 @@ final class ProcessSbpWebhookJob implements ShouldQueue
 
         try {
             match ($status) {
-                'PAID'                  => $payment->markAsSucceeded(ExternalId::fromString($qrId)),
-                'CANCELLED', 'EXPIRED'  => $payment->cancel('Cancelled by СБП'),
-                default                 => null,
+                'PAID' => $payment->markAsSucceeded(ExternalId::fromString($qrId)),
+                'CANCELLED', 'EXPIRED' => $payment->cancel('Cancelled by СБП'),
+                default => null,
             };
 
             $repository->save($payment);
@@ -57,13 +57,13 @@ final class ProcessSbpWebhookJob implements ShouldQueue
 
             $logger->info('СБП webhook job: обработан', [
                 'payment_id' => $payment->id()->toString(),
-                'qr_id'      => $qrId,
-                'status'     => $status,
+                'qr_id' => $qrId,
+                'status' => $status,
             ]);
         } catch (InvalidPaymentStateException) {
             $logger->info('СБП webhook job: платёж уже в терминальном статусе (пропущено)', [
                 'payment_id' => $payment->id()->toString(),
-                'qr_id'      => $qrId,
+                'qr_id' => $qrId,
             ]);
         }
     }
@@ -73,8 +73,8 @@ final class ProcessSbpWebhookJob implements ShouldQueue
         $qrId = $this->payload['qrId'] ?? 'unknown';
 
         logger()->critical('СБП webhook: обработка окончательно не удалась', [
-            'qr_id'   => $qrId,
-            'error'   => $exception->getMessage(),
+            'qr_id' => $qrId,
+            'error' => $exception->getMessage(),
             'payload' => $this->payload,
         ]);
 

@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Http;
 
 final class BitcoinBlockchainClient implements BlockchainClientInterface
 {
+    /** @param array<string> $addressPool */
     public function __construct(
         private readonly string $apiUrl,
         private readonly array $addressPool,
@@ -52,7 +53,7 @@ final class BitcoinBlockchainClient implements BlockchainClientInterface
     }
 
     /**
-     * @param  Memo[] $memos
+     * @param  Memo[]  $memos
      * @return array<string, TransactionResult>
      */
     public function findIncomingTransactionsBatch(array $memos, CryptoAsset $asset, DateTimeImmutable $since): array
@@ -78,7 +79,7 @@ final class BitcoinBlockchainClient implements BlockchainClientInterface
 
         if (! $response->successful()) {
             $this->logger->warning('mempool.space API error', [
-                'status'  => $response->status(),
+                'status' => $response->status(),
                 'address' => $address->toString(),
             ]);
 
@@ -109,7 +110,7 @@ final class BitcoinBlockchainClient implements BlockchainClientInterface
             }
 
             /** @var array<int, array<string, mixed>> $vout */
-            $vout          = $tx['vout'] ?? [];
+            $vout = $tx['vout'] ?? [];
             $totalReceived = 0;
 
             foreach ($vout as $output) {

@@ -65,8 +65,7 @@ class PaymentLoggerTest extends TestCase
         Log::shouldReceive('channel')->andReturnSelf();
         Log::shouldReceive('info')
             ->once()
-            ->with(\Mockery::any(), \Mockery::on(fn ($ctx) =>
-                $ctx['service'] === 'payment-gateway'
+            ->with(\Mockery::any(), \Mockery::on(fn ($ctx) => $ctx['service'] === 'payment-gateway'
             ));
 
         $this->logger->info('msg');
@@ -77,8 +76,7 @@ class PaymentLoggerTest extends TestCase
         Log::shouldReceive('channel')->andReturnSelf();
         Log::shouldReceive('info')
             ->once()
-            ->with(\Mockery::any(), \Mockery::on(fn ($ctx) =>
-                isset($ctx['environment'])
+            ->with(\Mockery::any(), \Mockery::on(fn ($ctx) => isset($ctx['environment'])
             ));
 
         $this->logger->info('msg');
@@ -89,8 +87,7 @@ class PaymentLoggerTest extends TestCase
         Log::shouldReceive('channel')->andReturnSelf();
         Log::shouldReceive('info')
             ->once()
-            ->with(\Mockery::any(), \Mockery::on(fn ($ctx) =>
-                isset($ctx['timestamp']) && str_contains($ctx['timestamp'], 'T')
+            ->with(\Mockery::any(), \Mockery::on(fn ($ctx) => isset($ctx['timestamp']) && str_contains($ctx['timestamp'], 'T')
             ));
 
         $this->logger->info('msg');
@@ -101,8 +98,7 @@ class PaymentLoggerTest extends TestCase
         Log::shouldReceive('channel')->andReturnSelf();
         Log::shouldReceive('info')
             ->once()
-            ->with('msg', \Mockery::on(fn ($ctx) =>
-                $ctx['payment_id'] === 'pay-123' &&
+            ->with('msg', \Mockery::on(fn ($ctx) => $ctx['payment_id'] === 'pay-123' &&
                 $ctx['service'] === 'payment-gateway'
             ));
 
@@ -114,8 +110,7 @@ class PaymentLoggerTest extends TestCase
         Log::shouldReceive('channel')->andReturnSelf();
         Log::shouldReceive('info')
             ->once()
-            ->with('msg', \Mockery::on(fn ($ctx) =>
-                $ctx['service'] === 'custom-service'
+            ->with('msg', \Mockery::on(fn ($ctx) => $ctx['service'] === 'custom-service'
             ));
 
         $this->logger->info('msg', ['service' => 'custom-service']);
@@ -129,8 +124,7 @@ class PaymentLoggerTest extends TestCase
         Log::shouldReceive('channel')->andReturnSelf();
         Log::shouldReceive('info')
             ->once()
-            ->with('msg', \Mockery::on(fn ($ctx) =>
-                $ctx['correlation_id'] === 'trace-abc-123'
+            ->with('msg', \Mockery::on(fn ($ctx) => $ctx['correlation_id'] === 'trace-abc-123'
             ));
 
         $this->logger->info('msg');

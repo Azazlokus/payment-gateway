@@ -37,10 +37,10 @@ final class ReconcilePaymentsCommand extends Command
 
     public function handle(): int
     {
-        $hours    = (int) $this->option('hours');
+        $hours = (int) $this->option('hours');
         $provider = $this->option('provider') ?: null;
-        $dryRun   = (bool) $this->option('dry-run');
-        $batch    = (int) $this->option('batch');
+        $dryRun = (bool) $this->option('dry-run');
+        $batch = (int) $this->option('batch');
 
         $cutoff = now()->subHours($hours);
 
@@ -55,11 +55,11 @@ final class ReconcilePaymentsCommand extends Command
             $query->where('provider', $provider);
         }
 
-        $total     = (clone $query)->count();
-        $synced    = 0;
-        $failed    = 0;
+        $total = (clone $query)->count();
+        $synced = 0;
+        $failed = 0;
 
-        $this->info("Found {$total} Pending payments older than {$hours}h" . ($provider ? " (provider: {$provider})" : '') . '.');
+        $this->info("Found {$total} Pending payments older than {$hours}h".($provider ? " (provider: {$provider})" : '').'.');
 
         if ($total === 0) {
             return self::SUCCESS;
@@ -80,7 +80,7 @@ final class ReconcilePaymentsCommand extends Command
                     $failed++;
                     Log::warning('payments:reconcile sync failed', [
                         'payment_id' => $row->id,
-                        'error'      => $e->getMessage(),
+                        'error' => $e->getMessage(),
                     ]);
                 }
             }

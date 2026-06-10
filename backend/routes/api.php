@@ -3,21 +3,23 @@
 declare(strict_types=1);
 
 use App\CryptoPayments\Presentation\Http\Controllers\CryptoDepositController;
+use App\PaymentLinks\Http\Controllers\PaymentLinkController;
 use App\Payments\Presentation\Http\Controllers\AlfaBankWebhookController;
+use App\Payments\Presentation\Http\Controllers\AnalyticsController;
+use App\Payments\Presentation\Http\Controllers\AuditLogController;
 use App\Payments\Presentation\Http\Controllers\CloudPaymentsWebhookController;
 use App\Payments\Presentation\Http\Controllers\DisputeController;
 use App\Payments\Presentation\Http\Controllers\HealthController;
+use App\Payments\Presentation\Http\Controllers\InvoiceController;
 use App\Payments\Presentation\Http\Controllers\MetricsController;
 use App\Payments\Presentation\Http\Controllers\PaymentController;
-use App\PaymentLinks\Http\Controllers\PaymentLinkController;
-use App\Payments\Presentation\Http\Controllers\InvoiceController;
 use App\Payments\Presentation\Http\Controllers\PaymentStatusStreamController;
 use App\Payments\Presentation\Http\Controllers\RecurringController;
 use App\Payments\Presentation\Http\Controllers\RefundHistoryController;
-use App\Payments\Presentation\Http\Controllers\WebhookLogController;
 use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
 use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
 use App\Payments\Presentation\Http\Controllers\WebhookController;
+use App\Payments\Presentation\Http\Controllers\WebhookLogController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Unversioned infrastructure endpoints ─────────────────────────────────────
@@ -143,8 +145,8 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
 
     // ── Recurring payments ──────────────────────────────────────────────────
 
-    Route::get('/recurring/methods',  [RecurringController::class, 'methods'])->middleware('throttle:60,1')->name('recurring.methods');
-    Route::post('/recurring/charge',  [RecurringController::class, 'charge'])->middleware('throttle:30,1')->name('recurring.charge');
+    Route::get('/recurring/methods', [RecurringController::class, 'methods'])->middleware('throttle:60,1')->name('recurring.methods');
+    Route::post('/recurring/charge', [RecurringController::class, 'charge'])->middleware('throttle:30,1')->name('recurring.charge');
 
     // ── Webhook Logs (общий список) ─────────────────────────────────────────
 
@@ -155,25 +157,25 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
     // ── Analytics ──────────────────────────────────────────────────────────
 
     Route::prefix('analytics')->name('analytics.')->group(function () {
-        Route::get('/revenue', [\App\Payments\Presentation\Http\Controllers\AnalyticsController::class, 'revenue'])
+        Route::get('/revenue', [AnalyticsController::class, 'revenue'])
             ->middleware('throttle:60,1')
             ->name('revenue');
-        Route::get('/funnel', [\App\Payments\Presentation\Http\Controllers\AnalyticsController::class, 'funnel'])
+        Route::get('/funnel', [AnalyticsController::class, 'funnel'])
             ->middleware('throttle:60,1')
             ->name('funnel');
     });
 
     // ── Audit Logs ─────────────────────────────────────────────────────────
 
-    Route::get('/audit-logs', [\App\Payments\Presentation\Http\Controllers\AuditLogController::class, 'index'])
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])
         ->middleware('throttle:60,1')
         ->name('audit-logs.index');
 
     // ── Payment Links ───────────────────────────────────────────────────────
 
-    Route::get('/payment-links',        [PaymentLinkController::class, 'index'])->middleware('throttle:60,1')->name('payment-links.index');
-    Route::post('/payment-links',       [PaymentLinkController::class, 'store'])->middleware('throttle:30,1')->name('payment-links.store');
-    Route::delete('/payment-links/{id}',[PaymentLinkController::class, 'destroy'])->middleware('throttle:30,1')->name('payment-links.destroy');
+    Route::get('/payment-links', [PaymentLinkController::class, 'index'])->middleware('throttle:60,1')->name('payment-links.index');
+    Route::post('/payment-links', [PaymentLinkController::class, 'store'])->middleware('throttle:30,1')->name('payment-links.store');
+    Route::delete('/payment-links/{id}', [PaymentLinkController::class, 'destroy'])->middleware('throttle:30,1')->name('payment-links.destroy');
 
     // ── Crypto deposits (TON / USDT-TON) ────────────────────────────────────
 

@@ -27,16 +27,16 @@ class WebhookContractTest extends TestCase
     private function createPayment(string $externalId): PaymentModel
     {
         return PaymentModel::create([
-            'id'              => PaymentId::generate()->toString(),
-            'external_id'     => $externalId,
-            'provider'        => 'yookassa',
-            'amount'          => 50000,
+            'id' => PaymentId::generate()->toString(),
+            'external_id' => $externalId,
+            'provider' => 'yookassa',
+            'amount' => 50000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => 'Pending',
-            'description'     => 'Contract test payment',
+            'currency' => 'RUB',
+            'status' => 'Pending',
+            'description' => 'Contract test payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
     }
 
@@ -53,13 +53,13 @@ class WebhookContractTest extends TestCase
         $this->createPayment('22d65900-000f-5000-a000-10d000000099');
 
         $response = $this->postJson('/api/webhook/yookassa', [
-            'type'   => 'notification',
-            'event'  => 'payment.succeeded',
+            'type' => 'notification',
+            'event' => 'payment.succeeded',
             'object' => [
-                'id'     => '22d65900-000f-5000-a000-10d000000099',
+                'id' => '22d65900-000f-5000-a000-10d000000099',
                 'status' => 'succeeded',
                 'amount' => ['value' => '500.00', 'currency' => 'RUB'],
-                'paid'   => true,
+                'paid' => true,
                 'created_at' => '2024-01-01T00:00:00.000Z',
             ],
         ]);
@@ -73,14 +73,14 @@ class WebhookContractTest extends TestCase
         $this->createPayment('22d65900-000f-5000-a000-10d000000100');
 
         $response = $this->postJson('/api/webhook/yookassa', [
-            'type'   => 'notification',
-            'event'  => 'payment.canceled',
+            'type' => 'notification',
+            'event' => 'payment.canceled',
             'object' => [
-                'id'            => '22d65900-000f-5000-a000-10d000000100',
-                'status'        => 'canceled',
+                'id' => '22d65900-000f-5000-a000-10d000000100',
+                'status' => 'canceled',
                 'cancellation_details' => ['reason' => 'card_expired'],
-                'paid'          => false,
-                'created_at'    => '2024-01-01T00:00:00.000Z',
+                'paid' => false,
+                'created_at' => '2024-01-01T00:00:00.000Z',
             ],
         ]);
 
@@ -90,7 +90,7 @@ class WebhookContractTest extends TestCase
     public function test_yookassa_rejects_payload_without_event_field(): void
     {
         $response = $this->postJson('/api/webhook/yookassa', [
-            'type'   => 'notification',
+            'type' => 'notification',
             // нет 'event'
             'object' => ['id' => Str::uuid(), 'status' => 'succeeded'],
         ]);
@@ -112,10 +112,10 @@ class WebhookContractTest extends TestCase
         $payment->update(['provider' => 'robokassa']);
 
         $response = $this->call('POST', '/api/webhook/robokassa', [
-            'OutSum'         => '500.00',
-            'InvId'          => '12345',
-            'SignatureValue' => md5('shop:500.00:12345:password2:Shp_paymentId=' . $payment->id),
-            'Shp_paymentId'  => $payment->id,
+            'OutSum' => '500.00',
+            'InvId' => '12345',
+            'SignatureValue' => md5('shop:500.00:12345:password2:Shp_paymentId='.$payment->id),
+            'Shp_paymentId' => $payment->id,
         ]);
 
         // Robokassa ожидает ответ "OK{InvId}" при успехе или просто 200
@@ -135,11 +135,11 @@ class WebhookContractTest extends TestCase
 
         $body = json_encode([
             'TransactionId' => 123456,
-            'Amount'        => 500.00,
-            'Currency'      => 'RUB',
-            'Status'        => 'Completed',
-            'InvoiceId'     => 'CP-123456',
-            'AccountId'     => 'user@example.com',
+            'Amount' => 500.00,
+            'Currency' => 'RUB',
+            'Status' => 'Completed',
+            'InvoiceId' => 'CP-123456',
+            'AccountId' => 'user@example.com',
         ]) ?: '';
 
         $hmac = base64_encode(hash_hmac('sha256', $body, config('services.cloudpayments.api_secret', 'test'), true));
@@ -165,16 +165,16 @@ class WebhookContractTest extends TestCase
     public function test_sbp_payment_payload_format(): void
     {
         Queue::fake();
-        $this->createPayment('SBP-' . Str::uuid());
+        $this->createPayment('SBP-'.Str::uuid());
 
         $response = $this->postJson(
             '/api/webhook/sbp',
             [
-                'event'     => 'PAYMENT_SUCCEEDED',
-                'paymentId' => 'SBP-' . Str::uuid(),
-                'amount'    => 50000,
-                'currency'  => 'RUB',
-                'status'    => 'SUCCESS',
+                'event' => 'PAYMENT_SUCCEEDED',
+                'paymentId' => 'SBP-'.Str::uuid(),
+                'amount' => 50000,
+                'currency' => 'RUB',
+                'status' => 'SUCCESS',
             ],
             ['X-Api-Key' => config('services.sbp.api_key', 'test-key')]
         );
@@ -194,8 +194,8 @@ class WebhookContractTest extends TestCase
         $response = $this->call('POST', '/api/webhook/alfabank', [
             'orderNumber' => (string) Str::uuid(),
             'orderStatus' => '2',  // 2 = успешно оплачен
-            'amount'      => '50000',
-            'currency'    => '810',
+            'amount' => '50000',
+            'currency' => '810',
         ]);
 
         $this->assertContains($response->status(), [200, 400, 404]);

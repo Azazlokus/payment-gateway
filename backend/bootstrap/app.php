@@ -28,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'correlation' => CorrelationIdMiddleware::class,
-            'auth.api'    => RequireApiKey::class,
+            'auth.api' => RequireApiKey::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

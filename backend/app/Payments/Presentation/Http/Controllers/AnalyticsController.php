@@ -20,14 +20,14 @@ final class AnalyticsController extends Controller
      */
     public function revenue(Request $request): JsonResponse
     {
-        $days     = min((int) $request->query('days', 30), 365);
+        $days = min((int) $request->query('days', 30), 365);
         $provider = $request->query('provider');
 
         $query = DB::table('payments')
             ->where('status', 'Succeeded')
             ->where('created_at', '>=', now()->subDays($days))
             ->whereNull('deleted_at')
-            ->selectRaw("DATE(created_at) as date, SUM(amount) as revenue_kopecks, COUNT(*) as count");
+            ->selectRaw('DATE(created_at) as date, SUM(amount) as revenue_kopecks, COUNT(*) as count');
 
         if ($provider) {
             $query->where('provider', $provider);
@@ -45,10 +45,10 @@ final class AnalyticsController extends Controller
         foreach ($rows as $row) {
             if (isset($filled[$row->date])) {
                 $filled[$row->date] = [
-                    'date'            => $row->date,
+                    'date' => $row->date,
                     'revenue_kopecks' => (int) $row->revenue_kopecks,
-                    'revenue_rub'     => round((int) $row->revenue_kopecks / 100, 2),
-                    'count'           => (int) $row->count,
+                    'revenue_rub' => round((int) $row->revenue_kopecks / 100, 2),
+                    'count' => (int) $row->count,
                 ];
             }
         }
@@ -62,7 +62,7 @@ final class AnalyticsController extends Controller
     public function funnel(Request $request): JsonResponse
     {
         $from = $request->query('from', now()->subDays(30)->toDateString());
-        $to   = $request->query('to',   now()->toDateString());
+        $to = $request->query('to', now()->toDateString());
 
         $rows = DB::table('payments')
             ->whereNull('deleted_at')
@@ -74,17 +74,17 @@ final class AnalyticsController extends Controller
         $total = $rows->sum('count');
 
         $funnel = $rows->map(fn ($row) => [
-            'status'         => $row->status,
-            'count'          => (int) $row->count,
-            'total_rub'      => round((int) $row->total_kopecks / 100, 2),
+            'status' => $row->status,
+            'count' => (int) $row->count,
+            'total_rub' => round((int) $row->total_kopecks / 100, 2),
             'conversion_pct' => $total > 0 ? round((int) $row->count / $total * 100, 1) : 0,
         ])->values();
 
         return response()->json([
-            'data'  => $funnel,
+            'data' => $funnel,
             'total' => (int) $total,
-            'from'  => $from,
-            'to'    => $to,
+            'from' => $from,
+            'to' => $to,
         ]);
     }
 }

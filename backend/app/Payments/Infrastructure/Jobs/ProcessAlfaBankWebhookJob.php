@@ -31,14 +31,14 @@ final class ProcessAlfaBankWebhookJob implements ShouldQueue
         PaymentRepositoryInterface $repository,
         PaymentLogger $logger,
     ): void {
-        $mdOrder   = (string) ($this->payload['mdOrder'] ?? '');
+        $mdOrder = (string) ($this->payload['mdOrder'] ?? '');
         $operation = (string) ($this->payload['operation'] ?? '');
 
         $payment = $repository->findByExternalId($mdOrder);
 
         if ($payment === null) {
             $logger->warning('Альфа-Банк webhook job: платёж не найден', [
-                'md_order'  => $mdOrder,
+                'md_order' => $mdOrder,
                 'operation' => $operation,
             ]);
 
@@ -49,7 +49,7 @@ final class ProcessAlfaBankWebhookJob implements ShouldQueue
             match ($operation) {
                 'deposited' => $payment->markAsSucceeded(ExternalId::fromString($mdOrder)),
 
-                'refunded'  => $payment->refund($payment->amount()),
+                'refunded' => $payment->refund($payment->amount()),
 
                 'reversed',
                 'declinedByTimeout' => $payment->cancel('Cancelled by Alfa-Bank'),
@@ -65,27 +65,27 @@ final class ProcessAlfaBankWebhookJob implements ShouldQueue
 
             $logger->info('Альфа-Банк webhook job: обработан', [
                 'payment_id' => $payment->id()->toString(),
-                'md_order'   => $mdOrder,
-                'operation'  => $operation,
+                'md_order' => $mdOrder,
+                'operation' => $operation,
             ]);
         } catch (InvalidPaymentStateException) {
             $logger->info('Альфа-Банк webhook job: платёж уже в терминальном статусе (пропущено)', [
                 'payment_id' => $payment->id()->toString(),
-                'md_order'   => $mdOrder,
+                'md_order' => $mdOrder,
             ]);
         }
     }
 
     public function failed(Throwable $exception): void
     {
-        $mdOrder   = $this->payload['mdOrder'] ?? 'unknown';
+        $mdOrder = $this->payload['mdOrder'] ?? 'unknown';
         $operation = $this->payload['operation'] ?? 'unknown';
 
         logger()->critical('Альфа-Банк webhook: обработка окончательно не удалась', [
-            'md_order'  => $mdOrder,
+            'md_order' => $mdOrder,
             'operation' => $operation,
-            'error'     => $exception->getMessage(),
-            'payload'   => $this->payload,
+            'error' => $exception->getMessage(),
+            'payload' => $this->payload,
         ]);
 
         $slackUrl = config('services.slack.webhook_url');

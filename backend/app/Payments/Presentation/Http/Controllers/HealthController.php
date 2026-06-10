@@ -74,9 +74,9 @@ final class HealthController extends Controller
 
         return response()->json(
             [
-                'status'  => $healthy ? 'ok' : 'error',
-                'db'      => $dbStatus,
-                'redis'   => $redisStatus,
+                'status' => $healthy ? 'ok' : 'error',
+                'db' => $dbStatus,
+                'redis' => $redisStatus,
                 'horizon' => $horizonStatus,
             ],
             $healthy ? Response::HTTP_OK : Response::HTTP_SERVICE_UNAVAILABLE,

@@ -28,11 +28,11 @@ final class PaymentLink extends Model
     ];
 
     protected $casts = [
-        'metadata'   => 'array',
+        'metadata' => 'array',
         'expires_at' => 'datetime',
-        'max_uses'   => 'integer',
-        'uses'       => 'integer',
-        'amount'     => 'integer',
+        'max_uses' => 'integer',
+        'uses' => 'integer',
+        'amount' => 'integer',
     ];
 
     public function isExpired(): bool

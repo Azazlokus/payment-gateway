@@ -27,8 +27,8 @@ final class OutboundWebhookLog extends Model
     ];
 
     protected $casts = [
-        'payload'  => 'array',
-        'success'  => 'boolean',
-        'sent_at'  => 'datetime',
+        'payload' => 'array',
+        'success' => 'boolean',
+        'sent_at' => 'datetime',
     ];
 }

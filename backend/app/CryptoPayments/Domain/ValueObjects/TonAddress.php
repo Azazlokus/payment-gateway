@@ -48,7 +48,7 @@ final readonly class TonAddress
 
         // Bounceable (EQ prefix) → non-bounceable (UQ prefix)
         if (str_starts_with($this->value, 'EQ')) {
-            return new self('UQ' . substr($this->value, 2));
+            return new self('UQ'.substr($this->value, 2));
         }
 
         // Other formats — return as-is

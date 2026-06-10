@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Payments\Application\PaymentProviderRegistry;
-use App\Payments\Infrastructure\Antifraud\VelocityChecker;
-use App\Payments\Infrastructure\Antifraud\VelocityRule;
 use App\Payments\Domain\Contracts\DisputeRepositoryInterface;
 use App\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
+use App\Payments\Infrastructure\Antifraud\VelocityChecker;
+use App\Payments\Infrastructure\Antifraud\VelocityRule;
 use App\Payments\Infrastructure\CircuitBreaker\CircuitBreaker;
 use App\Payments\Infrastructure\CircuitBreaker\CircuitBreakerProviderProxy;
 use App\Payments\Infrastructure\Observability\AuditLogger;
@@ -158,7 +158,7 @@ class PaymentServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->app['router']->aliasMiddleware('correlation', CorrelationIdMiddleware::class);
+        $this->app->make('router')->aliasMiddleware('correlation', CorrelationIdMiddleware::class);
 
         RateLimiter::for('webhook.yookassa', fn () => Limit::perMinute(300));
         RateLimiter::for('webhook.robokassa', fn () => Limit::perMinute(200));

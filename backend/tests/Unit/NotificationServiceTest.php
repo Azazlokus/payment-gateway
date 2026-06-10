@@ -39,11 +39,11 @@ class NotificationServiceTest extends TestCase
     private function makePayment(array $overrides = []): PaymentResultDTO
     {
         return new PaymentResultDTO(...array_merge([
-            'paymentId'      => 'pay-001',
-            'status'         => 'Succeeded',
-            'amount'         => 50000,
-            'currency'       => 'RUB',
-            'externalId'     => 'ext-001',
+            'paymentId' => 'pay-001',
+            'status' => 'Succeeded',
+            'amount' => 50000,
+            'currency' => 'RUB',
+            'externalId' => 'ext-001',
             'confirmationUrl' => null,
         ], $overrides));
     }
@@ -75,8 +75,7 @@ class NotificationServiceTest extends TestCase
             ['notification_url' => 'https://example.com/notify'],
         );
 
-        Http::assertSent(fn (Request $request) =>
-            $request->url() === 'https://example.com/notify' &&
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://example.com/notify' &&
             $request->method() === 'POST'
         );
     }
@@ -86,17 +85,16 @@ class NotificationServiceTest extends TestCase
         Http::fake(['https://example.com/notify' => Http::response([], 200)]);
 
         $payment = $this->makePayment([
-            'paymentId'  => 'pay-123',
-            'status'     => 'Succeeded',
-            'amount'     => 75000,
-            'currency'   => 'RUB',
+            'paymentId' => 'pay-123',
+            'status' => 'Succeeded',
+            'amount' => 75000,
+            'currency' => 'RUB',
             'externalId' => 'ext-456',
         ]);
 
         $this->service->notify($payment, ['notification_url' => 'https://example.com/notify']);
 
-        Http::assertSent(fn (Request $request) =>
-            $request['event'] === 'payment.status_changed' &&
+        Http::assertSent(fn (Request $request) => $request['event'] === 'payment.status_changed' &&
             $request['payment_id'] === 'pay-123' &&
             $request['status'] === 'Succeeded' &&
             $request['amount'] === 75000 &&

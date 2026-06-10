@@ -44,7 +44,7 @@ final class ProcessCryptoRefundsJob implements ShouldQueue
                     $refunds->save($refund);
                     $logger->warning('Crypto refund skipped: hot wallet not configured', [
                         'refund_id' => $refund->id()->toString(),
-                        'network'   => $client->network(),
+                        'network' => $client->network(),
                     ]);
 
                     continue;
@@ -65,7 +65,7 @@ final class ProcessCryptoRefundsJob implements ShouldQueue
 
                 $logger->info('Crypto refund completed', [
                     'refund_id' => $refund->id()->toString(),
-                    'tx_hash'   => $txHash->toString(),
+                    'tx_hash' => $txHash->toString(),
                 ]);
             } catch (Throwable $e) {
                 $refund->markAsFailed($e->getMessage());
@@ -73,7 +73,7 @@ final class ProcessCryptoRefundsJob implements ShouldQueue
 
                 $logger->error('Crypto refund failed', [
                     'refund_id' => $refund->id()->toString(),
-                    'error'     => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
             }
         }

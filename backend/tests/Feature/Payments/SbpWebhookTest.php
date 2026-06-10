@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
+use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
+use App\Payments\Domain\ValueObjects\PaymentId;
 use App\Payments\Infrastructure\Jobs\ProcessSbpWebhookJob;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
-use App\Payments\Infrastructure\Providers\SbpProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -19,6 +20,7 @@ class SbpWebhookTest extends TestCase
     use RefreshDatabase;
 
     private string $qrId = 'qr-sbp-test-0001';
+
     private string $webhookSecret = 'sbp-test-secret';
 
     protected function setUp(): void
@@ -29,19 +31,19 @@ class SbpWebhookTest extends TestCase
 
     private function createPendingPayment(): string
     {
-        $id = \App\Payments\Domain\ValueObjects\PaymentId::generate()->toString();
+        $id = PaymentId::generate()->toString();
 
         PaymentModel::create([
-            'id'              => $id,
-            'external_id'     => $this->qrId,
-            'provider'        => 'sbp',
-            'amount'          => 5000,
+            'id' => $id,
+            'external_id' => $this->qrId,
+            'provider' => 'sbp',
+            'amount' => 5000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => 'Pending',
-            'description'     => 'Test SBP payment',
+            'currency' => 'RUB',
+            'status' => 'Pending',
+            'description' => 'Test SBP payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
 
         return $id;
@@ -59,7 +61,7 @@ class SbpWebhookTest extends TestCase
         Queue::fake();
 
         $response = $this->postJson('/api/webhook/sbp', [
-            'qrId'   => $this->qrId,
+            'qrId' => $this->qrId,
             'status' => 'PAID',
         ], $this->validHeaders());
 
@@ -74,7 +76,7 @@ class SbpWebhookTest extends TestCase
         Queue::fake();
 
         $response = $this->postJson('/api/webhook/sbp', [
-            'qrId'   => $this->qrId,
+            'qrId' => $this->qrId,
             'status' => 'PAID',
         ], ['X-Api-Key' => 'wrong-key']);
 
@@ -87,7 +89,7 @@ class SbpWebhookTest extends TestCase
         Queue::fake();
 
         $response = $this->postJson('/api/webhook/sbp', [
-            'qrId'   => $this->qrId,
+            'qrId' => $this->qrId,
             'status' => 'PAID',
         ]);
 
@@ -115,12 +117,12 @@ class SbpWebhookTest extends TestCase
 
         $job = new ProcessSbpWebhookJob(['qrId' => $this->qrId, 'status' => 'PAID']);
         $job->handle(
-            $this->app->make(\App\Payments\Domain\Contracts\PaymentRepositoryInterface::class),
+            $this->app->make(PaymentRepositoryInterface::class),
             $this->app->make(PaymentLogger::class),
         );
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $paymentId,
+            'id' => $paymentId,
             'status' => 'Succeeded',
         ]);
     }
@@ -131,12 +133,12 @@ class SbpWebhookTest extends TestCase
 
         $job = new ProcessSbpWebhookJob(['qrId' => $this->qrId, 'status' => 'CANCELLED']);
         $job->handle(
-            $this->app->make(\App\Payments\Domain\Contracts\PaymentRepositoryInterface::class),
+            $this->app->make(PaymentRepositoryInterface::class),
             $this->app->make(PaymentLogger::class),
         );
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $paymentId,
+            'id' => $paymentId,
             'status' => 'Cancelled',
         ]);
     }
@@ -147,12 +149,12 @@ class SbpWebhookTest extends TestCase
 
         $job = new ProcessSbpWebhookJob(['qrId' => $this->qrId, 'status' => 'EXPIRED']);
         $job->handle(
-            $this->app->make(\App\Payments\Domain\Contracts\PaymentRepositoryInterface::class),
+            $this->app->make(PaymentRepositoryInterface::class),
             $this->app->make(PaymentLogger::class),
         );
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $paymentId,
+            'id' => $paymentId,
             'status' => 'Cancelled',
         ]);
     }
@@ -163,12 +165,12 @@ class SbpWebhookTest extends TestCase
 
         $job = new ProcessSbpWebhookJob(['qrId' => $this->qrId, 'status' => 'PROCESSING']);
         $job->handle(
-            $this->app->make(\App\Payments\Domain\Contracts\PaymentRepositoryInterface::class),
+            $this->app->make(PaymentRepositoryInterface::class),
             $this->app->make(PaymentLogger::class),
         );
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $paymentId,
+            'id' => $paymentId,
             'status' => 'Pending',
         ]);
     }
@@ -178,7 +180,7 @@ class SbpWebhookTest extends TestCase
         // No payment in DB
         $job = new ProcessSbpWebhookJob(['qrId' => 'nonexistent-qr', 'status' => 'PAID']);
         $job->handle(
-            $this->app->make(\App\Payments\Domain\Contracts\PaymentRepositoryInterface::class),
+            $this->app->make(PaymentRepositoryInterface::class),
             $this->app->make(PaymentLogger::class),
         );
 
@@ -188,24 +190,24 @@ class SbpWebhookTest extends TestCase
     public function test_job_is_idempotent_on_already_succeeded_payment(): void
     {
         // Create already-succeeded payment
-        $id = \App\Payments\Domain\ValueObjects\PaymentId::generate()->toString();
+        $id = PaymentId::generate()->toString();
         PaymentModel::create([
-            'id'              => $id,
-            'external_id'     => $this->qrId,
-            'provider'        => 'sbp',
-            'amount'          => 5000,
+            'id' => $id,
+            'external_id' => $this->qrId,
+            'provider' => 'sbp',
+            'amount' => 5000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => 'Succeeded',
-            'description'     => 'Already succeeded',
+            'currency' => 'RUB',
+            'status' => 'Succeeded',
+            'description' => 'Already succeeded',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
 
         // Should not throw, just silently skip
         $job = new ProcessSbpWebhookJob(['qrId' => $this->qrId, 'status' => 'PAID']);
         $job->handle(
-            $this->app->make(\App\Payments\Domain\Contracts\PaymentRepositoryInterface::class),
+            $this->app->make(PaymentRepositoryInterface::class),
             $this->app->make(PaymentLogger::class),
         );
 

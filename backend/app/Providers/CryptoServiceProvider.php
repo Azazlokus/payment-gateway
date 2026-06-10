@@ -6,10 +6,8 @@ namespace App\Providers;
 
 use App\CryptoPayments\Application\ACL\CryptoDepositToPaymentAdapter;
 use App\CryptoPayments\Application\Commands\CreateCryptoRefund\CreateCryptoRefundHandler;
-use App\CryptoPayments\Domain\Contracts\CryptoRefundRepositoryInterface;
-use App\CryptoPayments\Infrastructure\Persistence\EloquentCryptoRefundRepository;
-use App\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
 use App\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
+use App\CryptoPayments\Domain\Contracts\CryptoRefundRepositoryInterface;
 use App\CryptoPayments\Domain\Contracts\PriceOracleInterface;
 use App\CryptoPayments\Infrastructure\Blockchain\BitcoinBlockchainClient;
 use App\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry;
@@ -17,6 +15,7 @@ use App\CryptoPayments\Infrastructure\Blockchain\TonBlockchainClient;
 use App\CryptoPayments\Infrastructure\Blockchain\TronBlockchainClient;
 use App\CryptoPayments\Infrastructure\Observability\CryptoMetricsService;
 use App\CryptoPayments\Infrastructure\Persistence\EloquentCryptoDepositRepository;
+use App\CryptoPayments\Infrastructure\Persistence\EloquentCryptoRefundRepository;
 use App\CryptoPayments\Infrastructure\Pricing\CoinGeckoPriceOracle;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Payments\Infrastructure\Observability\MetricsService;
@@ -63,7 +62,7 @@ class CryptoServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(BlockchainClientRegistry::class, function () {
-            $registry = new BlockchainClientRegistry();
+            $registry = new BlockchainClientRegistry;
             $registry->register($this->app->make(TonBlockchainClient::class));
             $registry->register($this->app->make(TronBlockchainClient::class));
             $registry->register($this->app->make(BitcoinBlockchainClient::class));

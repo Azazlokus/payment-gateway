@@ -9,6 +9,7 @@ use App\Payments\Domain\ValueObjects\PaymentId;
 use App\Payments\Infrastructure\Jobs\ProcessAlfaBankWebhookJob;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
+use App\Payments\Infrastructure\Providers\AlfaBankProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -27,7 +28,7 @@ class AlfaBankWebhookTest extends TestCase
 
         // Override the AlfaBankProvider singleton with empty webhook_ips so 127.0.0.1 is allowed
         config(['payments.alfabank.webhook_ips' => []]);
-        $this->app->forgetInstance(\App\Payments\Infrastructure\Providers\AlfaBankProvider::class);
+        $this->app->forgetInstance(AlfaBankProvider::class);
     }
 
     private function createPayment(string $status = 'Pending', string $externalId = ''): string
@@ -35,16 +36,16 @@ class AlfaBankWebhookTest extends TestCase
         $id = PaymentId::generate()->toString();
 
         PaymentModel::create([
-            'id'              => $id,
-            'external_id'     => $externalId ?: $this->mdOrder,
-            'provider'        => 'alfabank',
-            'amount'          => 7500,
+            'id' => $id,
+            'external_id' => $externalId ?: $this->mdOrder,
+            'provider' => 'alfabank',
+            'amount' => 7500,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => $status,
-            'description'     => 'Test Alfa-Bank payment',
+            'currency' => 'RUB',
+            'status' => $status,
+            'description' => 'Test Alfa-Bank payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
 
         return $id;
@@ -57,9 +58,9 @@ class AlfaBankWebhookTest extends TestCase
         Queue::fake();
 
         $response = $this->post('/api/webhook/alfabank', [
-            'mdOrder'   => $this->mdOrder,
+            'mdOrder' => $this->mdOrder,
             'operation' => 'deposited',
-            'status'    => '1',
+            'status' => '1',
         ]);
 
         $response->assertStatus(Response::HTTP_OK);
@@ -97,7 +98,7 @@ class AlfaBankWebhookTest extends TestCase
         $paymentId = $this->createPayment('Pending');
 
         $job = new ProcessAlfaBankWebhookJob([
-            'mdOrder'   => $this->mdOrder,
+            'mdOrder' => $this->mdOrder,
             'operation' => 'deposited',
         ]);
         $job->handle(
@@ -106,7 +107,7 @@ class AlfaBankWebhookTest extends TestCase
         );
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $paymentId,
+            'id' => $paymentId,
             'status' => 'Succeeded',
         ]);
     }
@@ -116,7 +117,7 @@ class AlfaBankWebhookTest extends TestCase
         $paymentId = $this->createPayment('Succeeded');
 
         $job = new ProcessAlfaBankWebhookJob([
-            'mdOrder'   => $this->mdOrder,
+            'mdOrder' => $this->mdOrder,
             'operation' => 'refunded',
         ]);
         $job->handle(
@@ -125,7 +126,7 @@ class AlfaBankWebhookTest extends TestCase
         );
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $paymentId,
+            'id' => $paymentId,
             'status' => 'Refunded',
         ]);
     }
@@ -135,7 +136,7 @@ class AlfaBankWebhookTest extends TestCase
         $paymentId = $this->createPayment('Pending');
 
         $job = new ProcessAlfaBankWebhookJob([
-            'mdOrder'   => $this->mdOrder,
+            'mdOrder' => $this->mdOrder,
             'operation' => 'reversed',
         ]);
         $job->handle(
@@ -144,7 +145,7 @@ class AlfaBankWebhookTest extends TestCase
         );
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $paymentId,
+            'id' => $paymentId,
             'status' => 'Cancelled',
         ]);
     }
@@ -154,7 +155,7 @@ class AlfaBankWebhookTest extends TestCase
         $paymentId = $this->createPayment('Pending');
 
         $job = new ProcessAlfaBankWebhookJob([
-            'mdOrder'   => $this->mdOrder,
+            'mdOrder' => $this->mdOrder,
             'operation' => 'declinedByTimeout',
         ]);
         $job->handle(
@@ -163,7 +164,7 @@ class AlfaBankWebhookTest extends TestCase
         );
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $paymentId,
+            'id' => $paymentId,
             'status' => 'Cancelled',
         ]);
     }
@@ -173,7 +174,7 @@ class AlfaBankWebhookTest extends TestCase
         $paymentId = $this->createPayment('Pending');
 
         $job = new ProcessAlfaBankWebhookJob([
-            'mdOrder'   => $this->mdOrder,
+            'mdOrder' => $this->mdOrder,
             'operation' => 'somethingElse',
         ]);
         $job->handle(
@@ -182,7 +183,7 @@ class AlfaBankWebhookTest extends TestCase
         );
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $paymentId,
+            'id' => $paymentId,
             'status' => 'Pending',
         ]);
     }
@@ -190,7 +191,7 @@ class AlfaBankWebhookTest extends TestCase
     public function test_job_does_nothing_when_payment_not_found(): void
     {
         $job = new ProcessAlfaBankWebhookJob([
-            'mdOrder'   => 'nonexistent-order',
+            'mdOrder' => 'nonexistent-order',
             'operation' => 'deposited',
         ]);
         $job->handle(
@@ -207,7 +208,7 @@ class AlfaBankWebhookTest extends TestCase
 
         // Duplicate deposited webhook should not crash
         $job = new ProcessAlfaBankWebhookJob([
-            'mdOrder'   => $this->mdOrder,
+            'mdOrder' => $this->mdOrder,
             'operation' => 'deposited',
         ]);
         $job->handle(

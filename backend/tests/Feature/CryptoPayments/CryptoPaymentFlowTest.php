@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\CryptoPayments;
 
 use App\CryptoPayments\Application\ACL\CryptoDepositToPaymentAdapter;
-use App\CryptoPayments\Application\Commands\CreateCryptoRefund\CreateCryptoRefundCommand;
-use App\CryptoPayments\Application\Commands\CreateCryptoRefund\CreateCryptoRefundHandler;
 use App\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
 use App\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
 use App\CryptoPayments\Domain\Contracts\CryptoRefundRepositoryInterface;
@@ -15,19 +13,16 @@ use App\CryptoPayments\Domain\Enums\CryptoAsset;
 use App\CryptoPayments\Domain\Enums\CryptoDepositStatus;
 use App\CryptoPayments\Domain\Enums\CryptoRefundStatus;
 use App\CryptoPayments\Domain\Enums\DepositMode;
-use App\CryptoPayments\Domain\Events\DepositConfirmed;
 use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
 use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
-use App\CryptoPayments\Domain\ValueObjects\Memo;
+use App\CryptoPayments\Domain\ValueObjects\CryptoRefundId;
 use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
 use App\CryptoPayments\Domain\ValueObjects\TransactionResult;
 use App\CryptoPayments\Domain\ValueObjects\TxHash;
 use App\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry;
-use App\CryptoPayments\Infrastructure\Jobs\ProcessCryptoRefundsJob;
 use App\CryptoPayments\Infrastructure\Jobs\PollCryptoDepositsJob;
+use App\CryptoPayments\Infrastructure\Jobs\ProcessCryptoRefundsJob;
 use App\CryptoPayments\Infrastructure\Observability\CryptoMetricsService;
-use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
-use App\Payments\Infrastructure\Observability\MetricsService;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
 use DateTimeImmutable;
@@ -44,7 +39,8 @@ class CryptoPaymentFlowTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const MASTER  = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
+    private const MASTER = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
+
     private const TX_HASH = 'abc123def456abc123def456abc123def456abc123def456abc123def456abc1';
 
     private BlockchainClientInterface $mockClient;
@@ -82,32 +78,32 @@ class CryptoPaymentFlowTest extends TestCase
     {
         // 1. Create a payment in DB (simulate existing payment)
         $payment = PaymentModel::create([
-            'id'                  => 'pay-e2e-001',
-            'provider'            => 'crypto',
-            'amount'              => 5000,
-            'currency'            => 'RUB',
-            'status'              => 'pending',
-            'external_id'         => null,
-            'idempotency_key'     => null,
-            'description'         => 'E2E test payment',
-            'customer_email'      => null,
-            'metadata'            => null,
-            'three_ds_required'   => false,
+            'id' => 'pay-e2e-001',
+            'provider' => 'crypto',
+            'amount' => 5000,
+            'currency' => 'RUB',
+            'status' => 'pending',
+            'external_id' => null,
+            'idempotency_key' => null,
+            'description' => 'E2E test payment',
+            'customer_email' => null,
+            'metadata' => null,
+            'three_ds_required' => false,
             'three_ds_challenge_url' => null,
-            'refunded_amount'     => 0,
-            'payment_method_id'   => null,
+            'refunded_amount' => 0,
+            'payment_method_id' => null,
         ]);
 
         // 2. Create crypto deposit via API
         $response = $this->postJson('/api/v1/crypto/deposits', [
-            'payment_id'          => $payment->id,
+            'payment_id' => $payment->id,
             'fiat_amount_kopecks' => 5000,
-            'asset'               => 'TON',
+            'asset' => 'TON',
         ]);
 
         $response->assertStatus(201);
         $depositId = $response->json('depositId');
-        $memo      = $response->json('memo');
+        $memo = $response->json('memo');
 
         $this->assertNotEmpty($depositId);
         $this->assertNotEmpty($memo);
@@ -118,7 +114,7 @@ class CryptoPaymentFlowTest extends TestCase
                 $memo => new TransactionResult(
                     hash: TxHash::fromString(self::TX_HASH),
                     actualAmount: NativeCryptoAmount::ofNanotons(125_000_000),
-                    confirmedAt: new DateTimeImmutable(),
+                    confirmedAt: new DateTimeImmutable,
                 ),
             ]);
 
@@ -133,7 +129,7 @@ class CryptoPaymentFlowTest extends TestCase
 
         // 5. Verify deposit status is Confirmed
         $repository = app(CryptoDepositRepositoryInterface::class);
-        $deposit    = $repository->findById(CryptoDepositId::fromString($depositId));
+        $deposit = $repository->findById(CryptoDepositId::fromString($depositId));
 
         $this->assertNotNull($deposit);
         $this->assertSame(CryptoDepositStatus::Confirmed, $deposit->status());
@@ -144,9 +140,9 @@ class CryptoPaymentFlowTest extends TestCase
     {
         // Create deposit
         $createResp = $this->postJson('/api/v1/crypto/deposits', [
-            'payment_id'          => 'pay-e2e-show',
+            'payment_id' => 'pay-e2e-show',
             'fiat_amount_kopecks' => 5000,
-            'asset'               => 'TON',
+            'asset' => 'TON',
         ]);
         $createResp->assertStatus(201);
         $depositId = $createResp->json('depositId');
@@ -162,7 +158,7 @@ class CryptoPaymentFlowTest extends TestCase
                 $memo => new TransactionResult(
                     hash: TxHash::fromString(self::TX_HASH),
                     actualAmount: NativeCryptoAmount::ofNanotons(125_000_000),
-                    confirmedAt: new DateTimeImmutable(),
+                    confirmedAt: new DateTimeImmutable,
                 ),
             ]);
 
@@ -186,19 +182,19 @@ class CryptoPaymentFlowTest extends TestCase
     {
         // Create and confirm deposit
         $createResp = $this->postJson('/api/v1/crypto/deposits', [
-            'payment_id'          => 'pay-e2e-refund',
+            'payment_id' => 'pay-e2e-refund',
             'fiat_amount_kopecks' => 5000,
-            'asset'               => 'TON',
+            'asset' => 'TON',
         ]);
         $depositId = $createResp->json('depositId');
-        $memo      = $createResp->json('memo');
+        $memo = $createResp->json('memo');
 
         $this->mockClient->shouldReceive('findIncomingTransactionsBatch')
             ->andReturn([
                 $memo => new TransactionResult(
                     hash: TxHash::fromString(self::TX_HASH),
                     actualAmount: NativeCryptoAmount::ofNanotons(125_000_000),
-                    confirmedAt: new DateTimeImmutable(),
+                    confirmedAt: new DateTimeImmutable,
                 ),
             ]);
 
@@ -224,9 +220,9 @@ class CryptoPaymentFlowTest extends TestCase
     public function test_refund_rejected_for_awaiting_deposit(): void
     {
         $createResp = $this->postJson('/api/v1/crypto/deposits', [
-            'payment_id'          => 'pay-e2e-refund-fail',
+            'payment_id' => 'pay-e2e-refund-fail',
             'fiat_amount_kopecks' => 5000,
-            'asset'               => 'TON',
+            'asset' => 'TON',
         ]);
         $depositId = $createResp->json('depositId');
 
@@ -242,19 +238,19 @@ class CryptoPaymentFlowTest extends TestCase
     {
         // Create and confirm
         $createResp = $this->postJson('/api/v1/crypto/deposits', [
-            'payment_id'          => 'pay-e2e-dup-refund',
+            'payment_id' => 'pay-e2e-dup-refund',
             'fiat_amount_kopecks' => 5000,
-            'asset'               => 'TON',
+            'asset' => 'TON',
         ]);
         $depositId = $createResp->json('depositId');
-        $memo      = $createResp->json('memo');
+        $memo = $createResp->json('memo');
 
         $this->mockClient->shouldReceive('findIncomingTransactionsBatch')
             ->andReturn([
                 $memo => new TransactionResult(
                     hash: TxHash::fromString(self::TX_HASH),
                     actualAmount: NativeCryptoAmount::ofNanotons(125_000_000),
-                    confirmedAt: new DateTimeImmutable(),
+                    confirmedAt: new DateTimeImmutable,
                 ),
             ]);
 
@@ -279,19 +275,19 @@ class CryptoPaymentFlowTest extends TestCase
     {
         // Confirm deposit and create refund request
         $createResp = $this->postJson('/api/v1/crypto/deposits', [
-            'payment_id'          => 'pay-e2e-job-refund',
+            'payment_id' => 'pay-e2e-job-refund',
             'fiat_amount_kopecks' => 5000,
-            'asset'               => 'TON',
+            'asset' => 'TON',
         ]);
         $depositId = $createResp->json('depositId');
-        $memo      = $createResp->json('memo');
+        $memo = $createResp->json('memo');
 
         $this->mockClient->shouldReceive('findIncomingTransactionsBatch')
             ->andReturn([
                 $memo => new TransactionResult(
                     hash: TxHash::fromString(self::TX_HASH),
                     actualAmount: NativeCryptoAmount::ofNanotons(125_000_000),
-                    confirmedAt: new DateTimeImmutable(),
+                    confirmedAt: new DateTimeImmutable,
                 ),
             ]);
 
@@ -316,8 +312,8 @@ class CryptoPaymentFlowTest extends TestCase
         );
 
         $refundRepo = app(CryptoRefundRepositoryInterface::class);
-        $refund     = $refundRepo->findById(
-            \App\CryptoPayments\Domain\ValueObjects\CryptoRefundId::fromString($refundId)
+        $refund = $refundRepo->findById(
+            CryptoRefundId::fromString($refundId)
         );
 
         $this->assertNotNull($refund);

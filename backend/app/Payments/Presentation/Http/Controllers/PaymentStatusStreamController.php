@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Payments\Presentation\Http\Controllers;
 
+use App\Payments\Application\DTOs\PaymentResultDTO;
 use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Payments\Domain\Enums\PaymentStatus;
 use App\Payments\Domain\ValueObjects\PaymentId;
@@ -67,12 +68,12 @@ final class PaymentStatusStreamController extends Controller
                     break;
                 }
 
-                $resource = new PaymentResource($payment);
+                $resource = new PaymentResource(PaymentResultDTO::fromAggregate($payment));
                 $this->sendEvent('status', $resource->resolve());
 
-                if (in_array($payment->status, self::TERMINAL_STATUSES, strict: true)) {
+                if (in_array($payment->status(), self::TERMINAL_STATUSES, strict: true)) {
                     // Терминальный статус — сигнализируем клиенту закрыть EventSource
-                    $this->sendEvent('close', ['status' => $payment->status->value]);
+                    $this->sendEvent('close', ['status' => $payment->status()->value]);
                     break;
                 }
 
@@ -98,7 +99,7 @@ final class PaymentStatusStreamController extends Controller
     private function sendEvent(string $event, array $data): void
     {
         echo "event: {$event}\n";
-        echo 'data: ' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
+        echo 'data: '.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."\n\n";
     }
 
     private function sendKeepAlive(): void

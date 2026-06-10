@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Http;
 
 final class TronBlockchainClient implements BlockchainClientInterface
 {
+    /** @param array<string> $addressPool */
     public function __construct(
         private readonly string $apiUrl,
         private readonly string $apiKey,
@@ -55,7 +56,7 @@ final class TronBlockchainClient implements BlockchainClientInterface
     }
 
     /**
-     * @param  Memo[] $memos
+     * @param  Memo[]  $memos
      * @return array<string, TransactionResult>
      */
     public function findIncomingTransactionsBatch(array $memos, CryptoAsset $asset, DateTimeImmutable $since): array
@@ -78,25 +79,25 @@ final class TronBlockchainClient implements BlockchainClientInterface
         DateTimeImmutable $since,
     ): ?TransactionResult {
         return match ($asset) {
-            CryptoAsset::TRX        => $this->fetchTrxTransaction($address, $since),
+            CryptoAsset::TRX => $this->fetchTrxTransaction($address, $since),
             CryptoAsset::USDT_TRC20 => $this->fetchUsdtTrc20Transaction($address, $since),
-            default                 => null,
+            default => null,
         };
     }
 
     private function fetchTrxTransaction(CryptoAddress $address, DateTimeImmutable $since): ?TransactionResult
     {
         $minTimestampMs = $since->getTimestamp() * 1000;
-        $response       = Http::withHeaders($this->authHeaders())
+        $response = Http::withHeaders($this->authHeaders())
             ->get("{$this->apiUrl}/v1/accounts/{$address->toString()}/transactions", [
-                'only_to'       => 'true',
-                'limit'         => 50,
+                'only_to' => 'true',
+                'limit' => 50,
                 'min_timestamp' => $minTimestampMs,
             ]);
 
         if (! $response->successful()) {
             $this->logger->warning('TronGrid TRX API error', [
-                'status'  => $response->status(),
+                'status' => $response->status(),
                 'address' => $address->toString(),
             ]);
 
@@ -119,14 +120,14 @@ final class TronBlockchainClient implements BlockchainClientInterface
 
             /** @var array<int, array<string, mixed>> $contracts */
             $contracts = $rawData['contract'] ?? [];
-            $contract  = $contracts[0] ?? [];
+            $contract = $contracts[0] ?? [];
 
             if (($contract['type'] ?? '') !== 'TransferContract') {
                 continue;
             }
 
             /** @var array<string, mixed> $param */
-            $param  = $contract['parameter']['value'] ?? [];
+            $param = $contract['parameter']['value'] ?? [];
             $amount = (int) ($param['amount'] ?? 0);
 
             if ($amount <= 0) {
@@ -140,7 +141,7 @@ final class TronBlockchainClient implements BlockchainClientInterface
             }
 
             $blockTs = (int) ($rawData['timestamp'] ?? 0);
-            $utime   = (int) ($blockTs / 1000);
+            $utime = (int) ($blockTs / 1000);
 
             return new TransactionResult(
                 hash: TxHash::fromString($txHash),
@@ -155,17 +156,17 @@ final class TronBlockchainClient implements BlockchainClientInterface
     private function fetchUsdtTrc20Transaction(CryptoAddress $address, DateTimeImmutable $since): ?TransactionResult
     {
         $minTimestampMs = $since->getTimestamp() * 1000;
-        $response       = Http::withHeaders($this->authHeaders())
+        $response = Http::withHeaders($this->authHeaders())
             ->get("{$this->apiUrl}/v1/accounts/{$address->toString()}/transactions/trc20", [
                 'contract_address' => $this->usdtContract,
-                'only_to'          => 'true',
-                'limit'            => 50,
-                'min_timestamp'    => $minTimestampMs,
+                'only_to' => 'true',
+                'limit' => 50,
+                'min_timestamp' => $minTimestampMs,
             ]);
 
         if (! $response->successful()) {
             $this->logger->warning('TronGrid USDT-TRC20 API error', [
-                'status'  => $response->status(),
+                'status' => $response->status(),
                 'address' => $address->toString(),
             ]);
 
@@ -195,7 +196,7 @@ final class TronBlockchainClient implements BlockchainClientInterface
             }
 
             $blockTs = (int) ($transfer['block_timestamp'] ?? 0);
-            $utime   = (int) ($blockTs / 1000);
+            $utime = (int) ($blockTs / 1000);
 
             if ($utime < $since->getTimestamp()) {
                 continue;

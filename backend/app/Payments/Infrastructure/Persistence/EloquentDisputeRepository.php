@@ -20,20 +20,20 @@ final class EloquentDisputeRepository implements DisputeRepositoryInterface
             ['id' => $dispute->id()->toString()],
             [
                 'payment_id' => $dispute->paymentId()->toString(),
-                'status'     => $dispute->status()->value,
-                'amount'     => $dispute->amount()->amount(),
-                'currency'   => $dispute->amount()->currency()->value,
-                'reason'     => $dispute->reason(),
-                'note'       => $dispute->note(),
+                'status' => $dispute->status()->value,
+                'amount' => $dispute->amount()->amount(),
+                'currency' => $dispute->amount()->currency()->value,
+                'reason' => $dispute->reason(),
+                'note' => $dispute->note(),
             ]
         );
 
         foreach ($dispute->pullDomainEvents() as $event) {
             PaymentEventModel::create([
-                'payment_id'  => $dispute->paymentId()->toString(),
-                'event_id'    => $event->eventId,
-                'event_name'  => $event->eventName(),
-                'event_data'  => $event->toArray(),
+                'payment_id' => $dispute->paymentId()->toString(),
+                'event_id' => $event->eventId,
+                'event_name' => $event->eventName(),
+                'event_data' => $event->toArray(),
                 'occurred_at' => $event->occurredAt,
             ]);
         }

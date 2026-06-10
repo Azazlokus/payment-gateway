@@ -40,26 +40,26 @@ final class AuditLogController extends Controller
         }
 
         $perPage = min((int) $request->query('per_page', 30), 100);
-        $page    = max((int) $request->query('page', 1), 1);
-        $offset  = ($page - 1) * $perPage;
+        $page = max((int) $request->query('page', 1), 1);
+        $offset = ($page - 1) * $perPage;
 
         $total = (clone $query)->count();
-        $rows  = $query->offset($offset)->limit($perPage)->get();
+        $rows = $query->offset($offset)->limit($perPage)->get();
 
         return response()->json([
             'data' => $rows->map(fn ($row) => [
-                'id'           => $row->id,
-                'action'       => $row->action,
+                'id' => $row->id,
+                'action' => $row->action,
                 'subject_type' => $row->subject_type,
-                'subject_id'   => $row->subject_id,
-                'ip'           => $row->ip,
+                'subject_id' => $row->subject_id,
+                'ip' => $row->ip,
                 'api_key_hint' => $row->api_key_hint,
-                'metadata'     => $row->metadata ? json_decode($row->metadata, true) : null,
-                'created_at'   => $row->created_at,
+                'metadata' => $row->metadata ? json_decode($row->metadata, true) : null,
+                'created_at' => $row->created_at,
             ])->values(),
-            'total'        => $total,
+            'total' => $total,
             'current_page' => $page,
-            'last_page'    => (int) ceil($total / $perPage),
+            'last_page' => (int) ceil($total / $perPage),
         ]);
     }
 }

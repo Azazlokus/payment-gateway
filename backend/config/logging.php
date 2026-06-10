@@ -1,6 +1,8 @@
 <?php
 
+use Monolog\Formatter\LogstashFormatter;
 use Monolog\Handler\NullHandler;
+use Monolog\Handler\SocketHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
@@ -124,32 +126,32 @@ return [
         ],
 
         'logstash' => [
-            'driver'       => 'monolog',
-            'level'        => env('LOG_LEVEL', 'debug'),
-            'handler'      => Monolog\Handler\SocketHandler::class,
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => SocketHandler::class,
             'handler_with' => [
-                'connectionString' => 'tcp://' . env('LOGSTASH_HOST', 'logstash') . ':' . env('LOGSTASH_PORT', '5044'),
+                'connectionString' => 'tcp://'.env('LOGSTASH_HOST', 'logstash').':'.env('LOGSTASH_PORT', '5044'),
                 'connectionTimeout' => 1.0,
-                'persistent'        => false,
+                'persistent' => false,
             ],
-            'formatter'    => Monolog\Formatter\LogstashFormatter::class,
+            'formatter' => LogstashFormatter::class,
             'formatter_with' => [
                 'applicationName' => env('APP_NAME', 'payment-gateway'),
             ],
-            'processors'   => [Monolog\Processor\PsrLogMessageProcessor::class],
+            'processors' => [PsrLogMessageProcessor::class],
         ],
 
         'payments' => [
-            'driver'   => 'stack',
+            'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_PAYMENTS_STACK', 'payments_file')),
             // Set LOG_PAYMENTS_STACK=payments_file,logstash to enable ELK shipping
         ],
 
         'payments_file' => [
             'driver' => 'daily',
-            'path'   => storage_path('logs/payments.log'),
-            'level'  => env('LOG_LEVEL', 'debug'),
-            'days'   => 14,
+            'path' => storage_path('logs/payments.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
             'replace_placeholders' => true,
         ],
 

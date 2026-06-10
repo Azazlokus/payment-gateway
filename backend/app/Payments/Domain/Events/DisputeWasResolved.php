@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Payments\Domain\Events;
 
-use App\Payments\Domain\Enums\DisputeStatus;
-
 final readonly class DisputeWasResolved extends DomainEvent
 {
     public function __construct(

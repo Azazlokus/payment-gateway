@@ -41,7 +41,7 @@ interface BlockchainClientInterface
     // ── Memo-based batch polling ──
 
     /**
-     * @param  Memo[] $memos
+     * @param  Memo[]  $memos
      * @return array<string, TransactionResult> key = memo string
      */
     public function findIncomingTransactionsBatch(

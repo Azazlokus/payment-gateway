@@ -20,28 +20,28 @@ class DisputeTest extends TestCase
     private function createPayment(string $status = 'Succeeded'): PaymentModel
     {
         return PaymentModel::create([
-            'id'              => PaymentId::generate()->toString(),
-            'external_id'     => (string) Str::uuid(),
-            'provider'        => 'yookassa',
-            'amount'          => 50000,
+            'id' => PaymentId::generate()->toString(),
+            'external_id' => (string) Str::uuid(),
+            'provider' => 'yookassa',
+            'amount' => 50000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => $status,
-            'description'     => 'Test payment',
+            'currency' => 'RUB',
+            'status' => $status,
+            'description' => 'Test payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
     }
 
     private function createDispute(string $paymentId, string $status = 'Filed'): DisputeModel
     {
         return DisputeModel::create([
-            'id'         => DisputeId::generate()->toString(),
+            'id' => DisputeId::generate()->toString(),
             'payment_id' => $paymentId,
-            'status'     => $status,
-            'amount'     => 50000,
-            'currency'   => 'RUB',
-            'reason'     => 'Товар не получен',
+            'status' => $status,
+            'amount' => 50000,
+            'currency' => 'RUB',
+            'reason' => 'Товар не получен',
         ]);
     }
 
@@ -140,7 +140,7 @@ class DisputeTest extends TestCase
 
         $this->postJson("/api/v1/disputes/{$dispute->id}/resolve", [
             'resolution' => 'Won',
-            'note'       => 'Клиент прав',
+            'note' => 'Клиент прав',
         ])
             ->assertStatus(Response::HTTP_OK)
             ->assertJsonPath('status', 'Won')

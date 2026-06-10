@@ -39,16 +39,16 @@ final class SbpProvider implements PaymentProviderInterface
     ): ProviderResponse {
         $this->logger->info('СБП: создание QR-платежа', [
             'payment_id' => $paymentId,
-            'amount'     => $amount->amount(),
+            'amount' => $amount->amount(),
         ]);
 
         $response = retry(
             times: 3,
             callback: fn () => Http::withToken($this->apiKey)
                 ->post("{$this->baseUrl}/qrc/dynamic", [
-                    'merchantId'  => $this->merchantId,
-                    'amount'      => ['value' => $amount->amount(), 'currency' => $amount->currency()->value],
-                    'order'       => $paymentId,
+                    'merchantId' => $this->merchantId,
+                    'amount' => ['value' => $amount->amount(), 'currency' => $amount->currency()->value],
+                    'order' => $paymentId,
                     'description' => mb_substr($description, 0, 140),
                     'redirectUrl' => $returnUrl,
                 ]),
@@ -60,17 +60,17 @@ final class SbpProvider implements PaymentProviderInterface
             throw new PaymentException("СБП: ошибка создания QR [{$response->status()}]: {$response->body()}");
         }
 
-        $data  = $response->json();
-        $qrId  = $data['qrId'] ?? throw new PaymentException('СБП: ответ не содержит qrId');
+        $data = $response->json();
+        $qrId = $data['qrId'] ?? throw new PaymentException('СБП: ответ не содержит qrId');
         $qrUrl = $data['payload'] ?? '';
 
         $this->logger->info('СБП: QR создан', ['payment_id' => $paymentId, 'qr_id' => $qrId]);
 
         return new ProviderResponse(
-            externalId:      ExternalId::fromString($qrId),
+            externalId: ExternalId::fromString($qrId),
             confirmationUrl: $qrUrl,
-            status:          'pending',
-            rawData:         $data,
+            status: 'pending',
+            rawData: $data,
         );
     }
 
@@ -86,10 +86,10 @@ final class SbpProvider implements PaymentProviderInterface
         $data = $response->json();
 
         return new ProviderResponse(
-            externalId:      $externalId,
+            externalId: $externalId,
             confirmationUrl: '',
-            status:          $this->mapQrStatus($data['qrStatus'] ?? 'UNKNOWN'),
-            rawData:         $data,
+            status: $this->mapQrStatus($data['qrStatus'] ?? 'UNKNOWN'),
+            rawData: $data,
         );
     }
 
@@ -99,8 +99,8 @@ final class SbpProvider implements PaymentProviderInterface
             times: 3,
             callback: fn () => Http::withToken($this->apiKey)
                 ->post("{$this->baseUrl}/refund", [
-                    'qrId'     => $externalId->toString(),
-                    'amount'   => ['value' => $amount->amount(), 'currency' => $amount->currency()->value],
+                    'qrId' => $externalId->toString(),
+                    'amount' => ['value' => $amount->amount(), 'currency' => $amount->currency()->value],
                     'refundId' => (string) Str::uuid(),
                 ]),
             sleepMilliseconds: 500,
@@ -111,7 +111,7 @@ final class SbpProvider implements PaymentProviderInterface
             throw new PaymentException("СБП: ошибка возврата [{$response->status()}]: {$response->body()}");
         }
 
-        $data   = $response->json();
+        $data = $response->json();
         $status = $data['refundStatus'] ?? '';
 
         if ($status === 'DECLINED') {
@@ -119,21 +119,21 @@ final class SbpProvider implements PaymentProviderInterface
         }
 
         $this->logger->info('СБП: возврат создан', [
-            'qr_id'  => $externalId->toString(),
+            'qr_id' => $externalId->toString(),
             'amount' => $amount->amount(),
         ]);
 
         return new ProviderResponse(
-            externalId:      $externalId,
+            externalId: $externalId,
             confirmationUrl: '',
-            status:          'succeeded',
-            rawData:         $data,
+            status: 'succeeded',
+            rawData: $data,
         );
     }
 
     /**
-     * @param array<string, mixed>  $payload
-     * @param array<string, list<string|null>> $headers
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, list<string|null>>  $headers
      */
     public function verifyWebhook(array $payload, array $headers): bool
     {
@@ -154,10 +154,10 @@ final class SbpProvider implements PaymentProviderInterface
         $qrId = (string) ($payload['qrId'] ?? '');
 
         return new ProviderResponse(
-            externalId:      ExternalId::fromString($qrId),
+            externalId: ExternalId::fromString($qrId),
             confirmationUrl: '',
-            status:          $this->mapQrStatus($payload['status'] ?? 'UNKNOWN'),
-            rawData:         $payload,
+            status: $this->mapQrStatus($payload['status'] ?? 'UNKNOWN'),
+            rawData: $payload,
         );
     }
 
@@ -166,9 +166,9 @@ final class SbpProvider implements PaymentProviderInterface
     private function mapQrStatus(string $qrStatus): string
     {
         return match (strtoupper($qrStatus)) {
-            'PAID'                  => 'succeeded',
-            'EXPIRED', 'CANCELLED'  => 'canceled',
-            default                 => 'pending',
+            'PAID' => 'succeeded',
+            'EXPIRED', 'CANCELLED' => 'canceled',
+            default => 'pending',
         };
     }
 

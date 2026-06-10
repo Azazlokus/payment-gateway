@@ -64,7 +64,7 @@ final class PaymentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $perPage = min((int) $request->query('per_page', 15), 100);
-        $cursor = $request->query('cursor');
+        $cursor = $request->string('cursor')->toString();
         $filters = array_filter([
             'status' => $request->query('status'),
             'provider' => $request->query('provider'),
@@ -356,6 +356,10 @@ final class PaymentController extends Controller
 
         return response()->streamDownload(function () use ($filters) {
             $handle = fopen('php://output', 'w');
+
+            if ($handle === false) {
+                return;
+            }
 
             fputcsv($handle, ['id', 'status', 'provider', 'amount', 'currency', 'description', 'external_id', 'created_at']);
 

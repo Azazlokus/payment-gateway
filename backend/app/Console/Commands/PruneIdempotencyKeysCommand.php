@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class PruneIdempotencyKeysCommand extends Command
 {
-    protected $signature   = 'payments:prune-idempotency-keys {--days=90 : Возраст платежей в днях}';
+    protected $signature = 'payments:prune-idempotency-keys {--days=90 : Возраст платежей в днях}';
 
     protected $description = 'Очищает idempotency_key у завершённых платежей старше N дней';
 

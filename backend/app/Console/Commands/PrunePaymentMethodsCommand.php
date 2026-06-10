@@ -17,13 +17,13 @@ use Illuminate\Support\Facades\DB;
  */
 final class PrunePaymentMethodsCommand extends Command
 {
-    protected $signature   = 'payments:prune-payment-methods {--days=365 : Возраст платежей в днях}';
+    protected $signature = 'payments:prune-payment-methods {--days=365 : Возраст платежей в днях}';
 
     protected $description = 'Очищает payment_method_id у завершённых платежей старше N дней';
 
     public function handle(): int
     {
-        $days   = (int) $this->option('days');
+        $days = (int) $this->option('days');
         $cutoff = now()->subDays($days);
 
         // Сначала считаем, чтобы показать информативный вывод

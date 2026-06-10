@@ -55,7 +55,7 @@ final class WebhookController extends Controller
 
         if (! $this->provider->verifyWebhook($payload, $request->headers->all())) {
             $this->logger->warning('Webhook rejected', [
-                'ip'    => $request->ip(),
+                'ip' => $request->ip(),
                 'event' => $payload['event'] ?? 'unknown',
             ]);
 

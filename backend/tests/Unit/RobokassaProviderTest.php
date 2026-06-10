@@ -21,8 +21,10 @@ class RobokassaProviderTest extends TestCase
 
     private MockInterface $logger;
 
-    private string $login     = 'test_merchant';
+    private string $login = 'test_merchant';
+
     private string $password1 = 'test_pass1';
+
     private string $password2 = 'test_pass2';
 
     protected function setUp(): void
@@ -35,11 +37,11 @@ class RobokassaProviderTest extends TestCase
         $this->logger->shouldReceive('error')->andReturnNull()->byDefault();
 
         $this->provider = new RobokassaProvider(
-            login:     $this->login,
+            login: $this->login,
             password1: $this->password1,
             password2: $this->password2,
-            isTest:    true,
-            logger:    $this->logger,
+            isTest: true,
+            logger: $this->logger,
         );
     }
 
@@ -51,10 +53,10 @@ class RobokassaProviderTest extends TestCase
     public function test_create_payment_returns_redirect_url(): void
     {
         $result = $this->provider->createPayment(
-            paymentId:      'internal-pay-001',
-            amount:         Money::ofRub(30000), // 300 RUB
-            description:    'Test Robokassa payment',
-            returnUrl:      'https://example.com/return',
+            paymentId: 'internal-pay-001',
+            amount: Money::ofRub(30000), // 300 RUB
+            description: 'Test Robokassa payment',
+            returnUrl: 'https://example.com/return',
             idempotencyKey: 'idem-key-1',
         );
 
@@ -70,10 +72,10 @@ class RobokassaProviderTest extends TestCase
     public function test_create_payment_uses_internal_id_as_placeholder_external_id(): void
     {
         $result = $this->provider->createPayment(
-            paymentId:      'internal-pay-xyz',
-            amount:         Money::ofRub(10000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'internal-pay-xyz',
+            amount: Money::ofRub(10000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key',
         );
 
@@ -83,17 +85,17 @@ class RobokassaProviderTest extends TestCase
     public function test_create_payment_signature_is_correct(): void
     {
         $paymentId = 'pay-sig-test';
-        $amount    = Money::ofRub(50000); // 500.00 RUB
-        $outSum    = '500.00';
-        $invId     = 0;
+        $amount = Money::ofRub(50000); // 500.00 RUB
+        $outSum = '500.00';
+        $invId = 0;
 
         $expectedSig = md5("{$this->login}:{$outSum}:{$invId}:{$this->password1}:Shp_paymentId={$paymentId}");
 
         $result = $this->provider->createPayment(
-            paymentId:      $paymentId,
-            amount:         $amount,
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: $paymentId,
+            amount: $amount,
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'key',
         );
 
@@ -105,10 +107,10 @@ class RobokassaProviderTest extends TestCase
         $longDesc = str_repeat('а', 150);
 
         $result = $this->provider->createPayment(
-            paymentId:      'pay-001',
-            amount:         Money::ofRub(10000),
-            description:    $longDesc,
-            returnUrl:      'https://example.com',
+            paymentId: 'pay-001',
+            amount: Money::ofRub(10000),
+            description: $longDesc,
+            returnUrl: 'https://example.com',
             idempotencyKey: 'key',
         );
 
@@ -133,13 +135,12 @@ class RobokassaProviderTest extends TestCase
 
         $result = $this->provider->refundPayment(
             externalId: ExternalId::fromString('42'),
-            amount:     Money::ofRub(30000), // 300.00 RUB
+            amount: Money::ofRub(30000), // 300.00 RUB
         );
 
         $this->assertSame('succeeded', $result->status);
 
-        Http::assertSent(fn ($req) =>
-            str_contains($req->url(), '/Payment/Return') &&
+        Http::assertSent(fn ($req) => str_contains($req->url(), '/Payment/Return') &&
             $req['MerchantLogin'] === $this->login &&
             $req['InvoiceID'] === '42' &&
             $req['Amount'] === '300.00'
@@ -157,7 +158,7 @@ class RobokassaProviderTest extends TestCase
 
         $this->provider->refundPayment(
             externalId: ExternalId::fromString('42'),
-            amount:     Money::ofRub(30000),
+            amount: Money::ofRub(30000),
         );
     }
 
@@ -166,14 +167,14 @@ class RobokassaProviderTest extends TestCase
         config(['payments.robokassa.webhook_ips' => []]);
 
         $paymentId = 'pay-001';
-        $outSum    = '300.00';
-        $invId     = '42';
+        $outSum = '300.00';
+        $invId = '42';
         $signature = strtoupper(md5("{$outSum}:{$invId}:{$this->password2}:Shp_paymentId={$paymentId}"));
 
         $result = $this->provider->verifyWebhook([
-            'OutSum'         => $outSum,
-            'InvId'          => $invId,
-            'Shp_paymentId'  => $paymentId,
+            'OutSum' => $outSum,
+            'InvId' => $invId,
+            'Shp_paymentId' => $paymentId,
             'SignatureValue' => $signature,
         ], []);
 
@@ -187,9 +188,9 @@ class RobokassaProviderTest extends TestCase
         $this->logger->shouldReceive('warning')->once();
 
         $result = $this->provider->verifyWebhook([
-            'OutSum'         => '300.00',
-            'InvId'          => '42',
-            'Shp_paymentId'  => 'pay-001',
+            'OutSum' => '300.00',
+            'InvId' => '42',
+            'Shp_paymentId' => 'pay-001',
             'SignatureValue' => 'INVALIDSIG',
         ], []);
 
@@ -203,8 +204,8 @@ class RobokassaProviderTest extends TestCase
         $this->logger->shouldReceive('warning')->once();
 
         $result = $this->provider->verifyWebhook([
-            'OutSum'         => '300.00',
-            'InvId'          => '42',
+            'OutSum' => '300.00',
+            'InvId' => '42',
             'SignatureValue' => 'ANYSIG',
         ], []);
 
@@ -227,8 +228,8 @@ class RobokassaProviderTest extends TestCase
     {
         $result = $this->provider->parseWebhook([
             'Shp_paymentId' => 'pay-001',
-            'InvId'         => '42',
-            'OutSum'        => '300.00',
+            'InvId' => '42',
+            'OutSum' => '300.00',
         ]);
 
         $this->assertSame('succeeded', $result->status);
@@ -239,8 +240,8 @@ class RobokassaProviderTest extends TestCase
     {
         $result = $this->provider->parseWebhook([
             'Shp_paymentId' => 'pay-001',
-            'InvId'         => '42',
-            'OutSum'        => '300.00',
+            'InvId' => '42',
+            'OutSum' => '300.00',
         ]);
 
         $this->assertSame('42', $result->rawData['inv_id'] ?? null);
@@ -250,10 +251,10 @@ class RobokassaProviderTest extends TestCase
     public function test_kopecks_are_converted_to_rubles_correctly(): void
     {
         $result = $this->provider->createPayment(
-            paymentId:      'pay-001',
-            amount:         Money::ofRub(99999), // 999.99 RUB
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'pay-001',
+            amount: Money::ofRub(99999), // 999.99 RUB
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'key',
         );
 

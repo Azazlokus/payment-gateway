@@ -61,11 +61,11 @@ final class RobokassaWebhookController extends Controller
     public function handle(Request $request): Response
     {
         $payload = $request->all();
-        $invId   = (string) ($payload['InvId'] ?? '');
+        $invId = (string) ($payload['InvId'] ?? '');
 
         if (! $this->provider->verifyWebhook($payload, [])) {
             $this->logger->warning('Robokassa webhook rejected', [
-                'ip'    => $request->ip(),
+                'ip' => $request->ip(),
                 'invId' => $invId,
             ]);
 
@@ -73,7 +73,7 @@ final class RobokassaWebhookController extends Controller
         }
 
         $this->logger->info('Robokassa webhook received, dispatching job', [
-            'inv_id'         => $invId,
+            'inv_id' => $invId,
             'shp_payment_id' => $payload['Shp_paymentId'] ?? 'unknown',
         ]);
 

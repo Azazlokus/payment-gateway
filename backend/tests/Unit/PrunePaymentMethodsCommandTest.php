@@ -17,17 +17,17 @@ class PrunePaymentMethodsCommandTest extends TestCase
     private function makePayment(string $status, ?string $paymentMethodId, int $daysAgo = 0): PaymentModel
     {
         $model = PaymentModel::create([
-            'id'                => PaymentId::generate()->toString(),
-            'external_id'       => (string) Str::uuid(),
-            'provider'          => 'yookassa',
-            'amount'            => 10000,
-            'refunded_amount'   => 0,
-            'currency'          => 'RUB',
-            'status'            => $status,
-            'description'       => 'Test',
-            'idempotency_key'   => (string) Str::uuid(),
+            'id' => PaymentId::generate()->toString(),
+            'external_id' => (string) Str::uuid(),
+            'provider' => 'yookassa',
+            'amount' => 10000,
+            'refunded_amount' => 0,
+            'currency' => 'RUB',
+            'status' => $status,
+            'description' => 'Test',
+            'idempotency_key' => (string) Str::uuid(),
             'payment_method_id' => $paymentMethodId,
-            'metadata'          => [],
+            'metadata' => [],
         ]);
 
         if ($daysAgo > 0) {
@@ -83,7 +83,7 @@ class PrunePaymentMethodsCommandTest extends TestCase
     {
         $succeeded = $this->makePayment('Succeeded', 'pm_1', 400);
         $cancelled = $this->makePayment('Cancelled', 'pm_2', 400);
-        $refunded  = $this->makePayment('Refunded',  'pm_3', 400);
+        $refunded = $this->makePayment('Refunded', 'pm_3', 400);
 
         $this->artisan('payments:prune-payment-methods', ['--days' => 365])
             ->assertSuccessful();

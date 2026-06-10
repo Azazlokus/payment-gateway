@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Payments\Domain\ValueObjects;
 
-use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Symfony\Component\Uid\Ulid;
 
 final readonly class AttemptId
 {
@@ -13,7 +13,7 @@ final readonly class AttemptId
 
     public static function generate(): self
     {
-        return new self((string) Str::ulid());
+        return new self((string) new Ulid);
     }
 
     public static function fromString(string $value): self

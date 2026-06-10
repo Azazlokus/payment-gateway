@@ -19,9 +19,9 @@ final class CoinGeckoPriceOracle implements PriceOracleInterface
 
     public function getRateKopecks(CryptoAsset $asset): int
     {
-        $coinId  = $asset->coinGeckoId();
+        $coinId = $asset->coinGeckoId();
         $cacheKey = "crypto_price_kopecks_{$coinId}";
-        $ttl      = (int) config('crypto.price_oracle.cache_ttl_seconds', 60);
+        $ttl = (int) config('crypto.price_oracle.cache_ttl_seconds', 60);
 
         /** @var int $rate */
         $rate = Cache::remember($cacheKey, $ttl, function () use ($coinId, $asset): int {
@@ -43,22 +43,22 @@ final class CoinGeckoPriceOracle implements PriceOracleInterface
         // e.g., 5000 kopecks, TON at 40000 kopecks/TON, decimals=9:
         //   units = round(5000 * 10^9 / 40000) = round(125_000_000_000 / 40000) = 125_000_000 nanotons
         $decimals = $asset->decimals();
-        $factor   = 10 ** $decimals;
+        $factor = 10 ** $decimals;
 
         return intval(round(($kopecks * $factor) / $rateKopecks));
     }
 
     private function fetchRateKopecks(string $coinId, CryptoAsset $asset): int
     {
-        $baseUrl  = config('crypto.price_oracle.base_url', 'https://api.coingecko.com/api/v3');
+        $baseUrl = config('crypto.price_oracle.base_url', 'https://api.coingecko.com/api/v3');
         $response = Http::get("{$baseUrl}/simple/price", [
-            'ids'           => $coinId,
+            'ids' => $coinId,
             'vs_currencies' => 'rub',
         ]);
 
         if (! $response->successful()) {
             $this->logger->warning('CoinGecko API error', [
-                'status'  => $response->status(),
+                'status' => $response->status(),
                 'coin_id' => $coinId,
             ]);
 
@@ -66,7 +66,7 @@ final class CoinGeckoPriceOracle implements PriceOracleInterface
         }
 
         /** @var array<string, array<string, float|int>> $data */
-        $data  = $response->json();
+        $data = $response->json();
         $price = $data[$coinId]['rub'] ?? null;
 
         if ($price === null) {

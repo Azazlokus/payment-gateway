@@ -57,11 +57,11 @@ final readonly class NativeCryptoAmount
     public function humanReadable(): string
     {
         $decimals = $this->asset->decimals();
-        $divisor  = 10 ** $decimals;
-        $whole    = intdiv($this->units, $divisor);
+        $divisor = 10 ** $decimals;
+        $whole = intdiv($this->units, $divisor);
         $fraction = abs($this->units % $divisor);
 
-        return sprintf('%d.%0' . $decimals . 'd', $whole, $fraction);
+        return sprintf('%d.%0'.$decimals.'d', $whole, $fraction);
     }
 
     public function isGreaterThanOrEqualTo(self $other): bool

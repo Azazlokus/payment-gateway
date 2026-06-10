@@ -14,10 +14,10 @@ final class AuditLogger
      */
     public function log(
         string $action,
-        string|null $subjectType = null,
-        string|null $subjectId = null,
+        ?string $subjectType = null,
+        ?string $subjectId = null,
         array $metadata = [],
-        Request|null $request = null,
+        ?Request $request = null,
     ): void {
         try {
             $ip = $request?->ip();
@@ -26,18 +26,18 @@ final class AuditLogger
             if ($request !== null) {
                 $raw = (string) $request->header('X-Api-Key', '');
                 if ($raw !== '') {
-                    $apiKeyHint = '...' . substr($raw, -4);
+                    $apiKeyHint = '...'.substr($raw, -4);
                 }
             }
 
             DB::table('audit_logs')->insert([
-                'action'       => $action,
+                'action' => $action,
                 'subject_type' => $subjectType,
-                'subject_id'   => $subjectId,
-                'ip'           => $ip,
+                'subject_id' => $subjectId,
+                'ip' => $ip,
                 'api_key_hint' => $apiKeyHint,
-                'metadata'     => $metadata !== [] ? json_encode($metadata, JSON_THROW_ON_ERROR) : null,
-                'created_at'   => now(),
+                'metadata' => $metadata !== [] ? json_encode($metadata, JSON_THROW_ON_ERROR) : null,
+                'created_at' => now(),
             ]);
         } catch (\Throwable) {
             // Аудит не должен ронять запрос

@@ -17,16 +17,16 @@ class PaymentStatusStreamTest extends TestCase
     private function createPayment(string $status = 'Pending'): PaymentModel
     {
         return PaymentModel::create([
-            'id'              => PaymentId::generate()->toString(),
-            'external_id'     => (string) Str::uuid(),
-            'provider'        => 'yookassa',
-            'amount'          => 10000,
+            'id' => PaymentId::generate()->toString(),
+            'external_id' => (string) Str::uuid(),
+            'provider' => 'yookassa',
+            'amount' => 10000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => $status,
-            'description'     => 'Test payment',
+            'currency' => 'RUB',
+            'status' => $status,
+            'description' => 'Test payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
     }
 

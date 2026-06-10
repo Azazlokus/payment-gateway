@@ -21,8 +21,10 @@ use Tests\TestCase;
 class TronBlockchainClientTest extends TestCase
 {
     private const TRON_ADDRESS = 'TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9';
-    private const TX_HASH      = 'abc123def456abc123def456abc123def456abc123def456abc123def456abcd';
-    private const USDT_CTR     = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+
+    private const TX_HASH = 'abc123def456abc123def456abc123def456abc123def456abc123def456abcd';
+
+    private const USDT_CTR = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
     private TronBlockchainClient $client;
 
@@ -47,7 +49,7 @@ class TronBlockchainClientTest extends TestCase
     public function test_find_trx_transaction_for_address(): void
     {
         $address = CryptoAddress::fromString(self::TRON_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         Http::fake([
             '*/v1/accounts/*/transactions*' => Http::response([
@@ -72,7 +74,7 @@ class TronBlockchainClientTest extends TestCase
     public function test_trx_returns_null_when_no_transactions(): void
     {
         $address = CryptoAddress::fromString(self::TRON_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         Http::fake([
             '*/v1/accounts/*/transactions*' => Http::response(['data' => []]),
@@ -86,7 +88,7 @@ class TronBlockchainClientTest extends TestCase
     public function test_trx_returns_null_on_api_error(): void
     {
         $address = CryptoAddress::fromString(self::TRON_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         Http::fake([
             '*/v1/accounts/*/transactions*' => Http::response([], 500),
@@ -100,7 +102,7 @@ class TronBlockchainClientTest extends TestCase
     public function test_trx_ignores_failed_transactions(): void
     {
         $address = CryptoAddress::fromString(self::TRON_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         $tx = $this->makeTrxTx(hash: self::TX_HASH, amount: 5_000_000, timestampMs: 1_000_000);
         $tx['ret'][0]['contractRet'] = 'REVERT';
@@ -117,7 +119,7 @@ class TronBlockchainClientTest extends TestCase
     public function test_trx_ignores_zero_amount_transactions(): void
     {
         $address = CryptoAddress::fromString(self::TRON_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         Http::fake([
             '*/v1/accounts/*/transactions*' => Http::response([
@@ -137,7 +139,7 @@ class TronBlockchainClientTest extends TestCase
     public function test_find_usdt_trc20_transaction_for_address(): void
     {
         $address = CryptoAddress::fromString(self::TRON_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         Http::fake([
             '*/v1/accounts/*/transactions/trc20*' => Http::response([
@@ -162,7 +164,7 @@ class TronBlockchainClientTest extends TestCase
     public function test_usdt_trc20_returns_null_on_api_error(): void
     {
         $address = CryptoAddress::fromString(self::TRON_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         Http::fake([
             '*/v1/accounts/*/transactions/trc20*' => Http::response([], 503),
@@ -176,7 +178,7 @@ class TronBlockchainClientTest extends TestCase
     public function test_usdt_trc20_ignores_zero_amount(): void
     {
         $address = CryptoAddress::fromString(self::TRON_ADDRESS);
-        $since   = new DateTimeImmutable('@0');
+        $since = new DateTimeImmutable('@0');
 
         Http::fake([
             '*/v1/accounts/*/transactions/trc20*' => Http::response([
@@ -227,16 +229,16 @@ class TronBlockchainClientTest extends TestCase
     {
         return [
             'txID' => $hash,
-            'ret'  => [['contractRet' => 'SUCCESS']],
+            'ret' => [['contractRet' => 'SUCCESS']],
             'raw_data' => [
                 'timestamp' => $timestampMs,
-                'contract'  => [
+                'contract' => [
                     [
-                        'type'      => 'TransferContract',
+                        'type' => 'TransferContract',
                         'parameter' => [
                             'value' => [
-                                'amount'     => $amount,
-                                'to_address' => '41' . str_repeat('0', 40),
+                                'amount' => $amount,
+                                'to_address' => '41'.str_repeat('0', 40),
                             ],
                         ],
                     ],
@@ -251,9 +253,9 @@ class TronBlockchainClientTest extends TestCase
     private function makeUsdtTrc20Transfer(string $txId, string $amount, int $timestampMs): array
     {
         return [
-            'transaction_id'  => $txId,
-            'value'           => $amount,
-            'to'              => self::TRON_ADDRESS,
+            'transaction_id' => $txId,
+            'value' => $amount,
+            'to' => self::TRON_ADDRESS,
             'block_timestamp' => $timestampMs,
         ];
     }

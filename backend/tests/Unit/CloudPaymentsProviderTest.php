@@ -22,7 +22,8 @@ class CloudPaymentsProviderTest extends TestCase
 
     private MockInterface $logger;
 
-    private string $publicId  = 'pk_test_public';
+    private string $publicId = 'pk_test_public';
+
     private string $apiSecret = 'test_api_secret';
 
     protected function setUp(): void
@@ -35,9 +36,9 @@ class CloudPaymentsProviderTest extends TestCase
         $this->logger->shouldReceive('error')->andReturnNull()->byDefault();
 
         $this->provider = new CloudPaymentsProvider(
-            publicId:  $this->publicId,
+            publicId: $this->publicId,
             apiSecret: $this->apiSecret,
-            logger:    $this->logger,
+            logger: $this->logger,
         );
     }
 
@@ -51,18 +52,18 @@ class CloudPaymentsProviderTest extends TestCase
         Http::fake([
             '*/payments/link/create' => Http::response([
                 'Success' => true,
-                'Model'   => [
-                    'Url'           => 'https://pay.cloudpayments.ru/order/pay/cp-link-001',
+                'Model' => [
+                    'Url' => 'https://pay.cloudpayments.ru/order/pay/cp-link-001',
                     'TransactionId' => 12345678,
                 ],
             ], 200),
         ]);
 
         $result = $this->provider->createPayment(
-            paymentId:      'internal-pay-001',
-            amount:         Money::ofRub(50000),
-            description:    'Test CloudPayments payment',
-            returnUrl:      'https://example.com/return',
+            paymentId: 'internal-pay-001',
+            amount: Money::ofRub(50000),
+            description: 'Test CloudPayments payment',
+            returnUrl: 'https://example.com/return',
             idempotencyKey: 'idem-key-1',
         );
 
@@ -82,10 +83,10 @@ class CloudPaymentsProviderTest extends TestCase
         $this->expectExceptionMessageMatches('/CloudPayments: HTTP ошибка/');
 
         $this->provider->createPayment(
-            paymentId:      'pay-001',
-            amount:         Money::ofRub(50000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'pay-001',
+            amount: Money::ofRub(50000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key',
         );
     }
@@ -103,10 +104,10 @@ class CloudPaymentsProviderTest extends TestCase
         $this->expectExceptionMessageMatches('/Invalid public id/');
 
         $this->provider->createPayment(
-            paymentId:      'pay-001',
-            amount:         Money::ofRub(50000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'pay-001',
+            amount: Money::ofRub(50000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key',
         );
     }
@@ -116,7 +117,7 @@ class CloudPaymentsProviderTest extends TestCase
         Http::fake([
             '*/payments/link/create' => Http::response([
                 'Success' => true,
-                'Model'   => ['TransactionId' => 12345],
+                'Model' => ['TransactionId' => 12345],
             ], 200),
         ]);
 
@@ -124,10 +125,10 @@ class CloudPaymentsProviderTest extends TestCase
         $this->expectExceptionMessageMatches('/Url/');
 
         $this->provider->createPayment(
-            paymentId:      'pay-001',
-            amount:         Money::ofRub(50000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'pay-001',
+            amount: Money::ofRub(50000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key',
         );
     }
@@ -137,20 +138,19 @@ class CloudPaymentsProviderTest extends TestCase
         Http::fake([
             '*/payments/link/create' => Http::response([
                 'Success' => true,
-                'Model'   => ['Url' => 'https://pay.cloudpayments.ru/link', 'TransactionId' => 1],
+                'Model' => ['Url' => 'https://pay.cloudpayments.ru/link', 'TransactionId' => 1],
             ], 200),
         ]);
 
         $this->provider->createPayment(
-            paymentId:      'pay-001',
-            amount:         Money::ofRub(10000),
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'pay-001',
+            amount: Money::ofRub(10000),
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key',
         );
 
-        Http::assertSent(fn (Request $request) =>
-            $request->hasHeader('Authorization') &&
+        Http::assertSent(fn (Request $request) => $request->hasHeader('Authorization') &&
             str_starts_with($request->header('Authorization')[0], 'Basic ')
         );
     }
@@ -160,15 +160,15 @@ class CloudPaymentsProviderTest extends TestCase
         Http::fake([
             '*/payments/link/create' => Http::response([
                 'Success' => true,
-                'Model'   => ['Url' => 'https://pay.cloudpayments.ru/link', 'TransactionId' => 1],
+                'Model' => ['Url' => 'https://pay.cloudpayments.ru/link', 'TransactionId' => 1],
             ], 200),
         ]);
 
         $this->provider->createPayment(
-            paymentId:      'pay-001',
-            amount:         Money::ofRub(99999), // 999.99 RUB
-            description:    'Test',
-            returnUrl:      'https://example.com',
+            paymentId: 'pay-001',
+            amount: Money::ofRub(99999), // 999.99 RUB
+            description: 'Test',
+            returnUrl: 'https://example.com',
             idempotencyKey: 'idem-key',
         );
 
@@ -180,9 +180,9 @@ class CloudPaymentsProviderTest extends TestCase
         Http::fake([
             '*/payments/find' => Http::response([
                 'Success' => true,
-                'Model'   => [
+                'Model' => [
                     'TransactionId' => 12345678,
-                    'Status'        => 'Completed',
+                    'Status' => 'Completed',
                 ],
             ], 200),
         ]);
@@ -198,7 +198,7 @@ class CloudPaymentsProviderTest extends TestCase
         Http::fake([
             '*/payments/find' => Http::response([
                 'Success' => true,
-                'Model'   => ['TransactionId' => 1, 'Status' => 'Declined'],
+                'Model' => ['TransactionId' => 1, 'Status' => 'Declined'],
             ], 200),
         ]);
 
@@ -227,7 +227,7 @@ class CloudPaymentsProviderTest extends TestCase
 
         $result = $this->provider->refundPayment(
             externalId: ExternalId::fromString('12345678'),
-            amount:     Money::ofRub(50000),
+            amount: Money::ofRub(50000),
         );
 
         $this->assertSame('succeeded', $result->status);
@@ -247,7 +247,7 @@ class CloudPaymentsProviderTest extends TestCase
 
         $this->provider->refundPayment(
             externalId: ExternalId::fromString('12345678'),
-            amount:     Money::ofRub(50000),
+            amount: Money::ofRub(50000),
         );
     }
 
@@ -262,15 +262,15 @@ class CloudPaymentsProviderTest extends TestCase
 
         $this->provider->refundPayment(
             externalId: ExternalId::fromString('12345678'),
-            amount:     Money::ofRub(50000),
+            amount: Money::ofRub(50000),
         );
     }
 
     public function test_verify_webhook_returns_true_with_valid_hmac(): void
     {
         $payload = ['TransactionId' => 12345, 'Status' => 'Completed'];
-        $body    = json_encode($payload);
-        $hmac    = base64_encode(hash_hmac('sha256', (string) $body, $this->apiSecret, true));
+        $body = json_encode($payload);
+        $hmac = base64_encode(hash_hmac('sha256', (string) $body, $this->apiSecret, true));
 
         // Подменяем request() так чтобы getContent() возвращал нужное тело
         $request = \Illuminate\Http\Request::create('/webhook/cloudpayments', 'POST', [], [], [], [], (string) $body);
@@ -301,7 +301,7 @@ class CloudPaymentsProviderTest extends TestCase
     {
         $result = $this->provider->parseWebhook([
             'TransactionId' => '12345678',
-            'Status'        => 'Completed',
+            'Status' => 'Completed',
         ]);
 
         $this->assertSame('succeeded', $result->status);
@@ -312,8 +312,8 @@ class CloudPaymentsProviderTest extends TestCase
     {
         $result = $this->provider->parseWebhook([
             'TransactionId' => '12345678',
-            'Status'        => 'Refunded',
-            'Amount'        => 500.00,
+            'Status' => 'Refunded',
+            'Amount' => 500.00,
         ]);
 
         $this->assertSame('refunded', $result->status);
@@ -324,7 +324,7 @@ class CloudPaymentsProviderTest extends TestCase
     {
         $result = $this->provider->parseWebhook([
             'TransactionId' => '12345678',
-            'Status'        => 'Cancelled',
+            'Status' => 'Cancelled',
         ]);
 
         $this->assertSame('canceled', $result->status);
@@ -335,7 +335,7 @@ class CloudPaymentsProviderTest extends TestCase
     {
         $result = $this->provider->parseWebhook([
             'TransactionId' => '12345678',
-            'Status'        => 'Created',
+            'Status' => 'Created',
         ]);
 
         $this->assertSame('pending', $result->status);

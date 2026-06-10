@@ -38,7 +38,7 @@ final class CryptoDepositToPaymentAdapter
         if ($payment->status()->isTerminal()) {
             $this->logger->info('Payment already in terminal status, skipping confirm', [
                 'payment_id' => $event->paymentId,
-                'status'     => $payment->status()->value,
+                'status' => $payment->status()->value,
             ]);
 
             return;
@@ -51,7 +51,7 @@ final class CryptoDepositToPaymentAdapter
         } catch (InvalidPaymentStateException $e) {
             $this->logger->warning('Could not mark payment as succeeded', [
                 'payment_id' => $event->paymentId,
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -80,7 +80,7 @@ final class CryptoDepositToPaymentAdapter
         } catch (InvalidPaymentStateException $e) {
             $this->logger->warning('Could not cancel payment for expired deposit', [
                 'payment_id' => $event->paymentId,
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -101,7 +101,7 @@ final class CryptoDepositToPaymentAdapter
         if ($payment->status()->isTerminal()) {
             $this->logger->info('Payment already in terminal status, skipping overpaid handling', [
                 'payment_id' => $event->paymentId,
-                'status'     => $payment->status()->value,
+                'status' => $payment->status()->value,
             ]);
 
             return;
@@ -114,15 +114,15 @@ final class CryptoDepositToPaymentAdapter
             $this->metrics->paymentSucceeded('crypto_ton');
 
             $this->logger->warning('Crypto deposit overpaid — manual reconciliation required', [
-                'payment_id'    => $event->paymentId,
-                'deposit_id'    => $event->depositId,
+                'payment_id' => $event->paymentId,
+                'deposit_id' => $event->depositId,
                 'expected_units' => $event->expectedUnits,
-                'actual_units'  => $event->actualUnits,
+                'actual_units' => $event->actualUnits,
             ]);
         } catch (InvalidPaymentStateException $e) {
             $this->logger->warning('Could not mark overpaid payment as succeeded', [
                 'payment_id' => $event->paymentId,
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }

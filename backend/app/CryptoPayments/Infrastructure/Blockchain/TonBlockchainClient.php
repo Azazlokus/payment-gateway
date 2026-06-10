@@ -75,8 +75,8 @@ final class TonBlockchainClient implements BlockchainClientInterface
     }
 
     /**
-     * @param  Memo[] $memos
-     * @return array<string, TransactionResult>  key = memo string
+     * @param  Memo[]  $memos
+     * @return array<string, TransactionResult> key = memo string
      */
     public function findIncomingTransactionsBatch(
         array $memos,
@@ -84,9 +84,9 @@ final class TonBlockchainClient implements BlockchainClientInterface
         DateTimeImmutable $since,
     ): array {
         return match ($asset) {
-            CryptoAsset::TON      => $this->fetchTonTransactions($memos, $since),
+            CryptoAsset::TON => $this->fetchTonTransactions($memos, $since),
             CryptoAsset::USDT_TON => $this->fetchUsdtJettonTransfers($memos, $since),
-            default               => [],
+            default => [],
         };
     }
 
@@ -96,18 +96,18 @@ final class TonBlockchainClient implements BlockchainClientInterface
      * Uses TonCenter v2 /getTransactions to find incoming TON transfers.
      * Matches by comment (memo) in in_msg.message or in_msg.msg_data.text.
      *
-     * @param  Memo[] $memos
+     * @param  Memo[]  $memos
      * @return array<string, TransactionResult>
      */
     private function fetchTonTransactions(array $memos, DateTimeImmutable $since): array
     {
         $memoSet = array_map(fn (Memo $m) => $m->toString(), $memos);
-        $found   = [];
+        $found = [];
 
         $response = Http::withHeaders($this->authHeaders())->get("{$this->apiUrl}/getTransactions", [
-            'address'  => $this->masterAddress,
-            'limit'    => 50,
-            'to_lt'    => 0,
+            'address' => $this->masterAddress,
+            'limit' => 50,
+            'to_lt' => 0,
             'archival' => false,
         ]);
 
@@ -141,7 +141,7 @@ final class TonBlockchainClient implements BlockchainClientInterface
             }
 
             /** @var array<string, mixed> $txId */
-            $txId   = $tx['transaction_id'] ?? [];
+            $txId = $tx['transaction_id'] ?? [];
             $txHash = $txId['hash'] ?? null;
 
             if (! is_string($txHash) || $txHash === '') {
@@ -174,27 +174,27 @@ final class TonBlockchainClient implements BlockchainClientInterface
      *
      * API docs: https://toncenter.com/api/v3/openapi.json
      *
-     * @param  Memo[] $memos
+     * @param  Memo[]  $memos
      * @return array<string, TransactionResult>
      */
     private function fetchUsdtJettonTransfers(array $memos, DateTimeImmutable $since): array
     {
         $memoSet = array_map(fn (Memo $m) => $m->toString(), $memos);
-        $found   = [];
+        $found = [];
 
         $response = Http::withHeaders($this->authHeaders())->get("{$this->apiV3Url}/jetton/transfers", [
-            'address'       => $this->masterAddress,
+            'address' => $this->masterAddress,
             'jetton_master' => $this->usdtJettonMaster,
-            'direction'     => 'in',
-            'start_utime'   => $since->getTimestamp(),
-            'limit'         => 100,
-            'offset'        => 0,
+            'direction' => 'in',
+            'start_utime' => $since->getTimestamp(),
+            'limit' => 100,
+            'offset' => 0,
         ]);
 
         if (! $response->successful()) {
             $this->logger->warning('TonCenter v3 API error (jetton/transfers)', [
                 'status' => $response->status(),
-                'body'   => $response->body(),
+                'body' => $response->body(),
             ]);
 
             return [];
@@ -291,8 +291,7 @@ final class TonBlockchainClient implements BlockchainClientInterface
         $msgData = $inMsg['msg_data'] ?? [];
 
         if (
-            is_array($msgData)
-            && ($msgData['@type'] ?? '') === 'msg.dataText'
+            ($msgData['@type'] ?? '') === 'msg.dataText'
             && isset($msgData['text'])
             && is_string($msgData['text'])
             && $msgData['text'] !== ''

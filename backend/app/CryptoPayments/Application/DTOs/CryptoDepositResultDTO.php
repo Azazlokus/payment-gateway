@@ -29,12 +29,12 @@ final readonly class CryptoDepositResultDTO
     {
         $address = $deposit->depositAddress()->toString();
         $memoStr = $deposit->memo()?->toString();
-        $units   = $deposit->expectedAmount()->units();
+        $units = $deposit->expectedAmount()->units();
 
         $qrPayload = match ($deposit->asset()) {
-            CryptoAsset::TON      => "ton://transfer/{$address}?amount={$units}&text={$memoStr}",
+            CryptoAsset::TON => "ton://transfer/{$address}?amount={$units}&text={$memoStr}",
             CryptoAsset::USDT_TON => "ton://transfer/{$address}?text={$memoStr}",
-            CryptoAsset::BTC      => sprintf('bitcoin:%s?amount=%s', $address, number_format($units / 1e8, 8, '.', '')),
+            CryptoAsset::BTC => sprintf('bitcoin:%s?amount=%s', $address, number_format($units / 1e8, 8, '.', '')),
             CryptoAsset::TRX,
             CryptoAsset::USDT_TRC20 => "tron:{$address}",
         };

@@ -6,7 +6,6 @@ namespace Tests\Unit\CryptoPayments;
 
 use App\CryptoPayments\Domain\Enums\CryptoAsset;
 use App\CryptoPayments\Domain\ValueObjects\Memo;
-use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
 use App\CryptoPayments\Infrastructure\Blockchain\TonBlockchainClient;
 use App\Payments\Infrastructure\Observability\PaymentLogger;
 use DateTimeImmutable;
@@ -21,9 +20,11 @@ use Tests\TestCase;
  */
 class TonBlockchainClientTest extends TestCase
 {
-    private const MASTER   = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
+    private const MASTER = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
+
     private const USDT_CTR = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
-    private const TX_HASH  = 'abc123def456abc123def456abc123def456abc123def456abc123def456abc1';
+
+    private const TX_HASH = 'abc123def456abc123def456abc123def456abc123def456abc123def456abc1';
 
     private TonBlockchainClient $client;
 
@@ -48,7 +49,7 @@ class TonBlockchainClientTest extends TestCase
 
     public function test_find_ton_transaction_by_memo(): void
     {
-        $memo  = Memo::fromString('123456789');
+        $memo = Memo::fromString('123456789');
         $since = new DateTimeImmutable('@0');
 
         Http::fake([
@@ -68,7 +69,7 @@ class TonBlockchainClientTest extends TestCase
 
     public function test_ton_ignores_transaction_outside_time_window(): void
     {
-        $memo  = Memo::fromString('123456789');
+        $memo = Memo::fromString('123456789');
         $since = new DateTimeImmutable('@9999999999');
 
         Http::fake([
@@ -86,7 +87,7 @@ class TonBlockchainClientTest extends TestCase
 
     public function test_ton_ignores_transaction_with_wrong_memo(): void
     {
-        $memo  = Memo::fromString('111111111');
+        $memo = Memo::fromString('111111111');
         $since = new DateTimeImmutable('@0');
 
         Http::fake([
@@ -104,7 +105,7 @@ class TonBlockchainClientTest extends TestCase
 
     public function test_ton_returns_empty_on_api_error(): void
     {
-        $memo  = Memo::fromString('123456789');
+        $memo = Memo::fromString('123456789');
         $since = new DateTimeImmutable('@0');
 
         Http::fake([
@@ -125,8 +126,8 @@ class TonBlockchainClientTest extends TestCase
         Http::fake([
             '*/getTransactions*' => Http::response([
                 'result' => [
-                    $this->makeTonTx(memo: '111111111', value: 100_000_000, hash: 'aaaa' . str_repeat('0', 60), utime: 1_000),
-                    $this->makeTonTx(memo: '222222222', value: 200_000_000, hash: 'bbbb' . str_repeat('0', 60), utime: 2_000),
+                    $this->makeTonTx(memo: '111111111', value: 100_000_000, hash: 'aaaa'.str_repeat('0', 60), utime: 1_000),
+                    $this->makeTonTx(memo: '222222222', value: 200_000_000, hash: 'bbbb'.str_repeat('0', 60), utime: 2_000),
                 ],
             ]),
         ]);
@@ -141,7 +142,7 @@ class TonBlockchainClientTest extends TestCase
 
     public function test_ton_reads_memo_from_base64_msg_data(): void
     {
-        $memo  = Memo::fromString('123456789');
+        $memo = Memo::fromString('123456789');
         $since = new DateTimeImmutable('@0');
 
         $tx = $this->makeTonTx(memo: null, value: 125_000_000, hash: self::TX_HASH, utime: 1_000);
@@ -149,7 +150,7 @@ class TonBlockchainClientTest extends TestCase
         $tx['in_msg']['message'] = null;
         $tx['in_msg']['msg_data'] = [
             '@type' => 'msg.dataText',
-            'text'  => base64_encode('123456789'),
+            'text' => base64_encode('123456789'),
         ];
 
         Http::fake([
@@ -165,7 +166,7 @@ class TonBlockchainClientTest extends TestCase
 
     public function test_find_usdt_transfer_by_memo(): void
     {
-        $memo  = Memo::fromString('123456789');
+        $memo = Memo::fromString('123456789');
         $since = new DateTimeImmutable('@0');
 
         Http::fake([
@@ -186,7 +187,7 @@ class TonBlockchainClientTest extends TestCase
 
     public function test_usdt_ignores_transfer_outside_time_window(): void
     {
-        $memo  = Memo::fromString('123456789');
+        $memo = Memo::fromString('123456789');
         $since = new DateTimeImmutable('@9999999999');
 
         Http::fake([
@@ -204,7 +205,7 @@ class TonBlockchainClientTest extends TestCase
 
     public function test_usdt_ignores_transfer_with_wrong_memo(): void
     {
-        $memo  = Memo::fromString('111111111');
+        $memo = Memo::fromString('111111111');
         $since = new DateTimeImmutable('@0');
 
         Http::fake([
@@ -222,7 +223,7 @@ class TonBlockchainClientTest extends TestCase
 
     public function test_usdt_returns_empty_on_api_error(): void
     {
-        $memo  = Memo::fromString('123456789');
+        $memo = Memo::fromString('123456789');
         $since = new DateTimeImmutable('@0');
 
         Http::fake([
@@ -236,7 +237,7 @@ class TonBlockchainClientTest extends TestCase
 
     public function test_usdt_ignores_transfer_with_zero_amount(): void
     {
-        $memo  = Memo::fromString('123456789');
+        $memo = Memo::fromString('123456789');
         $since = new DateTimeImmutable('@0');
 
         Http::fake([
@@ -261,8 +262,8 @@ class TonBlockchainClientTest extends TestCase
         Http::fake([
             '*/jetton/transfers*' => Http::response([
                 'jetton_transfers' => [
-                    $this->makeUsdtTransfer(memo: '111111111', amount: '500000', hash: 'aaaa' . str_repeat('0', 60), utime: 1_000),
-                    $this->makeUsdtTransfer(memo: '222222222', amount: '750000', hash: 'bbbb' . str_repeat('0', 60), utime: 2_000),
+                    $this->makeUsdtTransfer(memo: '111111111', amount: '500000', hash: 'aaaa'.str_repeat('0', 60), utime: 1_000),
+                    $this->makeUsdtTransfer(memo: '222222222', amount: '750000', hash: 'bbbb'.str_repeat('0', 60), utime: 2_000),
                 ],
             ]),
         ]);
@@ -283,10 +284,10 @@ class TonBlockchainClientTest extends TestCase
     private function makeTonTx(?string $memo, int $value, string $hash, int $utime): array
     {
         return [
-            'utime'          => $utime,
+            'utime' => $utime,
             'transaction_id' => ['hash' => $hash],
-            'in_msg'         => [
-                'value'   => $value,
+            'in_msg' => [
+                'value' => $value,
                 'message' => $memo,
             ],
         ];
@@ -298,10 +299,10 @@ class TonBlockchainClientTest extends TestCase
     private function makeUsdtTransfer(string $memo, string $amount, string $hash, int $utime): array
     {
         return [
-            'utime'            => $utime,
+            'utime' => $utime,
             'transaction_hash' => $hash,
-            'amount'           => $amount,
-            'comment'          => $memo,
+            'amount' => $amount,
+            'comment' => $memo,
         ];
     }
 }

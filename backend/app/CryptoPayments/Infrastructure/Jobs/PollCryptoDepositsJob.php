@@ -68,7 +68,7 @@ final class PollCryptoDepositsJob implements ShouldQueue
     }
 
     /**
-     * @param CryptoDeposit[] $pending
+     * @param  CryptoDeposit[]  $pending
      */
     private function pollMemoDeposits(
         array $pending,
@@ -129,7 +129,7 @@ final class PollCryptoDepositsJob implements ShouldQueue
     }
 
     /**
-     * @param CryptoDeposit[] $pending
+     * @param  CryptoDeposit[]  $pending
      */
     private function pollUniqueAddressDeposits(
         array $pending,
@@ -147,10 +147,11 @@ final class PollCryptoDepositsJob implements ShouldQueue
                 $tx = $client->findIncomingTransactionByAddress($address, $asset, $deposit->createdAt());
             } catch (Throwable $e) {
                 $logger->warning('PollCryptoDepositsJob: blockchain query failed for address', [
-                    'asset'   => $asset->value,
+                    'asset' => $asset->value,
                     'address' => $address->toString(),
-                    'error'   => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
+
                 continue;
             }
 
@@ -187,13 +188,13 @@ final class PollCryptoDepositsJob implements ShouldQueue
 
             $logger->info('PollCryptoDepositsJob: deposit confirmed', [
                 'deposit_id' => $deposit->id()->toString(),
-                'tx_hash'    => $tx->hash->toString(),
-                'asset'      => $asset->value,
+                'tx_hash' => $tx->hash->toString(),
+                'asset' => $asset->value,
             ]);
         } catch (Throwable $e) {
             $logger->warning('PollCryptoDepositsJob: could not confirm deposit', [
                 'deposit_id' => $deposit->id()->toString(),
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }

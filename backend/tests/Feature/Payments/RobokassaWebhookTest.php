@@ -19,17 +19,18 @@ class RobokassaWebhookTest extends TestCase
 {
     use RefreshDatabase;
 
-    private string $login     = 'test_merchant';
+    private string $login = 'test_merchant';
+
     private string $password2 = 'test_password2';
 
     protected function setUp(): void
     {
         parent::setUp();
         config([
-            'payments.robokassa.login'       => $this->login,
-            'payments.robokassa.password1'   => 'test_password1',
-            'payments.robokassa.password2'   => $this->password2,
-            'payments.robokassa.is_test'     => true,
+            'payments.robokassa.login' => $this->login,
+            'payments.robokassa.password1' => 'test_password1',
+            'payments.robokassa.password2' => $this->password2,
+            'payments.robokassa.is_test' => true,
             'payments.robokassa.webhook_ips' => [], // пропускаем IP-фильтрацию
         ]);
     }
@@ -39,16 +40,16 @@ class RobokassaWebhookTest extends TestCase
         $id = PaymentId::generate()->toString();
 
         PaymentModel::create([
-            'id'              => $id,
-            'external_id'     => $id, // placeholder до первого вебхука
-            'provider'        => 'robokassa',
-            'amount'          => 30000,
+            'id' => $id,
+            'external_id' => $id, // placeholder до первого вебхука
+            'provider' => 'robokassa',
+            'amount' => 30000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => $status,
-            'description'     => 'Test Robokassa payment',
+            'currency' => 'RUB',
+            'status' => $status,
+            'description' => 'Test Robokassa payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
 
         return $id;
@@ -59,9 +60,9 @@ class RobokassaWebhookTest extends TestCase
         $signature = strtoupper(md5("{$outSum}:{$invId}:{$this->password2}:Shp_paymentId={$paymentId}"));
 
         return [
-            'OutSum'         => $outSum,
-            'InvId'          => $invId,
-            'Shp_paymentId'  => $paymentId,
+            'OutSum' => $outSum,
+            'InvId' => $invId,
+            'Shp_paymentId' => $paymentId,
             'SignatureValue' => $signature,
         ];
     }
@@ -73,7 +74,7 @@ class RobokassaWebhookTest extends TestCase
         Queue::fake();
 
         $paymentId = $this->createPayment();
-        $payload   = $this->validPayload($paymentId);
+        $payload = $this->validPayload($paymentId);
 
         $response = $this->post('/api/webhook/robokassa', $payload);
 
@@ -90,9 +91,9 @@ class RobokassaWebhookTest extends TestCase
         $paymentId = $this->createPayment();
 
         $response = $this->post('/api/webhook/robokassa', [
-            'OutSum'         => '300.00',
-            'InvId'          => '42',
-            'Shp_paymentId'  => $paymentId,
+            'OutSum' => '300.00',
+            'InvId' => '42',
+            'Shp_paymentId' => $paymentId,
             'SignatureValue' => 'INVALIDSIGNATURE',
         ]);
 
@@ -108,8 +109,8 @@ class RobokassaWebhookTest extends TestCase
 
         // Без Shp_paymentId подпись не совпадёт и verifyWebhook вернёт false
         $response = $this->post('/api/webhook/robokassa', [
-            'OutSum'         => '300.00',
-            'InvId'          => '42',
+            'OutSum' => '300.00',
+            'InvId' => '42',
             'SignatureValue' => 'ANYSIGNATURE',
         ]);
 
@@ -122,7 +123,7 @@ class RobokassaWebhookTest extends TestCase
         Queue::fake();
 
         $paymentId = $this->createPayment();
-        $payload   = $this->validPayload($paymentId, '99');
+        $payload = $this->validPayload($paymentId, '99');
 
         $response = $this->post('/api/webhook/robokassa', $payload);
 
@@ -137,7 +138,7 @@ class RobokassaWebhookTest extends TestCase
         config(['payments.robokassa.webhook_ips' => ['185.26.103.0/24']]);
 
         $paymentId = $this->createPayment();
-        $payload   = $this->validPayload($paymentId);
+        $payload = $this->validPayload($paymentId);
 
         // По умолчанию тестовые запросы приходят с 127.0.0.1
         $response = $this->post('/api/webhook/robokassa', $payload);
@@ -151,17 +152,17 @@ class RobokassaWebhookTest extends TestCase
     public function test_job_marks_payment_succeeded_and_updates_external_id(): void
     {
         $paymentId = $this->createPayment('Pending');
-        $invId     = '777';
+        $invId = '777';
 
         $this->runJob([
             'Shp_paymentId' => $paymentId,
-            'InvId'         => $invId,
-            'OutSum'        => '300.00',
+            'InvId' => $invId,
+            'OutSum' => '300.00',
         ]);
 
         $this->assertDatabaseHas('payments', [
-            'id'          => $paymentId,
-            'status'      => 'Succeeded',
+            'id' => $paymentId,
+            'status' => 'Succeeded',
             'external_id' => $invId,
         ]);
     }
@@ -170,8 +171,8 @@ class RobokassaWebhookTest extends TestCase
     {
         $this->runJob([
             'Shp_paymentId' => 'nonexistent-payment-id',
-            'InvId'         => '42',
-            'OutSum'        => '300.00',
+            'InvId' => '42',
+            'OutSum' => '300.00',
         ]);
 
         $this->assertDatabaseCount('payments', 0);
@@ -184,8 +185,8 @@ class RobokassaWebhookTest extends TestCase
         // Повторный вебхук не должен падать
         $this->runJob([
             'Shp_paymentId' => $paymentId,
-            'InvId'         => '42',
-            'OutSum'        => '300.00',
+            'InvId' => '42',
+            'OutSum' => '300.00',
         ]);
 
         $this->assertDatabaseHas('payments', ['id' => $paymentId, 'status' => 'Succeeded']);
@@ -197,8 +198,8 @@ class RobokassaWebhookTest extends TestCase
 
         $this->runJob([
             'Shp_paymentId' => '',
-            'InvId'         => '42',
-            'OutSum'        => '300.00',
+            'InvId' => '42',
+            'OutSum' => '300.00',
         ]);
 
         // Пустой ID → payment not found → ничего не изменилось

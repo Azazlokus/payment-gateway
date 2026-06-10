@@ -24,9 +24,9 @@ class RetryPaymentTest extends TestCase
         $mock = $this->mock(PaymentProviderInterface::class, function ($mock) use ($provider) {
             $mock->shouldReceive('name')->andReturn($provider);
             $mock->shouldReceive('createPayment')->andReturn(new ProviderResponse(
-                externalId:      ExternalId::fromString('new-ext-id-' . uniqid()),
+                externalId: ExternalId::fromString('new-ext-id-'.uniqid()),
                 confirmationUrl: 'https://pay.example.com/new',
-                status:          'pending',
+                status: 'pending',
             ));
         });
         $this->app->make(PaymentProviderRegistry::class)->register($mock);
@@ -37,16 +37,16 @@ class RetryPaymentTest extends TestCase
         $id = PaymentId::generate()->toString();
 
         PaymentModel::create([
-            'id'              => $id,
-            'external_id'     => 'ext-' . $id,
-            'provider'        => $provider,
-            'amount'          => 50000,
+            'id' => $id,
+            'external_id' => 'ext-'.$id,
+            'provider' => $provider,
+            'amount' => 50000,
             'refunded_amount' => 0,
-            'currency'        => 'RUB',
-            'status'          => $status,
-            'description'     => 'Test payment',
+            'currency' => 'RUB',
+            'status' => $status,
+            'description' => 'Test payment',
             'idempotency_key' => (string) Str::uuid(),
-            'metadata'        => [],
+            'metadata' => [],
         ]);
 
         return $id;

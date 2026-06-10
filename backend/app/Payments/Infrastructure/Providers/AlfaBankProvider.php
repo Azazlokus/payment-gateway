@@ -39,19 +39,19 @@ final class AlfaBankProvider implements PaymentProviderInterface
     ): ProviderResponse {
         $this->logger->info('Альфа-Банк: регистрация заказа', [
             'payment_id' => $paymentId,
-            'amount'     => $amount->amount(),
+            'amount' => $amount->amount(),
         ]);
 
         $response = retry(
             times: 3,
             callback: fn () => Http::asForm()->post("{$this->baseUrl}/register.do", [
-                'userName'    => $this->login,
-                'password'    => $this->password,
+                'userName' => $this->login,
+                'password' => $this->password,
                 'orderNumber' => $paymentId,
-                'amount'      => $amount->amount(),
-                'returnUrl'   => $returnUrl,
+                'amount' => $amount->amount(),
+                'returnUrl' => $returnUrl,
                 'description' => mb_substr($description, 0, 512),
-                'jsonParams'  => json_encode(['internal_payment_id' => $paymentId]),
+                'jsonParams' => json_encode(['internal_payment_id' => $paymentId]),
             ]),
             sleepMilliseconds: 500,
             when: fn (\Throwable $e) => $this->isRetryable($e),
@@ -74,14 +74,14 @@ final class AlfaBankProvider implements PaymentProviderInterface
 
         $this->logger->info('Альфа-Банк: заказ зарегистрирован', [
             'payment_id' => $paymentId,
-            'order_id'   => $orderId,
+            'order_id' => $orderId,
         ]);
 
         return new ProviderResponse(
-            externalId:      ExternalId::fromString($orderId),
+            externalId: ExternalId::fromString($orderId),
             confirmationUrl: $formUrl,
-            status:          'pending',
-            rawData:         $data,
+            status: 'pending',
+            rawData: $data,
         );
     }
 
@@ -90,7 +90,7 @@ final class AlfaBankProvider implements PaymentProviderInterface
         $response = Http::asForm()->post("{$this->baseUrl}/getOrderStatusExtended.do", [
             'userName' => $this->login,
             'password' => $this->password,
-            'orderId'  => $externalId->toString(),
+            'orderId' => $externalId->toString(),
         ]);
 
         if (! $response->successful()) {
@@ -100,10 +100,10 @@ final class AlfaBankProvider implements PaymentProviderInterface
         $data = $response->json();
 
         return new ProviderResponse(
-            externalId:      $externalId,
+            externalId: $externalId,
             confirmationUrl: '',
-            status:          $this->mapOrderStatus((int) ($data['orderStatus'] ?? -1)),
-            rawData:         $data,
+            status: $this->mapOrderStatus((int) ($data['orderStatus'] ?? -1)),
+            rawData: $data,
         );
     }
 
@@ -114,8 +114,8 @@ final class AlfaBankProvider implements PaymentProviderInterface
             callback: fn () => Http::asForm()->post("{$this->baseUrl}/refund.do", [
                 'userName' => $this->login,
                 'password' => $this->password,
-                'orderId'  => $externalId->toString(),
-                'amount'   => $amount->amount(),
+                'orderId' => $externalId->toString(),
+                'amount' => $amount->amount(),
             ]),
             sleepMilliseconds: 500,
             when: fn (\Throwable $e) => $this->isRetryable($e),
@@ -135,20 +135,20 @@ final class AlfaBankProvider implements PaymentProviderInterface
 
         $this->logger->info('Альфа-Банк: возврат выполнен', [
             'order_id' => $externalId->toString(),
-            'amount'   => $amount->amount(),
+            'amount' => $amount->amount(),
         ]);
 
         return new ProviderResponse(
-            externalId:      $externalId,
+            externalId: $externalId,
             confirmationUrl: '',
-            status:          'succeeded',
-            rawData:         $data,
+            status: 'succeeded',
+            rawData: $data,
         );
     }
 
     /**
-     * @param array<string, mixed>  $payload
-     * @param array<string, list<string|null>> $headers
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, list<string|null>>  $headers
      */
     public function verifyWebhook(array $payload, array $headers): bool
     {
@@ -170,14 +170,14 @@ final class AlfaBankProvider implements PaymentProviderInterface
     /** @param array<string, mixed> $payload */
     public function parseWebhook(array $payload): ProviderResponse
     {
-        $mdOrder   = (string) ($payload['mdOrder'] ?? '');
+        $mdOrder = (string) ($payload['mdOrder'] ?? '');
         $operation = (string) ($payload['operation'] ?? '');
 
         return new ProviderResponse(
-            externalId:      ExternalId::fromString($mdOrder),
+            externalId: ExternalId::fromString($mdOrder),
             confirmationUrl: '',
-            status:          $this->mapOperation($operation),
-            rawData:         $payload,
+            status: $this->mapOperation($operation),
+            rawData: $payload,
         );
     }
 
@@ -186,9 +186,9 @@ final class AlfaBankProvider implements PaymentProviderInterface
     private function mapOrderStatus(int $status): string
     {
         return match ($status) {
-            2       => 'succeeded',
-            3       => 'canceled',
-            6       => 'refunded',
+            2 => 'succeeded',
+            3 => 'canceled',
+            6 => 'refunded',
             default => 'pending',
         };
     }
@@ -196,11 +196,11 @@ final class AlfaBankProvider implements PaymentProviderInterface
     private function mapOperation(string $operation): string
     {
         return match ($operation) {
-            'deposited'           => 'succeeded',
-            'refunded'            => 'refunded',
+            'deposited' => 'succeeded',
+            'refunded' => 'refunded',
             'reversed',
-            'declinedByTimeout'   => 'canceled',
-            default               => 'pending',
+            'declinedByTimeout' => 'canceled',
+            default => 'pending',
         };
     }
 
