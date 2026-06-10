@@ -141,7 +141,7 @@ return [
 
         'payments' => [
             'driver'   => 'stack',
-            'channels' => explode(',', env('LOG_PAYMENTS_STACK', 'payments_file')),
+            'channels' => explode(',', (string) env('LOG_PAYMENTS_STACK', 'payments_file')),
             // Set LOG_PAYMENTS_STACK=payments_file,logstash to enable ELK shipping
         ],
 

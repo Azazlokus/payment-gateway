@@ -10,6 +10,7 @@ use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
 use App\CryptoPayments\Domain\ValueObjects\Memo;
 use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
 use App\CryptoPayments\Domain\ValueObjects\TransactionResult;
+use App\CryptoPayments\Domain\ValueObjects\TxHash;
 use DateTimeImmutable;
 
 interface BlockchainClientInterface
