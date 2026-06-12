@@ -93,7 +93,7 @@ final class PollCryptoDepositsJob implements ShouldQueue
             }
         }
 
-        if (empty($memos)) {
+        if ($memos === []) {
             return;
         }
 
@@ -108,7 +108,7 @@ final class PollCryptoDepositsJob implements ShouldQueue
             return;
         }
 
-        if (empty($results)) {
+        if ($results === []) {
             return;
         }
 
@@ -155,7 +155,7 @@ final class PollCryptoDepositsJob implements ShouldQueue
                 continue;
             }
 
-            if ($tx === null) {
+            if (! $tx instanceof TransactionResult) {
                 continue;
             }
 

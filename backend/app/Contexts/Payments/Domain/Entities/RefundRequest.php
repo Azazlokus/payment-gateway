@@ -11,7 +11,7 @@ final class RefundRequest
 {
     private string $status = 'pending';
 
-    private \DateTimeImmutable $createdAt;
+    private readonly \DateTimeImmutable $createdAt;
 
     public function __construct(
         private readonly RefundId $id,

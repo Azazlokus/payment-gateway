@@ -41,7 +41,7 @@ final class RecurringController extends Controller
             ->get()
             // Дедупликация: один метод — одна запись (самая свежая)
             ->unique('payment_method_id')
-            ->map(fn ($p) => [
+            ->map(fn ($p): array => [
                 'payment_method_id' => $p->payment_method_id,
                 'provider' => $p->provider,
                 'last_payment_id' => $p->id,

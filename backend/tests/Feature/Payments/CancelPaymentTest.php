@@ -131,7 +131,7 @@ class CancelPaymentTest extends TestCase
         // Добавляем external_id чтобы sync пошёл в провайдер
         PaymentModel::where('id', $id)->update(['external_id' => $this->externalId]);
 
-        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) {
+        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock): void {
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldReceive('getPayment')->andReturn(new ProviderResponse(
                 externalId: ExternalId::fromString($this->externalId),
@@ -151,7 +151,7 @@ class CancelPaymentTest extends TestCase
         // Pending без external_id — sync возвращает текущее состояние, не идёт в провайдер
         $id = $this->createPayment('Pending');
 
-        $this->mock(PaymentProviderInterface::class, function ($mock) {
+        $this->mock(PaymentProviderInterface::class, function ($mock): void {
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldNotReceive('getPayment');
         });
@@ -165,7 +165,7 @@ class CancelPaymentTest extends TestCase
     {
         $fakeId = PaymentId::generate()->toString();
 
-        $this->mock(PaymentProviderInterface::class, function ($mock) {
+        $this->mock(PaymentProviderInterface::class, function ($mock): void {
             $mock->shouldReceive('name')->andReturn('yookassa');
         });
 

@@ -18,7 +18,7 @@ final class TenantContext
 
     public function get(): TenantId
     {
-        if ($this->tenantId === null) {
+        if (! $this->tenantId instanceof TenantId) {
             throw new RuntimeException('Tenant context has not been set');
         }
 
@@ -27,7 +27,7 @@ final class TenantContext
 
     public function has(): bool
     {
-        return $this->tenantId !== null;
+        return $this->tenantId instanceof TenantId;
     }
 
     public function clear(): void

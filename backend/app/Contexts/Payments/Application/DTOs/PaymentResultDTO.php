@@ -40,7 +40,7 @@ final readonly class PaymentResultDTO
             threeDsRequired: $payment->threeDsRequired(),
             threeDsChallengeUrl: $payment->threeDsChallengeUrl(),
             splits: array_map(
-                fn (SplitRule $s) => $s->toArray(),
+                fn (SplitRule $s): array => $s->toArray(),
                 $payment->splits(),
             ),
         );

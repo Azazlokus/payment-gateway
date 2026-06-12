@@ -150,8 +150,8 @@ class CloudPaymentsProviderTest extends TestCase
             idempotencyKey: 'idem-key',
         );
 
-        Http::assertSent(fn (Request $request) => $request->hasHeader('Authorization') &&
-            str_starts_with($request->header('Authorization')[0], 'Basic ')
+        Http::assertSent(fn (Request $request): bool => $request->hasHeader('Authorization') &&
+            str_starts_with((string) $request->header('Authorization')[0], 'Basic ')
         );
     }
 
@@ -172,7 +172,7 @@ class CloudPaymentsProviderTest extends TestCase
             idempotencyKey: 'idem-key',
         );
 
-        Http::assertSent(fn (Request $request) => $request['Amount'] === 999.99);
+        Http::assertSent(fn (Request $request): bool => $request['Amount'] === 999.99);
     }
 
     public function test_get_payment_returns_succeeded(): void

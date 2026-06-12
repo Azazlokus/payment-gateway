@@ -20,11 +20,11 @@ use Tests\TestCase;
  */
 class TronBlockchainClientTest extends TestCase
 {
-    private const TRON_ADDRESS = 'TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9';
+    private const string TRON_ADDRESS = 'TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9';
 
-    private const TX_HASH = 'abc123def456abc123def456abc123def456abc123def456abc123def456abcd';
+    private const string TX_HASH = 'abc123def456abc123def456abc123def456abc123def456abc123def456abcd';
 
-    private const USDT_CTR = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+    private const string USDT_CTR = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
     private TronBlockchainClient $client;
 

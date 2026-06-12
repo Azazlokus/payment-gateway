@@ -45,11 +45,11 @@ final class CreatePaymentRequest extends FormRequest
             'receipt' => ['sometimes', 'array'],
             'receipt.customer.email' => [
                 'nullable', 'email',
-                Rule::requiredIf(fn () => $this->has('receipt') && ! $this->filled('receipt.customer.phone')),
+                Rule::requiredIf(fn (): bool => $this->has('receipt') && ! $this->filled('receipt.customer.phone')),
             ],
             'receipt.customer.phone' => [
                 'nullable', 'string',
-                Rule::requiredIf(fn () => $this->has('receipt') && ! $this->filled('receipt.customer.email')),
+                Rule::requiredIf(fn (): bool => $this->has('receipt') && ! $this->filled('receipt.customer.email')),
             ],
             'receipt.items' => ['required_with:receipt', 'array', 'min:1'],
             'receipt.items.*.description' => ['required', 'string', 'max:128'],

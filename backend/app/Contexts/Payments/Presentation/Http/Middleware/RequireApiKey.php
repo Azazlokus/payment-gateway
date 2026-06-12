@@ -16,7 +16,7 @@ final class RequireApiKey
         // Оба ключа принимаются одновременно — позволяет плавно ротировать
         // без даунтайма. После обновления клиентов старый ключ удаляется.
         $configKeys = array_values(array_filter(
-            array_map('trim', explode(',', (string) config('api.key')))
+            array_map(trim(...), explode(',', (string) config('api.key')))
         ));
 
         if ($configKeys === []) {

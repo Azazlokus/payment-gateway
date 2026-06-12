@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Contexts\Payments\Application\Commands\RefundPayment;
 
 use App\Contexts\Payments\Application\DTOs\PaymentResultDTO;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Enums\RefundStatus;
 use App\Contexts\Payments\Domain\Exceptions\PaymentException;
+use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
 use App\Contexts\Payments\Domain\ValueObjects\Money;
 use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
 use App\Contexts\Payments\Infrastructure\Jobs\ProcessRefundJob;
@@ -34,7 +36,7 @@ final readonly class RefundPaymentHandler
 
             if ($cached !== null) {
                 $payment = $this->repository->findById(PaymentId::fromString($cached));
-                if ($payment !== null) {
+                if ($payment instanceof Payment) {
                     $this->logger->info('Refund idempotency hit', [
                         'idempotency_key' => $command->idempotencyKey,
                         'payment_id' => $cached,
@@ -48,11 +50,11 @@ final readonly class RefundPaymentHandler
         $result = DB::transaction(function () use ($command): PaymentResultDTO {
             $payment = $this->repository->findById(PaymentId::fromString($command->paymentId));
 
-            if ($payment === null) {
+            if (! $payment instanceof Payment) {
                 throw new PaymentException("Payment not found: {$command->paymentId}", Response::HTTP_NOT_FOUND);
             }
 
-            if ($payment->externalId() === null) {
+            if (! $payment->externalId() instanceof ExternalId) {
                 throw new PaymentException('Payment has no external ID, cannot refund', Response::HTTP_CONFLICT);
             }
 

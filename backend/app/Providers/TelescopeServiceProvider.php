@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use Laravel\Telescope\IncomingEntry;
@@ -8,13 +10,14 @@ use Laravel\Telescope\TelescopeApplicationServiceProvider;
 
 class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 {
+    #[\Override]
     public function register(): void
     {
         Telescope::night();
 
         $this->hideSensitiveRequestDetails();
 
-        Telescope::filter(function (IncomingEntry $entry) {
+        Telescope::filter(function (IncomingEntry $entry): bool {
             if ($this->app->environment('local')) {
                 return true;
             }
@@ -37,6 +40,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         Telescope::hideRequestHeaders(['cookie', 'x-csrf-token', 'x-xsrf-token', 'x-api-key']);
     }
 
+    #[\Override]
     protected function gate(): void
     {
         // Telescope доступен только в local — gate не нужен

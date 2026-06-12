@@ -31,7 +31,7 @@ final class RetryFailedRefundsCommand extends Command
         }
 
         $refunds = Refund::where('status', $status->value)
-            ->where(function ($q) {
+            ->where(function ($q): void {
                 $q->whereNull('next_retry_at')
                     ->orWhere('next_retry_at', '<=', now());
             })

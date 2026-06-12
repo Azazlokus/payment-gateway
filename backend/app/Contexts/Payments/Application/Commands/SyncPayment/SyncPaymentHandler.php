@@ -6,9 +6,11 @@ namespace App\Contexts\Payments\Application\Commands\SyncPayment;
 
 use App\Contexts\Payments\Application\DTOs\PaymentResultDTO;
 use App\Contexts\Payments\Application\PaymentProviderRegistry;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Exceptions\InvalidPaymentStateException;
 use App\Contexts\Payments\Domain\Exceptions\PaymentException;
+use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
 use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
 use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Facades\DB;
@@ -27,11 +29,11 @@ final readonly class SyncPaymentHandler
         return DB::transaction(function () use ($command): PaymentResultDTO {
             $payment = $this->repository->findById(PaymentId::fromString($command->paymentId));
 
-            if ($payment === null) {
+            if (! $payment instanceof Payment) {
                 throw new PaymentException("Payment not found: {$command->paymentId}", Response::HTTP_NOT_FOUND);
             }
 
-            if ($payment->externalId() === null || $payment->status()->isTerminal()) {
+            if (! $payment->externalId() instanceof ExternalId || $payment->status()->isTerminal()) {
                 return PaymentResultDTO::fromAggregate($payment);
             }
 

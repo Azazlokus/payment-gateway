@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Contexts\CryptoPayments\Presentation\Http\Controllers\CryptoDepositController;
-use App\PaymentLinks\Http\Controllers\PaymentLinkController;
 use App\Contexts\Payments\Presentation\Http\Controllers\AlfaBankWebhookController;
 use App\Contexts\Payments\Presentation\Http\Controllers\AnalyticsController;
 use App\Contexts\Payments\Presentation\Http\Controllers\AuditLogController;
@@ -21,6 +20,7 @@ use App\Contexts\Payments\Presentation\Http\Controllers\RobokassaWebhookControll
 use App\Contexts\Payments\Presentation\Http\Controllers\SbpWebhookController;
 use App\Contexts\Payments\Presentation\Http\Controllers\WebhookController;
 use App\Contexts\Payments\Presentation\Http\Controllers\WebhookLogController;
+use App\PaymentLinks\Http\Controllers\PaymentLinkController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Unversioned infrastructure endpoints ─────────────────────────────────────

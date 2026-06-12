@@ -7,10 +7,10 @@ namespace App\Contexts\Payments\Infrastructure\Webhook;
 use App\Contexts\Payments\Domain\Exceptions\WebhookVerificationFailedException;
 use Illuminate\Contracts\Cache\Repository;
 
-final class ReplayProtector
+final readonly class ReplayProtector
 {
     public function __construct(
-        private readonly Repository $cache,
+        private Repository $cache,
     ) {}
 
     /**

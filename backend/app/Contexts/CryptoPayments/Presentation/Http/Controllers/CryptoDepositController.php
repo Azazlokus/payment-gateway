@@ -9,6 +9,7 @@ use App\Contexts\CryptoPayments\Application\Commands\CreateCryptoDeposit\CreateC
 use App\Contexts\CryptoPayments\Application\Commands\CreateCryptoRefund\CreateCryptoRefundCommand;
 use App\Contexts\CryptoPayments\Application\Commands\CreateCryptoRefund\CreateCryptoRefundHandler;
 use App\Contexts\CryptoPayments\Application\DTOs\CryptoDepositResultDTO;
+use App\Contexts\CryptoPayments\Domain\Aggregates\CryptoDeposit;
 use App\Contexts\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
 use App\Contexts\CryptoPayments\Domain\Enums\CryptoAsset;
 use App\Contexts\CryptoPayments\Domain\Exceptions\CryptoDepositException;
@@ -44,7 +45,7 @@ final class CryptoDepositController extends Controller
     {
         $deposit = $this->deposits->findById(CryptoDepositId::fromString($id));
 
-        if ($deposit === null) {
+        if (! $deposit instanceof CryptoDeposit) {
             return response()->json(['code' => 'not_found', 'message' => 'Crypto deposit not found.'], Response::HTTP_NOT_FOUND);
         }
 

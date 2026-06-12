@@ -47,7 +47,7 @@ final class PrunePaymentMethodsCommand extends Command
             ->where('created_at', '<', $cutoff)
             ->whereNotNull('payment_method_id')
             ->orderBy('id')
-            ->chunkById(500, function ($chunk) use (&$pruned) {
+            ->chunkById(500, function ($chunk) use (&$pruned): void {
                 $ids = $chunk->pluck('id')->all();
 
                 $pruned += DB::table('payments')

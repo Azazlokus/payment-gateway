@@ -21,7 +21,7 @@ final class WebhookLogController extends Controller
             ->latest('sent_at')
             ->limit(50)
             ->get()
-            ->map(fn ($log) => [
+            ->map(fn ($log): array => [
                 'id' => $log->id,
                 'url' => $log->url,
                 'attempt' => $log->attempt,
@@ -55,7 +55,7 @@ final class WebhookLogController extends Controller
         $logs = $query->paginate(30);
 
         return response()->json([
-            'data' => $logs->map(fn ($log) => [
+            'data' => $logs->map(fn ($log): array => [
                 'id' => $log->id,
                 'payment_id' => $log->payment_id,
                 'url' => $log->url,

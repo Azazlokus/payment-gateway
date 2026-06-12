@@ -23,7 +23,7 @@ final class AuditLogger
             $ip = $request?->ip();
             $apiKeyHint = null;
 
-            if ($request !== null) {
+            if ($request instanceof Request) {
                 $raw = (string) $request->header('X-Api-Key', '');
                 if ($raw !== '') {
                     $apiKeyHint = '...'.substr($raw, -4);

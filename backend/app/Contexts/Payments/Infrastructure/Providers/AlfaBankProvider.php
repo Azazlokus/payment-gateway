@@ -13,15 +13,15 @@ use App\Contexts\Payments\Domain\ValueObjects\Money;
 use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Facades\Http;
 
-final class AlfaBankProvider implements PaymentProviderInterface
+final readonly class AlfaBankProvider implements PaymentProviderInterface
 {
     /** @param array<string> $webhookIps */
     public function __construct(
-        private readonly string $login,
-        private readonly string $password,
-        private readonly string $baseUrl,
-        private readonly PaymentLogger $logger,
-        private readonly array $webhookIps = [],
+        private string $login,
+        private string $password,
+        private string $baseUrl,
+        private PaymentLogger $logger,
+        private array $webhookIps = [],
     ) {}
 
     public function name(): string
@@ -54,7 +54,7 @@ final class AlfaBankProvider implements PaymentProviderInterface
                 'jsonParams' => json_encode(['internal_payment_id' => $paymentId]),
             ]),
             sleepMilliseconds: 500,
-            when: fn (\Throwable $e) => $this->isRetryable($e),
+            when: fn (\Throwable $e): bool => $this->isRetryable($e),
         );
 
         if (! $response->successful()) {
@@ -118,7 +118,7 @@ final class AlfaBankProvider implements PaymentProviderInterface
                 'amount' => $amount->amount(),
             ]),
             sleepMilliseconds: 500,
-            when: fn (\Throwable $e) => $this->isRetryable($e),
+            when: fn (\Throwable $e): bool => $this->isRetryable($e),
         );
 
         if (! $response->successful()) {
@@ -152,7 +152,7 @@ final class AlfaBankProvider implements PaymentProviderInterface
      */
     public function verifyWebhook(array $payload, array $headers): bool
     {
-        if (! empty($this->webhookIps)) {
+        if ($this->webhookIps !== []) {
             $requestIp = request()->ip();
 
             if (! $this->ipInAllowedRanges($requestIp, $this->webhookIps)) {

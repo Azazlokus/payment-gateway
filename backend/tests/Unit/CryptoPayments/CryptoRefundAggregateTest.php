@@ -17,9 +17,9 @@ use PHPUnit\Framework\TestCase;
 
 class CryptoRefundAggregateTest extends TestCase
 {
-    private const ADDRESS = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
+    private const string ADDRESS = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
 
-    private const DEPOSIT_ID = '01HXXXXXXXXXXXXXXXXXXXXXXXX';
+    private const string DEPOSIT_ID = '01HXXXXXXXXXXXXXXXXXXXXXXXX';
 
     private function makeRefund(): CryptoRefundRequest
     {
@@ -46,7 +46,6 @@ class CryptoRefundAggregateTest extends TestCase
         $this->assertCount(1, $events);
         $this->assertInstanceOf(RefundWasRequested::class, $events[0]);
 
-        /** @var RefundWasRequested $event */
         $event = $events[0];
         $this->assertSame(self::DEPOSIT_ID, $event->depositId);
         $this->assertSame(self::ADDRESS, $event->toAddress);

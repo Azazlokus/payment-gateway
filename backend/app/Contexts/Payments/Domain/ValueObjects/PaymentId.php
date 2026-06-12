@@ -7,7 +7,7 @@ namespace App\Contexts\Payments\Domain\ValueObjects;
 use InvalidArgumentException;
 use Symfony\Component\Uid\Ulid;
 
-final readonly class PaymentId
+final readonly class PaymentId implements \Stringable
 {
     private function __construct(private string $value) {}
 

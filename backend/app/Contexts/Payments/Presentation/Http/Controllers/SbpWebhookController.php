@@ -20,10 +20,7 @@ final class SbpWebhookController extends Controller
         private readonly PaymentLogger $logger,
     ) {}
 
-    #[OA\Post(
-        path: '/webhook/sbp',
-        summary: 'Webhook от СБП',
-        description: <<<'TEXT'
+    #[OA\Post(path: '/webhook/sbp', description: <<<'TEXT'
             Принимает JSON-уведомления от банка-эквайера об изменении статуса QR-платежа.
 
             **Верификация:** заголовок `X-Api-Key` сверяется с `SBP_WEBHOOK_SECRET`.
@@ -31,19 +28,15 @@ final class SbpWebhookController extends Controller
             **Поддерживаемые статусы:**
             - `PAID` — платёж прошёл успешно
             - `CANCELLED` / `EXPIRED` — платёж отменён или истёк
-            TEXT,
-        tags: ['Webhook'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(ref: '#/components/schemas/SbpWebhookPayload'),
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Webhook принят', content: new OA\JsonContent(
-                properties: [new OA\Property(property: 'message', type: 'string', example: 'ok')]
-            )),
-            new OA\Response(response: 403, description: 'Невалидный X-Api-Key или отсутствуют обязательные поля'),
-        ]
-    )]
+            TEXT, summary: 'Webhook от СБП', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(ref: '#/components/schemas/SbpWebhookPayload'),
+    ), tags: ['Webhook'], responses: [
+        new OA\Response(response: 200, description: 'Webhook принят', content: new OA\JsonContent(
+            properties: [new OA\Property(property: 'message', type: 'string', example: 'ok')]
+        )),
+        new OA\Response(response: 403, description: 'Невалидный X-Api-Key или отсутствуют обязательные поля'),
+    ])]
     public function handle(Request $request): JsonResponse
     {
         $payload = $request->all();

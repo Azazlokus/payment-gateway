@@ -74,7 +74,7 @@ final class EloquentCryptoDepositRepository implements CryptoDepositRepositoryIn
             ->get()
             ->all();
 
-        return array_map(fn (CryptoDepositModel $m) => $this->hydrate($m), $models);
+        return array_map($this->hydrate(...), $models);
     }
 
     /** @return CryptoDeposit[] */
@@ -86,13 +86,13 @@ final class EloquentCryptoDepositRepository implements CryptoDepositRepositoryIn
             ->get()
             ->all();
 
-        return array_map(fn (CryptoDepositModel $m) => $this->hydrate($m), $models);
+        return array_map($this->hydrate(...), $models);
     }
 
     /** @return string[] */
     public function findActiveAddressesByNetwork(string $network): array
     {
-        $assets = array_filter(CryptoAsset::cases(), fn (CryptoAsset $a) => $a->network() === $network);
+        $assets = array_filter(CryptoAsset::cases(), fn (CryptoAsset $a): bool => $a->network() === $network);
         $assetValues = array_map(fn (CryptoAsset $a) => $a->value, $assets);
 
         return CryptoDepositModel::whereIn('asset', $assetValues)

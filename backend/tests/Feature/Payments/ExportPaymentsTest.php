@@ -98,7 +98,7 @@ class ExportPaymentsTest extends TestCase
         $content = $this->get('/api/v1/payments/export')->streamedContent();
 
         $firstLine = explode("\n", trim($content))[0];
-        $columns = str_getcsv($firstLine);
+        $columns = str_getcsv($firstLine, escape: '\\');
 
         $this->assertSame(['id', 'status', 'provider', 'amount', 'currency', 'description', 'external_id', 'created_at'], $columns);
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Contexts\Payments\Infrastructure\Jobs;
 
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Exceptions\InvalidPaymentStateException;
@@ -38,7 +39,7 @@ final class ProcessYooKassaWebhookJob implements ShouldQueue
 
         $payment = $repository->findByExternalId($providerResponse->externalId->toString());
 
-        if ($payment === null) {
+        if (! $payment instanceof Payment) {
             $logger->warning('Webhook job: payment not found', [
                 'external_id' => $providerResponse->externalId->toString(),
                 'event' => $event,
@@ -74,7 +75,7 @@ final class ProcessYooKassaWebhookJob implements ShouldQueue
                 'event' => $event,
                 'payment_id' => $payment->id()->toString(),
             ]);
-        } catch (InvalidPaymentStateException $e) {
+        } catch (InvalidPaymentStateException) {
             // Идемпотентность: платёж уже в нужном статусе — не ретраим
             $logger->info('Webhook job: payment already in terminal status (skipped)', [
                 'event' => $event,

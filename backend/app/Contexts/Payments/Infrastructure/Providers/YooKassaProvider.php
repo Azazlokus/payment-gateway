@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Contexts\Payments\Infrastructure\Providers;
 
 use App\Contexts\Payments\Application\DTOs\CreatePaymentOptionsDTO;
+use App\Contexts\Payments\Application\DTOs\ReceiptDTO;
 use App\Contexts\Payments\Application\DTOs\ReceiptItemDTO;
 use App\Contexts\Payments\Domain\Contracts\PaymentProviderInterface;
 use App\Contexts\Payments\Domain\Contracts\ProviderResponse;
@@ -19,16 +20,22 @@ use App\Contexts\Payments\Domain\ValueObjects\SplitRule;
 use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Str;
 use YooKassa\Client;
+use YooKassa\Model\Payment\PaymentMethod\AbstractPaymentMethod;
+use YooKassa\Model\Payment\PaymentMethod\BankCard;
 use YooKassa\Model\Payment\PaymentMethod\PaymentMethodBankCard;
+use YooKassa\Request\Payments\CancelResponse;
+use YooKassa\Request\Payments\CreateCaptureResponse;
+use YooKassa\Request\Payments\CreatePaymentResponse;
+use YooKassa\Request\Refunds\CreateRefundResponse;
 
-final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitPayments, SupportsTokenization, SupportsTwoPhasePayments
+final readonly class YooKassaProvider implements PaymentProviderInterface, SupportsSplitPayments, SupportsTokenization, SupportsTwoPhasePayments
 {
-    private readonly Client $client;
+    private Client $client;
 
     public function __construct(
-        private readonly string $shopId,
-        private readonly string $secretKey,
-        private readonly PaymentLogger $logger,
+        private string $shopId,
+        private string $secretKey,
+        private PaymentLogger $logger,
         ?Client $client = null,
     ) {
         $this->client = $client ?? new Client;
@@ -87,7 +94,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                 'description' => $description,
                 'metadata' => ['internal_payment_id' => $paymentId],
                 'capture' => true,
-                'transfers' => array_map(fn (SplitRule $split) => [
+                'transfers' => array_map(fn (SplitRule $split): array => [
                     'account_id' => $split->accountId(),
                     'amount' => [
                         'value' => number_format($split->amount()->amount() / 100, 2, '.', ''),
@@ -107,15 +114,15 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                 }
             }
 
-            if ($options->receipt !== null) {
+            if ($options->receipt instanceof ReceiptDTO) {
                 $payload['receipt'] = $this->buildReceipt($options, $amount);
             }
 
             $response = retry(
                 times: 3,
-                callback: fn () => $this->client->createPayment($payload, $idempotencyKey),
+                callback: fn (): ?CreatePaymentResponse => $this->client->createPayment($payload, $idempotencyKey),
                 sleepMilliseconds: 500,
-                when: fn (\Throwable $e) => $this->isRetryable($e),
+                when: fn (\Throwable $e): bool => $this->isRetryable($e),
             );
 
             $confirmationUrl = $options->paymentMethodId !== null
@@ -134,7 +141,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                 'error' => $e->getMessage(),
             ]);
 
-            throw new PaymentException("YooKassa createSplitPayment failed: {$e->getMessage()}", previous: $e);
+            throw new PaymentException("YooKassa createSplitPayment failed: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
     }
 
@@ -143,7 +150,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
         try {
             $response = retry(
                 times: 3,
-                callback: fn () => $this->client->capturePayment(
+                callback: fn (): ?CreateCaptureResponse => $this->client->capturePayment(
                     [
                         'amount' => [
                             'value' => number_format($amount->amount() / 100, 2, '.', ''),
@@ -154,7 +161,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                     (string) Str::uuid(),
                 ),
                 sleepMilliseconds: 500,
-                when: fn (\Throwable $e) => $this->isRetryable($e),
+                when: fn (\Throwable $e): bool => $this->isRetryable($e),
             );
 
             return new ProviderResponse(
@@ -164,7 +171,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                 rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
             );
         } catch (\Throwable $e) {
-            throw new PaymentException("YooKassa capture failed: {$e->getMessage()}", previous: $e);
+            throw new PaymentException("YooKassa capture failed: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
     }
 
@@ -173,9 +180,9 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
         try {
             $response = retry(
                 times: 3,
-                callback: fn () => $this->client->cancelPayment($externalId->toString(), (string) Str::uuid()),
+                callback: fn (): ?CancelResponse => $this->client->cancelPayment($externalId->toString(), (string) Str::uuid()),
                 sleepMilliseconds: 500,
-                when: fn (\Throwable $e) => $this->isRetryable($e),
+                when: fn (\Throwable $e): bool => $this->isRetryable($e),
             );
 
             return new ProviderResponse(
@@ -185,7 +192,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                 rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
             );
         } catch (\Throwable $e) {
-            throw new PaymentException("YooKassa void failed: {$e->getMessage()}", previous: $e);
+            throw new PaymentException("YooKassa void failed: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
     }
 
@@ -202,7 +209,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                 rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
             );
         } catch (\Throwable $e) {
-            throw new PaymentException("YooKassa getPayment failed: {$e->getMessage()}", previous: $e);
+            throw new PaymentException("YooKassa getPayment failed: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
     }
 
@@ -211,7 +218,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
         try {
             $response = retry(
                 times: 3,
-                callback: fn () => $this->client->createRefund(
+                callback: fn (): ?CreateRefundResponse => $this->client->createRefund(
                     [
                         'payment_id' => $externalId->toString(),
                         'amount' => [
@@ -222,7 +229,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                     (string) Str::uuid(),
                 ),
                 sleepMilliseconds: 500,
-                when: fn (\Throwable $e) => $this->isRetryable($e),
+                when: fn (\Throwable $e): bool => $this->isRetryable($e),
             );
 
             return new ProviderResponse(
@@ -232,7 +239,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                 rawData: method_exists($response, 'jsonSerialize') ? $response->jsonSerialize() : [],
             );
         } catch (\Throwable $e) {
-            throw new PaymentException("YooKassa refund failed: {$e->getMessage()}", previous: $e);
+            throw new PaymentException("YooKassa refund failed: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
     }
 
@@ -293,7 +300,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
             $response = $this->client->getPaymentInfo($paymentId);
             $method = $response->getPaymentMethod();
 
-            if ($method === null || ! $method->getSaved()) {
+            if (! $method instanceof AbstractPaymentMethod || ! $method->getSaved()) {
                 throw new PaymentException('Payment method was not saved for this payment');
             }
 
@@ -304,12 +311,12 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                 type: $method->getType() ?? 'card',
                 last4: $card?->getLast4() ?? '0000',
                 brand: $card?->getCardType() ?? 'unknown',
-                expiresAt: $card ? sprintf('%s/%s', $card->getExpiryMonth(), $card->getExpiryYear()) : null,
+                expiresAt: $card instanceof BankCard ? sprintf('%s/%s', $card->getExpiryMonth(), $card->getExpiryYear()) : null,
             );
         } catch (PaymentException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            throw new PaymentException("YooKassa tokenize failed: {$e->getMessage()}", previous: $e);
+            throw new PaymentException("YooKassa tokenize failed: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
     }
 
@@ -337,9 +344,9 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
 
             $response = retry(
                 times: 3,
-                callback: fn () => $this->client->createPayment($payload, $idempotencyKey),
+                callback: fn (): ?CreatePaymentResponse => $this->client->createPayment($payload, $idempotencyKey),
                 sleepMilliseconds: 500,
-                when: fn (\Throwable $e) => $this->isRetryable($e),
+                when: fn (\Throwable $e): bool => $this->isRetryable($e),
             );
 
             return new ProviderResponse(
@@ -352,7 +359,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
         } catch (PaymentException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            throw new PaymentException("YooKassa chargeToken failed: {$e->getMessage()}", previous: $e);
+            throw new PaymentException("YooKassa chargeToken failed: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
     }
 
@@ -406,15 +413,15 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                 }
             }
 
-            if ($options->receipt !== null) {
+            if ($options->receipt instanceof ReceiptDTO) {
                 $payload['receipt'] = $this->buildReceipt($options, $amount);
             }
 
             $response = retry(
                 times: 3,
-                callback: fn () => $this->client->createPayment($payload, $idempotencyKey),
+                callback: fn (): ?CreatePaymentResponse => $this->client->createPayment($payload, $idempotencyKey),
                 sleepMilliseconds: 500,
-                when: fn (\Throwable $e) => $this->isRetryable($e),
+                when: fn (\Throwable $e): bool => $this->isRetryable($e),
             );
 
             $this->logger->info('YooKassa: платёж создан', [
@@ -448,7 +455,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
                 'error' => $e->getMessage(),
             ]);
 
-            throw new PaymentException("YooKassa createPayment failed: {$e->getMessage()}", previous: $e);
+            throw new PaymentException("YooKassa createPayment failed: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
     }
 
@@ -473,7 +480,7 @@ final class YooKassaProvider implements PaymentProviderInterface, SupportsSplitP
             'phone' => $receipt->phone,
         ]);
 
-        $items = array_map(fn (ReceiptItemDTO $item) => [
+        $items = array_map(fn (ReceiptItemDTO $item): array => [
             'description' => $item->description,
             'quantity' => $item->quantity,
             'amount' => [

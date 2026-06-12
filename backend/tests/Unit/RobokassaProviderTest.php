@@ -140,7 +140,7 @@ class RobokassaProviderTest extends TestCase
 
         $this->assertSame('succeeded', $result->status);
 
-        Http::assertSent(fn ($req) => str_contains($req->url(), '/Payment/Return') &&
+        Http::assertSent(fn ($req): bool => str_contains((string) $req->url(), '/Payment/Return') &&
             $req['MerchantLogin'] === $this->login &&
             $req['InvoiceID'] === '42' &&
             $req['Amount'] === '300.00'

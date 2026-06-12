@@ -62,7 +62,7 @@ final class EloquentCryptoRefundRepository implements CryptoRefundRepositoryInte
             CryptoRefundModel::where('status', CryptoRefundStatus::Pending->value)
                 ->orderBy('created_at')
                 ->get()
-                ->map(fn (CryptoRefundModel $m) => $this->hydrate($m))
+                ->map(fn (CryptoRefundModel $m): CryptoRefundRequest => $this->hydrate($m))
                 ->all(),
         );
     }

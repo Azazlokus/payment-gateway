@@ -20,7 +20,7 @@ class CryptoDepositTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const MASTER_ADDRESS = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
+    private const string MASTER_ADDRESS = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
 
     protected function setUp(): void
     {

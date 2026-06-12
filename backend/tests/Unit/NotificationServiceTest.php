@@ -75,7 +75,7 @@ class NotificationServiceTest extends TestCase
             ['notification_url' => 'https://example.com/notify'],
         );
 
-        Http::assertSent(fn (Request $request) => $request->url() === 'https://example.com/notify' &&
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://example.com/notify' &&
             $request->method() === 'POST'
         );
     }
@@ -94,7 +94,7 @@ class NotificationServiceTest extends TestCase
 
         $this->service->notify($payment, ['notification_url' => 'https://example.com/notify']);
 
-        Http::assertSent(fn (Request $request) => $request['event'] === 'payment.status_changed' &&
+        Http::assertSent(fn (Request $request): bool => $request['event'] === 'payment.status_changed' &&
             $request['payment_id'] === 'pay-123' &&
             $request['status'] === 'Succeeded' &&
             $request['amount'] === 75000 &&
@@ -145,7 +145,7 @@ class NotificationServiceTest extends TestCase
 
         $this->logger->shouldReceive('warning')->once()->with(
             'Outbound notification failed',
-            Mockery::on(fn ($ctx) => str_contains($ctx['error'], 'Connection refused'))
+            Mockery::on(fn ($ctx): bool => str_contains((string) $ctx['error'], 'Connection refused'))
         );
 
         $this->metrics->shouldReceive('notificationSent')->once()->with(false);

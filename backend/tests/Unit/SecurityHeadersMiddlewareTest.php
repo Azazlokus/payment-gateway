@@ -21,7 +21,7 @@ class SecurityHeadersMiddlewareTest extends TestCase
 
     private function handle(Request $request): Response
     {
-        return $this->middleware->handle($request, fn () => new Response('ok'));
+        return $this->middleware->handle($request, fn (): Response => new Response('ok'));
     }
 
     // ─── Заголовки присутствуют ───────────────────────────────────────────────
@@ -112,7 +112,7 @@ class SecurityHeadersMiddlewareTest extends TestCase
     {
         $response = $this->middleware->handle(
             Request::create('/test'),
-            fn () => new Response('hello world', 200)
+            fn (): Response => new Response('hello world', 200)
         );
 
         $this->assertSame('hello world', $response->getContent());
@@ -122,7 +122,7 @@ class SecurityHeadersMiddlewareTest extends TestCase
     {
         $response = $this->middleware->handle(
             Request::create('/test'),
-            fn () => new Response('not found', 404)
+            fn (): Response => new Response('not found', 404)
         );
 
         $this->assertSame(404, $response->getStatusCode());
@@ -132,7 +132,7 @@ class SecurityHeadersMiddlewareTest extends TestCase
     {
         $called = false;
 
-        $this->middleware->handle(Request::create('/test'), function () use (&$called) {
+        $this->middleware->handle(Request::create('/test'), function () use (&$called): Response {
             $called = true;
 
             return new Response;

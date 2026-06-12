@@ -34,7 +34,7 @@ final class ProcessCryptoRefundsJob implements ShouldQueue
     ): void {
         $pending = $refunds->findPending();
 
-        if (empty($pending)) {
+        if ($pending === []) {
             return;
         }
 

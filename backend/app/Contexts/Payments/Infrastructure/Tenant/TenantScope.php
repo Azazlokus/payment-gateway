@@ -9,9 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 
 /** @implements Scope<Model> */
-final class TenantScope implements Scope
+final readonly class TenantScope implements Scope
 {
-    public function __construct(private readonly TenantContext $context) {}
+    public function __construct(private TenantContext $context) {}
 
     /** @param Builder<covariant Model> $builder */
     public function apply(Builder $builder, Model $model): void

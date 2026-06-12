@@ -11,10 +11,10 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
-final class CoinGeckoPriceOracle implements PriceOracleInterface
+final readonly class CoinGeckoPriceOracle implements PriceOracleInterface
 {
     public function __construct(
-        private readonly PaymentLogger $logger,
+        private PaymentLogger $logger,
     ) {}
 
     public function getRateKopecks(CryptoAsset $asset): int
@@ -24,9 +24,7 @@ final class CoinGeckoPriceOracle implements PriceOracleInterface
         $ttl = (int) config('crypto.price_oracle.cache_ttl_seconds', 60);
 
         /** @var int $rate */
-        $rate = Cache::remember($cacheKey, $ttl, function () use ($coinId, $asset): int {
-            return $this->fetchRateKopecks($coinId, $asset);
-        });
+        $rate = Cache::remember($cacheKey, $ttl, fn (): int => $this->fetchRateKopecks($coinId));
 
         return $rate;
     }
@@ -48,7 +46,7 @@ final class CoinGeckoPriceOracle implements PriceOracleInterface
         return intval(round(($kopecks * $factor) / $rateKopecks));
     }
 
-    private function fetchRateKopecks(string $coinId, CryptoAsset $asset): int
+    private function fetchRateKopecks(string $coinId): int
     {
         $baseUrl = config('crypto.price_oracle.base_url', 'https://api.coingecko.com/api/v3');
         $response = Http::get("{$baseUrl}/simple/price", [

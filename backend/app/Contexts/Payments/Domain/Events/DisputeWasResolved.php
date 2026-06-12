@@ -7,10 +7,10 @@ namespace App\Contexts\Payments\Domain\Events;
 final readonly class DisputeWasResolved extends DomainEvent
 {
     public function __construct(
-        public readonly string $disputeId,
-        public readonly string $paymentId,
-        public readonly string $resolution, // 'Won' | 'Lost'
-        public readonly ?string $note,
+        public string $disputeId,
+        public string $paymentId,
+        public string $resolution, // 'Won' | 'Lost'
+        public ?string $note,
     ) {
         parent::__construct();
     }

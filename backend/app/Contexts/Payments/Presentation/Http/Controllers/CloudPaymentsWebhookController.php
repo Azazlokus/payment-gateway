@@ -22,10 +22,7 @@ final class CloudPaymentsWebhookController extends Controller
         private readonly ReplayProtector $replayProtector,
     ) {}
 
-    #[OA\Post(
-        path: '/webhook/cloudpayments',
-        summary: 'Webhook от CloudPayments',
-        description: <<<'TEXT'
+    #[OA\Post(path: '/webhook/cloudpayments', description: <<<'TEXT'
             Принимает JSON-уведомления от CloudPayments об изменении статуса транзакции.
 
             **Верификация:** заголовок `Content-HMAC` = Base64(HMAC-SHA256(body, apiSecret)).
@@ -34,35 +31,30 @@ final class CloudPaymentsWebhookController extends Controller
             - `Completed` / `Authorized` — оплата успешна
             - `Cancelled` / `Declined` — отменена
             - `Refunded` — возврат
-            TEXT,
-        tags: ['Webhook'],
-        parameters: [
-            new OA\Parameter(
-                name: 'Content-HMAC',
-                in: 'header',
-                required: true,
-                description: 'HMAC-SHA256 подпись тела запроса',
-                schema: new OA\Schema(type: 'string'),
-            ),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'TransactionId', type: 'integer', example: 12345678),
-                    new OA\Property(property: 'InvoiceId', type: 'string', example: '01HV9Z7BKQE4GNKR2XQVP0M8T'),
-                    new OA\Property(property: 'Status', type: 'string', enum: ['Completed', 'Authorized', 'Cancelled', 'Declined', 'Refunded']),
-                    new OA\Property(property: 'Amount', type: 'number', format: 'float', example: 500.00),
-                ]
-            ),
+            TEXT, summary: 'Webhook от CloudPayments', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'TransactionId', type: 'integer', example: 12345678),
+                new OA\Property(property: 'InvoiceId', type: 'string', example: '01HV9Z7BKQE4GNKR2XQVP0M8T'),
+                new OA\Property(property: 'Status', type: 'string', enum: ['Completed', 'Authorized', 'Cancelled', 'Declined', 'Refunded']),
+                new OA\Property(property: 'Amount', type: 'number', format: 'float', example: 500.00),
+            ]
         ),
-        responses: [
-            new OA\Response(response: 200, description: 'Webhook принят', content: new OA\JsonContent(
-                properties: [new OA\Property(property: 'code', type: 'integer', example: 0)]
-            )),
-            new OA\Response(response: 403, description: 'Неверная подпись'),
-        ]
-    )]
+    ), tags: ['Webhook'], parameters: [
+        new OA\Parameter(
+            name: 'Content-HMAC',
+            description: 'HMAC-SHA256 подпись тела запроса',
+            in: 'header',
+            required: true,
+            schema: new OA\Schema(type: 'string'),
+        ),
+    ], responses: [
+        new OA\Response(response: 200, description: 'Webhook принят', content: new OA\JsonContent(
+            properties: [new OA\Property(property: 'code', type: 'integer', example: 0)]
+        )),
+        new OA\Response(response: 403, description: 'Неверная подпись'),
+    ])]
     public function handle(Request $request): JsonResponse
     {
         $nonce = (string) $request->header('X-Request-Id', uniqid('', true));

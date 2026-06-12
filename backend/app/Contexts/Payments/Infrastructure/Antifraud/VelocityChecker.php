@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Redis;
  */
 final class VelocityChecker
 {
-    private const PREFIX = 'velocity:';
+    private const string PREFIX = 'velocity:';
 
     /** @var VelocityRule[] */
     private array $rules = [];

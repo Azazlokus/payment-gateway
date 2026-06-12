@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Contexts\Payments\Infrastructure\Jobs;
 
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Exceptions\InvalidPaymentStateException;
 use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
@@ -47,7 +48,7 @@ final class ProcessRobokassaWebhookJob implements ShouldQueue
 
         $payment = $repository->findById($paymentId);
 
-        if ($payment === null) {
+        if (! $payment instanceof Payment) {
             $logger->warning('Robokassa webhook job: payment not found', [
                 'shp_payment_id' => $internalId,
                 'inv_id' => $invId,
@@ -77,7 +78,7 @@ final class ProcessRobokassaWebhookJob implements ShouldQueue
                 'payment_id' => $payment->id()->toString(),
                 'inv_id' => $invId,
             ]);
-        } catch (InvalidPaymentStateException $e) {
+        } catch (InvalidPaymentStateException) {
             // Idempotency: payment already in a terminal state — do not retry
             $logger->info('Robokassa webhook job: payment already in terminal status (skipped)', [
                 'payment_id' => $payment->id()->toString(),

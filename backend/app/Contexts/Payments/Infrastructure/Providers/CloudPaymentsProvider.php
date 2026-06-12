@@ -15,14 +15,14 @@ use App\Contexts\Payments\Domain\ValueObjects\Money;
 use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Facades\Http;
 
-final class CloudPaymentsProvider implements PaymentProviderInterface, SupportsTokenization
+final readonly class CloudPaymentsProvider implements PaymentProviderInterface, SupportsTokenization
 {
-    private const BASE_URL = 'https://api.cloudpayments.ru';
+    private const string BASE_URL = 'https://api.cloudpayments.ru';
 
     public function __construct(
-        private readonly string $publicId,
-        private readonly string $apiSecret,
-        private readonly PaymentLogger $logger,
+        private string $publicId,
+        private string $apiSecret,
+        private PaymentLogger $logger,
     ) {}
 
     public function name(): string
@@ -55,7 +55,7 @@ final class CloudPaymentsProvider implements PaymentProviderInterface, SupportsT
                     'FailRedirectUrl' => $returnUrl,
                 ]),
             sleepMilliseconds: 500,
-            when: fn (\Throwable $e) => $this->isRetryable($e),
+            when: fn (\Throwable $e): bool => $this->isRetryable($e),
         );
 
         if (! $response->successful()) {
@@ -118,7 +118,7 @@ final class CloudPaymentsProvider implements PaymentProviderInterface, SupportsT
                     'Amount' => $this->kopecksToRubles($amount->amount()),
                 ]),
             sleepMilliseconds: 500,
-            when: fn (\Throwable $e) => $this->isRetryable($e),
+            when: fn (\Throwable $e): bool => $this->isRetryable($e),
         );
 
         if (! $response->successful()) {
@@ -230,7 +230,7 @@ final class CloudPaymentsProvider implements PaymentProviderInterface, SupportsT
                     'Description' => mb_substr($description, 0, 255),
                 ]),
             sleepMilliseconds: 500,
-            when: fn (\Throwable $e) => $this->isRetryable($e),
+            when: fn (\Throwable $e): bool => $this->isRetryable($e),
         );
 
         if (! $response->successful()) {

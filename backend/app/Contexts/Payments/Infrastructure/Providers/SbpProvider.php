@@ -14,14 +14,14 @@ use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
-final class SbpProvider implements PaymentProviderInterface
+final readonly class SbpProvider implements PaymentProviderInterface
 {
     public function __construct(
-        private readonly string $merchantId,
-        private readonly string $apiKey,
-        private readonly string $webhookSecret,
-        private readonly string $baseUrl,
-        private readonly PaymentLogger $logger,
+        private string $merchantId,
+        private string $apiKey,
+        private string $webhookSecret,
+        private string $baseUrl,
+        private PaymentLogger $logger,
     ) {}
 
     public function name(): string
@@ -53,7 +53,7 @@ final class SbpProvider implements PaymentProviderInterface
                     'redirectUrl' => $returnUrl,
                 ]),
             sleepMilliseconds: 500,
-            when: fn (\Throwable $e) => $this->isRetryable($e),
+            when: fn (\Throwable $e): bool => $this->isRetryable($e),
         );
 
         if (! $response->successful()) {
@@ -104,7 +104,7 @@ final class SbpProvider implements PaymentProviderInterface
                     'refundId' => (string) Str::uuid(),
                 ]),
             sleepMilliseconds: 500,
-            when: fn (\Throwable $e) => $this->isRetryable($e),
+            when: fn (\Throwable $e): bool => $this->isRetryable($e),
         );
 
         if (! $response->successful()) {

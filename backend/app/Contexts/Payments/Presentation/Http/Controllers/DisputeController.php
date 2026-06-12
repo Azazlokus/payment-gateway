@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Contexts\Payments\Presentation\Http\Controllers;
 
 use App\Contexts\Payments\Domain\Aggregates\Dispute;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\DisputeRepositoryInterface;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Enums\DisputeStatus;
@@ -53,34 +54,26 @@ final class DisputeController extends Controller
         $disputes = $this->disputes->findByPaymentId($id);
 
         return response()->json([
-            'data' => array_map(fn (Dispute $d) => $this->format($d), $disputes),
+            'data' => array_map($this->format(...), $disputes),
         ]);
     }
 
-    #[OA\Post(
-        path: '/payments/{paymentId}/disputes',
-        summary: 'Открыть диспут по платежу',
-        description: 'Регистрирует чарджбэк/диспут по платежу. Статус при создании — `Filed`.',
-        tags: ['Disputes'],
-        parameters: [
-            new OA\Parameter(name: 'paymentId', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'ulid')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['amount', 'reason'],
-                properties: [
-                    new OA\Property(property: 'amount', type: 'integer', description: 'Оспариваемая сумма в копейках', example: 50000, minimum: 1),
-                    new OA\Property(property: 'reason', type: 'string', description: 'Основание диспута', example: 'Товар не получен', maxLength: 500),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: 'Диспут создан', content: new OA\JsonContent(ref: '#/components/schemas/DisputeResponse')),
-            new OA\Response(response: 404, description: 'Платёж не найден', content: new OA\JsonContent(ref: '#/components/schemas/PaymentError')),
-            new OA\Response(response: 422, description: 'Ошибка валидации', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
-        ]
-    )]
+    #[OA\Post(path: '/payments/{paymentId}/disputes', description: 'Регистрирует чарджбэк/диспут по платежу. Статус при создании — `Filed`.', summary: 'Открыть диспут по платежу', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['amount', 'reason'],
+            properties: [
+                new OA\Property(property: 'amount', description: 'Оспариваемая сумма в копейках', type: 'integer', example: 50000, minimum: 1),
+                new OA\Property(property: 'reason', description: 'Основание диспута', type: 'string', example: 'Товар не получен', maxLength: 500),
+            ]
+        )
+    ), tags: ['Disputes'], parameters: [
+        new OA\Parameter(name: 'paymentId', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'ulid')),
+    ], responses: [
+        new OA\Response(response: 201, description: 'Диспут создан', content: new OA\JsonContent(ref: '#/components/schemas/DisputeResponse')),
+        new OA\Response(response: 404, description: 'Платёж не найден', content: new OA\JsonContent(ref: '#/components/schemas/PaymentError')),
+        new OA\Response(response: 422, description: 'Ошибка валидации', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
+    ])]
     public function store(string $paymentId, Request $request): JsonResponse
     {
         $request->validate([
@@ -96,7 +89,7 @@ final class DisputeController extends Controller
 
         $payment = $this->payments->findById($id);
 
-        if ($payment === null) {
+        if (! $payment instanceof Payment) {
             return $this->notFound();
         }
 
@@ -136,38 +129,30 @@ final class DisputeController extends Controller
 
         $dispute = $this->disputes->findById($disputeId);
 
-        if ($dispute === null) {
+        if (! $dispute instanceof Dispute) {
             return $this->notFound();
         }
 
         return response()->json($this->format($dispute));
     }
 
-    #[OA\Post(
-        path: '/disputes/{id}/resolve',
-        summary: 'Разрешить диспут',
-        description: 'Помечает диспут как `Won` (победа) или `Lost` (проигрыш). Диспут уже в статусе Won/Lost повторно разрешить нельзя — 409.',
-        tags: ['Disputes'],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'ulid')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['resolution'],
-                properties: [
-                    new OA\Property(property: 'resolution', type: 'string', enum: ['Won', 'Lost'], description: 'Исход диспута'),
-                    new OA\Property(property: 'note', type: 'string', nullable: true, description: 'Комментарий', maxLength: 500),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Диспут разрешён', content: new OA\JsonContent(ref: '#/components/schemas/DisputeResponse')),
-            new OA\Response(response: 404, description: 'Диспут не найден', content: new OA\JsonContent(ref: '#/components/schemas/PaymentError')),
-            new OA\Response(response: 409, description: 'Диспут уже разрешён', content: new OA\JsonContent(ref: '#/components/schemas/PaymentError')),
-            new OA\Response(response: 422, description: 'Ошибка валидации', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
-        ]
-    )]
+    #[OA\Post(path: '/disputes/{id}/resolve', description: 'Помечает диспут как `Won` (победа) или `Lost` (проигрыш). Диспут уже в статусе Won/Lost повторно разрешить нельзя — 409.', summary: 'Разрешить диспут', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['resolution'],
+            properties: [
+                new OA\Property(property: 'resolution', description: 'Исход диспута', type: 'string', enum: ['Won', 'Lost']),
+                new OA\Property(property: 'note', description: 'Комментарий', type: 'string', nullable: true, maxLength: 500),
+            ]
+        )
+    ), tags: ['Disputes'], parameters: [
+        new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'ulid')),
+    ], responses: [
+        new OA\Response(response: 200, description: 'Диспут разрешён', content: new OA\JsonContent(ref: '#/components/schemas/DisputeResponse')),
+        new OA\Response(response: 404, description: 'Диспут не найден', content: new OA\JsonContent(ref: '#/components/schemas/PaymentError')),
+        new OA\Response(response: 409, description: 'Диспут уже разрешён', content: new OA\JsonContent(ref: '#/components/schemas/PaymentError')),
+        new OA\Response(response: 422, description: 'Ошибка валидации', content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')),
+    ])]
     public function resolve(string $id, Request $request): JsonResponse
     {
         $request->validate([
@@ -183,7 +168,7 @@ final class DisputeController extends Controller
 
         $dispute = $this->disputes->findById($disputeId);
 
-        if ($dispute === null) {
+        if (! $dispute instanceof Dispute) {
             return $this->notFound();
         }
 

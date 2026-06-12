@@ -19,7 +19,7 @@ final class RefundHistoryController extends Controller
         $refunds = Refund::where('payment_id', $id)
             ->latest()
             ->get()
-            ->map(fn ($r) => [
+            ->map(fn ($r): array => [
                 'id' => $r->id,
                 'external_id' => $r->external_id,
                 'amount' => $r->amount,

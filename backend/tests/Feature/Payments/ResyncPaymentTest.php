@@ -64,7 +64,7 @@ class ResyncPaymentTest extends TestCase
         $mock = Mockery::mock(NotificationService::class);
         $mock->shouldReceive('notify')
             ->once()
-            ->andReturnUsing(function () use (&$notified) {
+            ->andReturnUsing(function () use (&$notified): void {
                 $notified = true;
             });
         // Re-bind after TestCase setUp already bound a different mock
@@ -85,7 +85,7 @@ class ResyncPaymentTest extends TestCase
 
         $this->postJson("/api/v1/payments/{$id}/resync");
 
-        Http::assertSent(fn ($req) => $req->url() === 'https://example.com/notify');
+        Http::assertSent(fn ($req): bool => $req->url() === 'https://example.com/notify');
     }
 
     public function test_resync_without_notification_url_returns_200(): void

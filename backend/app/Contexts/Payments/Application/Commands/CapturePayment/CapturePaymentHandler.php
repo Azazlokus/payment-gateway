@@ -6,6 +6,7 @@ namespace App\Contexts\Payments\Application\Commands\CapturePayment;
 
 use App\Contexts\Payments\Application\DTOs\PaymentResultDTO;
 use App\Contexts\Payments\Application\PaymentProviderRegistry;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Contracts\SupportsTwoPhasePayments;
 use App\Contexts\Payments\Domain\Enums\PaymentStatus;
@@ -33,7 +34,7 @@ final readonly class CapturePaymentHandler
         $result = DB::transaction(function () use ($command): PaymentResultDTO {
             $payment = $this->repository->findById(PaymentId::fromString($command->paymentId));
 
-            if ($payment === null) {
+            if (! $payment instanceof Payment) {
                 throw new PaymentException("Payment not found: {$command->paymentId}", Response::HTTP_NOT_FOUND);
             }
 
@@ -79,7 +80,7 @@ final readonly class CapturePaymentHandler
         });
 
         $payment = $this->repository->findById(PaymentId::fromString($command->paymentId));
-        if ($payment !== null) {
+        if ($payment instanceof Payment) {
             $this->notifications->notify($result, $payment->metadata());
         }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Contexts\Payments\Infrastructure\Jobs;
 
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Exceptions\InvalidPaymentStateException;
 use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
@@ -36,7 +37,7 @@ final class ProcessAlfaBankWebhookJob implements ShouldQueue
 
         $payment = $repository->findByExternalId($mdOrder);
 
-        if ($payment === null) {
+        if (! $payment instanceof Payment) {
             $logger->warning('Альфа-Банк webhook job: платёж не найден', [
                 'md_order' => $mdOrder,
                 'operation' => $operation,

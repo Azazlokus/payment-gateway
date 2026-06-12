@@ -7,7 +7,7 @@ namespace App\Contexts\CryptoPayments\Domain\ValueObjects;
 use InvalidArgumentException;
 use Symfony\Component\Uid\Ulid;
 
-final readonly class CryptoDepositId
+final readonly class CryptoDepositId implements \Stringable
 {
     private function __construct(private string $value) {}
 

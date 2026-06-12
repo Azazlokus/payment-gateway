@@ -69,7 +69,7 @@ class YooKassaProviderTest extends TestCase
         $this->yooKassaClient->shouldReceive('createPayment')
             ->once()
             ->with(
-                Mockery::on(fn ($params) => $params['amount']['value'] === '100.00' &&
+                Mockery::on(fn ($params): bool => $params['amount']['value'] === '100.00' &&
                     $params['amount']['currency'] === 'RUB' &&
                     $params['confirmation']['type'] === 'redirect' &&
                     $params['description'] === 'Test payment' &&
@@ -101,7 +101,7 @@ class YooKassaProviderTest extends TestCase
 
         $this->logger->shouldReceive('error')->once()->with(
             'YooKassa: ошибка создания платежа',
-            Mockery::on(fn ($ctx) => str_contains($ctx['error'], 'Network error'))
+            Mockery::on(fn ($ctx): bool => str_contains((string) $ctx['error'], 'Network error'))
         );
 
         $this->expectException(PaymentException::class);
@@ -159,7 +159,7 @@ class YooKassaProviderTest extends TestCase
         $this->yooKassaClient->shouldReceive('createRefund')
             ->once()
             ->with(
-                Mockery::on(fn ($params) => $params['payment_id'] === '22d65900-000f-5000-a000-10d000000000' &&
+                Mockery::on(fn ($params): bool => $params['payment_id'] === '22d65900-000f-5000-a000-10d000000000' &&
                     $params['amount']['value'] === '100.00' &&
                     $params['amount']['currency'] === 'RUB'
                 ),
@@ -257,7 +257,7 @@ class YooKassaProviderTest extends TestCase
         $this->yooKassaClient->shouldReceive('createPayment')
             ->once()
             ->with(
-                Mockery::on(fn ($params) => $params['amount']['value'] === '999.99'),
+                Mockery::on(fn ($params): bool => $params['amount']['value'] === '999.99'),
                 Mockery::any()
             )
             ->andReturn($response);

@@ -16,13 +16,13 @@ use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Http;
 
-final class BitcoinBlockchainClient implements BlockchainClientInterface
+final readonly class BitcoinBlockchainClient implements BlockchainClientInterface
 {
     /** @param array<string> $addressPool */
     public function __construct(
-        private readonly string $apiUrl,
-        private readonly array $addressPool,
-        private readonly PaymentLogger $logger,
+        private string $apiUrl,
+        private array $addressPool,
+        private PaymentLogger $logger,
     ) {}
 
     public function network(): string

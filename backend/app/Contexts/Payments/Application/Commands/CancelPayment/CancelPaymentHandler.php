@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Contexts\Payments\Application\Commands\CancelPayment;
 
 use App\Contexts\Payments\Application\DTOs\PaymentResultDTO;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Exceptions\PaymentException;
 use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
@@ -24,7 +25,7 @@ final readonly class CancelPaymentHandler
         return DB::transaction(function () use ($command): PaymentResultDTO {
             $payment = $this->repository->findById(PaymentId::fromString($command->paymentId));
 
-            if ($payment === null) {
+            if (! $payment instanceof Payment) {
                 throw new PaymentException("Payment not found: {$command->paymentId}", Response::HTTP_NOT_FOUND);
             }
 

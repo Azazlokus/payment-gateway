@@ -22,7 +22,7 @@ use PHPUnit\Framework\TestCase;
 
 class CryptoDepositAggregateTest extends TestCase
 {
-    private const ADDRESS = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
+    private const string ADDRESS = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
 
     private function makeDeposit(
         int $expectedNanotons = 125_000_000,

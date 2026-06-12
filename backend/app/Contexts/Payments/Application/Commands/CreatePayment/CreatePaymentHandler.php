@@ -58,7 +58,7 @@ final readonly class CreatePaymentHandler
 
         return DB::transaction(function () use ($command, $provider, $correlationId, $dimensions): PaymentResultDTO {
             $splitRules = array_map(
-                fn (SplitRuleDTO $dto) => new SplitRule(
+                fn (SplitRuleDTO $dto): SplitRule => new SplitRule(
                     accountId: $dto->accountId,
                     amount: Money::ofRub($dto->amountKopecks),
                     description: $dto->description,

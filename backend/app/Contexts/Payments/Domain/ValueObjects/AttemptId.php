@@ -7,7 +7,7 @@ namespace App\Contexts\Payments\Domain\ValueObjects;
 use InvalidArgumentException;
 use Symfony\Component\Uid\Ulid;
 
-final readonly class AttemptId
+final readonly class AttemptId implements \Stringable
 {
     private function __construct(private string $value) {}
 
@@ -18,7 +18,7 @@ final readonly class AttemptId
 
     public static function fromString(string $value): self
     {
-        if (empty(trim($value))) {
+        if (in_array(trim($value), ['', '0'], true)) {
             throw new InvalidArgumentException('AttemptId cannot be empty');
         }
 

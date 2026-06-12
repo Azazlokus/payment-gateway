@@ -18,13 +18,13 @@ use App\Contexts\Payments\Domain\ValueObjects\SplitRule;
 use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
 use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 
-final class CircuitBreakerProviderProxy implements PaymentProviderInterface, SupportsSplitPayments, SupportsTokenization, SupportsTwoPhasePayments
+final readonly class CircuitBreakerProviderProxy implements PaymentProviderInterface, SupportsSplitPayments, SupportsTokenization, SupportsTwoPhasePayments
 {
     public function __construct(
-        private readonly PaymentProviderInterface $inner,
-        private readonly CircuitBreakerInterface $circuitBreaker,
-        private readonly PaymentLogger $logger,
-        private readonly MetricsService $metrics,
+        private PaymentProviderInterface $inner,
+        private CircuitBreakerInterface $circuitBreaker,
+        private PaymentLogger $logger,
+        private MetricsService $metrics,
     ) {}
 
     public function name(): string
@@ -41,21 +41,21 @@ final class CircuitBreakerProviderProxy implements PaymentProviderInterface, Sup
         CreatePaymentOptionsDTO $options = new CreatePaymentOptionsDTO,
     ): ProviderResponse {
         return $this->withCircuitBreaker(
-            fn () => $this->inner->createPayment($paymentId, $amount, $description, $returnUrl, $idempotencyKey, $options),
+            fn (): ProviderResponse => $this->inner->createPayment($paymentId, $amount, $description, $returnUrl, $idempotencyKey, $options),
         );
     }
 
     public function getPayment(ExternalId $externalId): ProviderResponse
     {
         return $this->withCircuitBreaker(
-            fn () => $this->inner->getPayment($externalId),
+            fn (): ProviderResponse => $this->inner->getPayment($externalId),
         );
     }
 
     public function refundPayment(ExternalId $externalId, Money $amount): ProviderResponse
     {
         return $this->withCircuitBreaker(
-            fn () => $this->inner->refundPayment($externalId, $amount),
+            fn (): ProviderResponse => $this->inner->refundPayment($externalId, $amount),
         );
     }
 
@@ -156,7 +156,7 @@ final class CircuitBreakerProviderProxy implements PaymentProviderInterface, Sup
     {
         $inner = $this->guardInterface(SupportsTokenization::class);
 
-        $this->withCircuitBreaker(function () use ($inner, $token) {
+        $this->withCircuitBreaker(function () use ($inner, $token): null {
             $inner->deleteToken($token);
 
             return null;

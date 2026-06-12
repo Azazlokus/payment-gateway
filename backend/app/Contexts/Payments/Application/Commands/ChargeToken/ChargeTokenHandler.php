@@ -7,6 +7,7 @@ namespace App\Contexts\Payments\Application\Commands\ChargeToken;
 use App\Contexts\Payments\Application\DTOs\PaymentResultDTO;
 use App\Contexts\Payments\Application\PaymentProviderRegistry;
 use App\Contexts\Payments\Domain\Aggregates\Payment;
+use App\Contexts\Payments\Domain\Aggregates\PaymentMethod;
 use App\Contexts\Payments\Domain\Contracts\PaymentMethodRepositoryInterface;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Contracts\SupportsTokenization;
@@ -34,7 +35,7 @@ final readonly class ChargeTokenHandler
     {
         $method = $this->methodRepository->findById(PaymentMethodId::fromString($command->paymentMethodId));
 
-        if ($method === null || ! $method->isActive()) {
+        if (! $method instanceof PaymentMethod || ! $method->isActive()) {
             throw new PaymentException('Payment method not found or inactive', 404);
         }
 

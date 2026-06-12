@@ -6,8 +6,10 @@ namespace App\Contexts\Payments\Infrastructure\Jobs;
 
 use App\Contexts\Payments\Application\DTOs\PaymentResultDTO;
 use App\Contexts\Payments\Application\PaymentProviderRegistry;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Enums\RefundStatus;
+use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
 use App\Contexts\Payments\Domain\ValueObjects\Money;
 use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
 use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
@@ -29,10 +31,10 @@ final class ProcessRefundJob implements ShouldQueue
 
     public int $tries = 1;
 
-    private const MAX_ATTEMPTS = 5;
+    private const int MAX_ATTEMPTS = 5;
 
     /** Backoff: 10s, 30s, 60s, 120s, 300s */
-    private const BACKOFF_SECONDS = [10, 30, 60, 120, 300];
+    private const array BACKOFF_SECONDS = [10, 30, 60, 120, 300];
 
     public function __construct(
         public readonly string $refundId,
@@ -73,7 +75,7 @@ final class ProcessRefundJob implements ShouldQueue
 
         $payment = $repository->findById(PaymentId::fromString($refund->payment_id));
 
-        if ($payment === null || $payment->externalId() === null) {
+        if (! $payment instanceof Payment || ! $payment->externalId() instanceof ExternalId) {
             $refund->update([
                 'status' => RefundStatus::Failed,
                 'last_error' => 'Payment not found or has no external ID',

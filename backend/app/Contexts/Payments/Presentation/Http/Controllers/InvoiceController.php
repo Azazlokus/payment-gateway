@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Contexts\Payments\Presentation\Http\Controllers;
 
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -30,7 +31,7 @@ final class InvoiceController extends Controller
 
         $payment = $this->repository->findById($paymentId);
 
-        if ($payment === null) {
+        if (! $payment instanceof Payment) {
             abort(404, 'Payment not found');
         }
 

@@ -36,7 +36,7 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
             'metadata' => $payment->metadata(),
         ];
 
-        if ($payment->tenantId() !== null) {
+        if ($payment->tenantId() instanceof TenantId) {
             $attributes['tenant_id'] = $payment->tenantId()->toString();
         }
 
@@ -123,7 +123,7 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
         $paginator = $query->cursorPaginate(perPage: $perPage, cursor: $cursor);
 
         return [
-            'data' => $paginator->getCollection()->map(fn ($m) => $this->hydrate($m))->all(),
+            'data' => $paginator->getCollection()->map(fn (PaymentModel $m): Payment => $this->hydrate($m))->all(),
             'per_page' => $paginator->perPage(),
             'next_cursor' => $paginator->nextCursor()?->encode(),
             'prev_cursor' => $paginator->previousCursor()?->encode(),
@@ -163,7 +163,7 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
             ? $model->splits
             : $model->splits()->get();
 
-        $splitRules = $splits->map(fn (PaymentSplitModel $s) => new SplitRule(
+        $splitRules = $splits->map(fn (PaymentSplitModel $s): SplitRule => new SplitRule(
             accountId: $s->account_id,
             amount: Money::ofRub((int) $s->amount),
             description: $s->description ?? '',

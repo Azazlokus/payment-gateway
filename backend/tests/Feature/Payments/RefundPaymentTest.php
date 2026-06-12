@@ -48,7 +48,7 @@ class RefundPaymentTest extends TestCase
     private function mockRefundProvider(?ProviderResponse $response = null): void
     {
         $externalId = $this->externalId;
-        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) use ($externalId, $response) {
+        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) use ($externalId, $response): void {
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldReceive('refundPayment')->andReturn($response ?? new ProviderResponse(
                 externalId: ExternalId::fromString($externalId),
@@ -174,7 +174,7 @@ class RefundPaymentTest extends TestCase
             'metadata' => [],
         ]);
 
-        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) {
+        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock): void {
             $mock->shouldReceive('name')->andReturn('yookassa');
         });
         $this->app->make(PaymentProviderRegistry::class)->register($mockProvider);

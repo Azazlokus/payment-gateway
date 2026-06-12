@@ -29,7 +29,7 @@ final class EloquentPaymentMethodRepository implements PaymentMethodRepositoryIn
             'metadata' => $method->metadata(),
         ];
 
-        if ($method->tenantId() !== null) {
+        if ($method->tenantId() instanceof TenantId) {
             $attributes['tenant_id'] = $method->tenantId()->toString();
         }
 
@@ -62,7 +62,7 @@ final class EloquentPaymentMethodRepository implements PaymentMethodRepositoryIn
         return PaymentMethodModel::where('customer_id', $customerId)
             ->where('is_active', true)
             ->get()
-            ->map(fn (PaymentMethodModel $m) => $this->hydrate($m))
+            ->map(fn (PaymentMethodModel $m): PaymentMethod => $this->hydrate($m))
             ->all();
     }
 

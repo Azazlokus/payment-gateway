@@ -6,7 +6,7 @@ namespace App\Contexts\CryptoPayments\Domain\ValueObjects;
 
 use InvalidArgumentException;
 
-final readonly class CryptoAddress
+final readonly class CryptoAddress implements \Stringable
 {
     private function __construct(private string $value) {}
 

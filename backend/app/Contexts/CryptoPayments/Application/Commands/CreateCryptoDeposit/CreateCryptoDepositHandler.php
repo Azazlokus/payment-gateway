@@ -56,9 +56,9 @@ final readonly class CreateCryptoDepositHandler
             } else {
                 $usedAddresses = $this->deposits->findActiveAddressesByNetwork($client->network());
                 $pool = $client->depositAddressPool();
-                $available = array_filter($pool, fn (string $addr) => ! in_array($addr, $usedAddresses, true));
+                $available = array_filter($pool, fn (string $addr): bool => ! in_array($addr, $usedAddresses, true));
 
-                if (empty($available)) {
+                if ($available === []) {
                     throw new RuntimeException(
                         "No available deposit addresses for {$command->asset->value}. Please add more addresses to the pool."
                     );

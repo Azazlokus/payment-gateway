@@ -6,10 +6,10 @@ namespace App\Contexts\CryptoPayments\Infrastructure\Observability;
 
 use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
 
-final class CryptoMetricsService
+final readonly class CryptoMetricsService
 {
     public function __construct(
-        private readonly MetricsService $metrics,
+        private MetricsService $metrics,
     ) {}
 
     public function depositCreated(string $asset): void

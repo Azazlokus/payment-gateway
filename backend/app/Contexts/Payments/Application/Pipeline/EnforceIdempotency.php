@@ -6,6 +6,7 @@ namespace App\Contexts\Payments\Application\Pipeline;
 
 use App\Contexts\Payments\Application\Commands\CreatePayment\CreatePaymentCommand;
 use App\Contexts\Payments\Application\DTOs\PaymentResultDTO;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use Closure;
 
@@ -23,7 +24,7 @@ final readonly class EnforceIdempotency
 
         $existing = $this->repository->findByIdempotencyKey($command->idempotencyKey);
 
-        if ($existing !== null) {
+        if ($existing instanceof Payment) {
             // Тихо возвращаем уже созданный платёж — не создаём дубль
             return PaymentResultDTO::fromAggregate($existing);
         }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Contexts\CryptoPayments\Application\Commands\CreateCryptoRefund;
 
+use App\Contexts\CryptoPayments\Domain\Aggregates\CryptoDeposit;
 use App\Contexts\CryptoPayments\Domain\Aggregates\CryptoRefundRequest;
 use App\Contexts\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
 use App\Contexts\CryptoPayments\Domain\Contracts\CryptoRefundRepositoryInterface;
@@ -34,7 +35,7 @@ final readonly class CreateCryptoRefundHandler
 
             $deposit = $this->deposits->findById($depositId);
 
-            if ($deposit === null) {
+            if (! $deposit instanceof CryptoDeposit) {
                 throw new CryptoDepositException("Deposit {$command->depositId} not found");
             }
 

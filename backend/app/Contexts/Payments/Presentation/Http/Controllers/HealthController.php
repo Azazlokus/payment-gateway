@@ -14,38 +14,32 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class HealthController extends Controller
 {
-    #[OA\Get(
-        path: '/health',
-        summary: 'Health check',
-        description: 'Проверяет доступность сервиса и базы данных',
-        tags: ['System'],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Сервис работает',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'status', type: 'string', example: 'ok'),
-                        new OA\Property(property: 'db', type: 'string', example: 'ok'),
-                        new OA\Property(property: 'redis', type: 'string', example: 'ok'),
-                        new OA\Property(property: 'horizon', type: 'string', example: 'running'),
-                    ]
-                )
-            ),
-            new OA\Response(
-                response: 503,
-                description: 'Сервис недоступен',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'status', type: 'string', example: 'error'),
-                        new OA\Property(property: 'db', type: 'string', example: 'unavailable'),
-                        new OA\Property(property: 'redis', type: 'string', example: 'unavailable'),
-                        new OA\Property(property: 'horizon', type: 'string', example: 'inactive'),
-                    ]
-                )
-            ),
-        ]
-    )]
+    #[OA\Get(path: '/health', description: 'Проверяет доступность сервиса и базы данных', summary: 'Health check', tags: ['System'], responses: [
+        new OA\Response(
+            response: 200,
+            description: 'Сервис работает',
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'status', type: 'string', example: 'ok'),
+                    new OA\Property(property: 'db', type: 'string', example: 'ok'),
+                    new OA\Property(property: 'redis', type: 'string', example: 'ok'),
+                    new OA\Property(property: 'horizon', type: 'string', example: 'running'),
+                ]
+            )
+        ),
+        new OA\Response(
+            response: 503,
+            description: 'Сервис недоступен',
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'status', type: 'string', example: 'error'),
+                    new OA\Property(property: 'db', type: 'string', example: 'unavailable'),
+                    new OA\Property(property: 'redis', type: 'string', example: 'unavailable'),
+                    new OA\Property(property: 'horizon', type: 'string', example: 'inactive'),
+                ]
+            )
+        ),
+    ])]
     public function check(): JsonResponse
     {
         try {

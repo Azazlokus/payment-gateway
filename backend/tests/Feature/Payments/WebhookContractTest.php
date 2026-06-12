@@ -4,14 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
-use App\Contexts\Payments\Application\PaymentProviderRegistry;
 use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
 use App\Contexts\Payments\Infrastructure\Persistence\Models\PaymentModel;
-use App\Contexts\Payments\Infrastructure\Providers\AlfaBankProvider;
-use App\Contexts\Payments\Infrastructure\Providers\CloudPaymentsProvider;
-use App\Contexts\Payments\Infrastructure\Providers\RobokassaProvider;
-use App\Contexts\Payments\Infrastructure\Providers\SbpProvider;
-use App\Contexts\Payments\Infrastructure\Providers\YooKassaProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -163,7 +157,7 @@ class WebhookContractTest extends TestCase
         ]) ?: '';
 
         // Секрет берём из того же конфига, что и провайдер
-        $hmac = base64_encode(hash_hmac('sha256', $body, config('payments.cloudpayments.api_secret'), true));
+        $hmac = base64_encode(hash_hmac('sha256', $body, (string) config('payments.cloudpayments.api_secret'), true));
 
         $response = $this->call(
             'POST',

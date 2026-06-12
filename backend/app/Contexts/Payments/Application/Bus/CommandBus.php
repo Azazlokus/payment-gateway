@@ -33,7 +33,7 @@ class CommandBus
 
     private function resolveHandler(object $command): string
     {
-        $commandClass = get_class($command);
+        $commandClass = $command::class;
 
         // App\Contexts\Payments\Application\Commands\CreatePayment\CreatePaymentCommand
         // →  App\Contexts\Payments\Application\Commands\CreatePayment\CreatePaymentHandler

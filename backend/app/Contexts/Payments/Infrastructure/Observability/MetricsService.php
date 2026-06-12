@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Redis;
  */
 class MetricsService
 {
-    private const PREFIX = 'metrics:';
+    private const string PREFIX = 'metrics:';
 
     // ─── Счётчики ─────────────────────────────────────────────────────────────
 
@@ -152,9 +152,8 @@ class MetricsService
         // DLQ gauge — читаем из БД при каждом dump()
         $failedJobsCount = DB::table('failed_jobs')->count();
         $output .= "# TYPE failed_jobs_count gauge\n";
-        $output .= "failed_jobs_count {$failedJobsCount}\n";
 
-        return $output;
+        return $output."failed_jobs_count {$failedJobsCount}\n";
     }
 
     // ─── Private ─────────────────────────────────────────────────────────────
@@ -194,7 +193,7 @@ class MetricsService
     /** @param array<string, string> $labels */
     private function formatLabels(array $labels): string
     {
-        if (empty($labels)) {
+        if ($labels === []) {
             return '';
         }
 

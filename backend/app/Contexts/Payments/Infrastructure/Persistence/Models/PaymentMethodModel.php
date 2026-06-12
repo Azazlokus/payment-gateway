@@ -55,6 +55,7 @@ final class PaymentMethodModel extends Model
         'token',
     ];
 
+    #[\Override]
     protected static function booted(): void
     {
         if (config('payments.multi_tenant.enabled', false)) {

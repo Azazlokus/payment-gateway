@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\PaymentLinks\Http\Controllers;
 
-use App\PaymentLinks\Models\PaymentLink;
 use App\Contexts\Payments\Application\Bus\CommandBus;
 use App\Contexts\Payments\Application\Commands\CreatePayment\CreatePaymentCommand;
 use App\Contexts\Payments\Application\DTOs\CreatePaymentOptionsDTO;
+use App\PaymentLinks\Models\PaymentLink;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -46,7 +46,7 @@ final class PaymentLinkController extends Controller
             'return_url' => $data['return_url'] ?? null,
             'metadata' => $data['metadata'] ?? null,
             'max_uses' => $data['max_uses'] ?? 1,
-            'expires_at' => isset($data['expires_at']) ? $data['expires_at'] : null,
+            'expires_at' => $data['expires_at'] ?? null,
         ]);
 
         return response()->json([
@@ -63,7 +63,7 @@ final class PaymentLinkController extends Controller
         $links = PaymentLink::latest()->paginate(20);
 
         return response()->json([
-            'data' => $links->map(fn ($l) => $this->formatLink($l))->values(),
+            'data' => $links->map(fn (PaymentLink $l): array => $this->formatLink($l))->values(),
             'total' => $links->total(),
             'page' => $links->currentPage(),
         ]);

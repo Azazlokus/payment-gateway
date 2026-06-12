@@ -19,6 +19,10 @@ php vendor/bin/deptrac analyse --formatter=json  # JSON для CI
 ./vendor/bin/pint                             # исправить
 ./vendor/bin/pint --test                      # только проверить
 
+# Автоматический рефакторинг (Rector)
+php vendor/bin/rector process --dry-run       # preview изменений
+php vendor/bin/rector process                 # применить
+
 # Docker
 docker compose up -d                          # поднять все сервисы
 docker compose exec app php artisan migrate   # миграции

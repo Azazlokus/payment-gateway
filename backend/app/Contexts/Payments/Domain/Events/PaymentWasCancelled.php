@@ -7,8 +7,8 @@ namespace App\Contexts\Payments\Domain\Events;
 final readonly class PaymentWasCancelled extends DomainEvent
 {
     public function __construct(
-        public readonly string $paymentId,
-        public readonly string $reason,
+        public string $paymentId,
+        public string $reason,
     ) {
         parent::__construct();
     }

@@ -7,6 +7,7 @@ namespace App\Contexts\CryptoPayments\Application\ACL;
 use App\Contexts\CryptoPayments\Domain\Events\DepositConfirmed;
 use App\Contexts\CryptoPayments\Domain\Events\DepositExpired;
 use App\Contexts\CryptoPayments\Domain\Events\DepositOverpaid;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Exceptions\InvalidPaymentStateException;
 use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
@@ -14,19 +15,19 @@ use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
 use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
 use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 
-final class CryptoDepositToPaymentAdapter
+final readonly class CryptoDepositToPaymentAdapter
 {
     public function __construct(
-        private readonly PaymentRepositoryInterface $payments,
-        private readonly MetricsService $metrics,
-        private readonly PaymentLogger $logger,
+        private PaymentRepositoryInterface $payments,
+        private MetricsService $metrics,
+        private PaymentLogger $logger,
     ) {}
 
     public function onDepositConfirmed(DepositConfirmed $event): void
     {
         $payment = $this->payments->findById(PaymentId::fromString($event->paymentId));
 
-        if ($payment === null) {
+        if (! $payment instanceof Payment) {
             $this->logger->warning('Payment not found for confirmed deposit', [
                 'payment_id' => $event->paymentId,
                 'deposit_id' => $event->depositId,
@@ -60,7 +61,7 @@ final class CryptoDepositToPaymentAdapter
     {
         $payment = $this->payments->findById(PaymentId::fromString($event->paymentId));
 
-        if ($payment === null) {
+        if (! $payment instanceof Payment) {
             $this->logger->warning('Payment not found for expired deposit', [
                 'payment_id' => $event->paymentId,
                 'deposit_id' => $event->depositId,
@@ -89,7 +90,7 @@ final class CryptoDepositToPaymentAdapter
     {
         $payment = $this->payments->findById(PaymentId::fromString($event->paymentId));
 
-        if ($payment === null) {
+        if (! $payment instanceof Payment) {
             $this->logger->warning('Payment not found for overpaid deposit', [
                 'payment_id' => $event->paymentId,
                 'deposit_id' => $event->depositId,

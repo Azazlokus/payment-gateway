@@ -73,7 +73,7 @@ final class AnalyticsController extends Controller
 
         $total = $rows->sum('count');
 
-        $funnel = $rows->map(fn ($row) => [
+        $funnel = $rows->map(fn ($row): array => [
             'status' => $row->status,
             'count' => (int) $row->count,
             'total_rub' => round((int) $row->total_kopecks / 100, 2),

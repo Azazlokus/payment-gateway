@@ -55,7 +55,7 @@ final class TenantScopeTest extends TestCase
 
         $applied = false;
         $builder = Mockery::mock(Builder::class);
-        $builder->shouldReceive('where')->andReturnUsing(function () use (&$applied) {
+        $builder->shouldReceive('where')->andReturnUsing(function () use (&$applied): void {
             $applied = true;
         });
 

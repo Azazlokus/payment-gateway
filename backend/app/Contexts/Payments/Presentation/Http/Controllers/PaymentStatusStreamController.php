@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Contexts\Payments\Presentation\Http\Controllers;
 
 use App\Contexts\Payments\Application\DTOs\PaymentResultDTO;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
 use App\Contexts\Payments\Domain\Enums\PaymentStatus;
 use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
@@ -28,17 +29,17 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 final class PaymentStatusStreamController extends Controller
 {
     // Статусы, после которых стрим закрывается
-    private const TERMINAL_STATUSES = [
+    private const array TERMINAL_STATUSES = [
         PaymentStatus::Succeeded,
         PaymentStatus::Cancelled,
         PaymentStatus::Refunded,
     ];
 
     // Интервал между проверками в секундах
-    private const POLL_INTERVAL = 2;
+    private const int POLL_INTERVAL = 2;
 
     // Максимальное время жизни стрима (5 минут)
-    private const MAX_SECONDS = 300;
+    private const int MAX_SECONDS = 300;
 
     public function __construct(
         private readonly PaymentRepositoryInterface $repository,
@@ -48,7 +49,7 @@ final class PaymentStatusStreamController extends Controller
     {
         $paymentId = PaymentId::fromString($id);
 
-        $response = new StreamedResponse(function () use ($paymentId) {
+        $response = new StreamedResponse(function () use ($paymentId): void {
             $started = time();
 
             // Отправляем initial keepalive, чтобы клиент сразу получил соединение
@@ -68,7 +69,7 @@ final class PaymentStatusStreamController extends Controller
                     break;
                 }
 
-                if ($payment === null) {
+                if (! $payment instanceof Payment) {
                     $this->sendEvent('error', ['message' => 'Payment not found']);
                     break;
                 }

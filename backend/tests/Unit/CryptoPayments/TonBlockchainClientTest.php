@@ -20,11 +20,11 @@ use Tests\TestCase;
  */
 class TonBlockchainClientTest extends TestCase
 {
-    private const MASTER = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
+    private const string MASTER = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFy';
 
-    private const USDT_CTR = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
+    private const string USDT_CTR = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
 
-    private const TX_HASH = 'abc123def456abc123def456abc123def456abc123def456abc123def456abc1';
+    private const string TX_HASH = 'abc123def456abc123def456abc123def456abc123def456abc123def456abc1';
 
     private TonBlockchainClient $client;
 

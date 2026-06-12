@@ -11,22 +11,19 @@ use App\Contexts\Payments\Domain\ValueObjects\Money;
 
 final class PaymentAttempt
 {
-    private PaymentStatus $status;
+    private PaymentStatus $status = PaymentStatus::Pending;
 
-    private ?ExternalId $externalId;
+    private ?ExternalId $externalId = null;
 
-    private ?string $failureReason;
+    private ?string $failureReason = null;
 
-    private \DateTimeImmutable $createdAt;
+    private readonly \DateTimeImmutable $createdAt;
 
     public function __construct(
         private readonly AttemptId $id,
         private readonly Money $amount,
         private readonly string $provider,
     ) {
-        $this->status = PaymentStatus::Pending;
-        $this->externalId = null;
-        $this->failureReason = null;
         $this->createdAt = new \DateTimeImmutable;
     }
 

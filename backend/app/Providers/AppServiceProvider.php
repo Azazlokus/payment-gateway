@@ -7,6 +7,7 @@ use Laravel\Horizon\Horizon;
 
 class AppServiceProvider extends ServiceProvider
 {
+    #[\Override]
     public function register(): void
     {
         if ($this->app->environment('local')) {
@@ -17,9 +18,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Horizon::auth(function ($request) {
-            return app()->environment('local')
-                || in_array($request->ip(), explode(',', config('services.horizon.allowed_ips', '')));
-        });
+        Horizon::auth(fn ($request) => app()->environment('local')
+            || in_array($request->ip(), explode(',', (string) config('services.horizon.allowed_ips', ''))));
     }
 }

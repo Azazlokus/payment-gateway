@@ -12,6 +12,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 final class PaymentMethodResource extends JsonResource
 {
     /** @return array<string, mixed> */
+    #[\Override]
     public function toArray(Request $request): array
     {
         /** @var PaymentMethod $method */

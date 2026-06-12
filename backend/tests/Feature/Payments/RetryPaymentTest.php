@@ -21,7 +21,7 @@ class RetryPaymentTest extends TestCase
 
     private function mockProvider(string $provider = 'yookassa'): void
     {
-        $mock = $this->mock(PaymentProviderInterface::class, function ($mock) use ($provider) {
+        $mock = $this->mock(PaymentProviderInterface::class, function ($mock) use ($provider): void {
             $mock->shouldReceive('name')->andReturn($provider);
             $mock->shouldReceive('createPayment')->andReturn(new ProviderResponse(
                 externalId: ExternalId::fromString('new-ext-id-'.uniqid()),

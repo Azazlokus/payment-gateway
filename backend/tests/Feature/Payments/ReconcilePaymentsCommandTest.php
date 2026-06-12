@@ -28,9 +28,10 @@ class CommandBusSpy extends CommandBus
         // Не вызываем parent — Pipeline не нужен в шпионе
     }
 
+    #[\Override]
     public function dispatch(object $command): mixed
     {
-        if ($this->exception !== null) {
+        if ($this->exception instanceof \Throwable) {
             throw $this->exception;
         }
 
@@ -148,7 +149,7 @@ class ReconcilePaymentsCommandTest extends TestCase
         $this->artisan('payments:reconcile', ['--hours' => 2, '--provider' => 'yookassa'])
             ->assertSuccessful();
 
-        $dispatched = array_map(fn ($cmd) => $cmd->paymentId, $spy->dispatched);
+        $dispatched = array_map(fn (object $cmd) => $cmd->paymentId, $spy->dispatched);
         $this->assertContains($yookassa->id, $dispatched);
         $this->assertNotContains($robokassa->id, $dispatched);
     }

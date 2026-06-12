@@ -44,11 +44,11 @@ final class ProcessCloudPaymentsWebhookJob implements ShouldQueue
         $payment = $repository->findByExternalId($transactionId);
 
         // Если транзакция ещё не привязана — ищем по InvoiceId (внутренний ID)
-        if ($payment === null && $invoiceId !== '') {
+        if (! $payment instanceof Payment && $invoiceId !== '') {
             $payment = $repository->findByExternalId($invoiceId);
         }
 
-        if ($payment === null) {
+        if (! $payment instanceof Payment) {
             $logger->warning('CloudPayments webhook job: платёж не найден', [
                 'transaction_id' => $transactionId,
                 'invoice_id' => $invoiceId,

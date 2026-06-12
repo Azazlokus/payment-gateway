@@ -22,10 +22,7 @@ final class WebhookController extends Controller
         private readonly PaymentLogger $logger,
     ) {}
 
-    #[OA\Post(
-        path: '/webhook/yookassa',
-        summary: 'Webhook от YooKassa',
-        description: <<<'TEXT'
+    #[OA\Post(path: '/webhook/yookassa', description: <<<'TEXT'
             Принимает JSON-уведомления от YooKassa об изменении статуса платежа или возврата.
 
             **Поддерживаемые события:**
@@ -38,19 +35,15 @@ final class WebhookController extends Controller
             - Обработка асинхронна: вебхук ставит задачу в очередь Horizon (Redis) и возвращает `200` немедленно
             - Exponential backoff: 10s → 30s → 60s → 120s → 300s (5 попыток)
             - При исчерпании попыток — критический лог + алерт в Slack
-            TEXT,
-        tags: ['Webhook'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(ref: '#/components/schemas/YooKassaWebhookPayload')
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Webhook принят и поставлен в очередь', content: new OA\JsonContent(
-                properties: [new OA\Property(property: 'message', type: 'string', example: 'ok')]
-            )),
-            new OA\Response(response: 403, description: 'Запрос с неразрешённого IP или без нужных полей'),
-        ]
-    )]
+            TEXT, summary: 'Webhook от YooKassa', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(ref: '#/components/schemas/YooKassaWebhookPayload')
+    ), tags: ['Webhook'], responses: [
+        new OA\Response(response: 200, description: 'Webhook принят и поставлен в очередь', content: new OA\JsonContent(
+            properties: [new OA\Property(property: 'message', type: 'string', example: 'ok')]
+        )),
+        new OA\Response(response: 403, description: 'Запрос с неразрешённого IP или без нужных полей'),
+    ])]
     public function yookassa(Request $request): JsonResponse
     {
         $payload = $request->all();

@@ -17,15 +17,15 @@ use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Http;
 
-final class TonBlockchainClient implements BlockchainClientInterface
+final readonly class TonBlockchainClient implements BlockchainClientInterface
 {
     public function __construct(
-        private readonly string $masterAddress,
-        private readonly string $apiKey,
-        private readonly string $apiUrl,
-        private readonly string $apiV3Url,
-        private readonly string $usdtJettonMaster,
-        private readonly PaymentLogger $logger,
+        private string $masterAddress,
+        private string $apiKey,
+        private string $apiUrl,
+        private string $apiV3Url,
+        private string $usdtJettonMaster,
+        private PaymentLogger $logger,
     ) {}
 
     public function network(): string
@@ -101,7 +101,7 @@ final class TonBlockchainClient implements BlockchainClientInterface
      */
     private function fetchTonTransactions(array $memos, DateTimeImmutable $since): array
     {
-        $memoSet = array_map(fn (Memo $m) => $m->toString(), $memos);
+        $memoSet = array_map(fn (Memo $m): string => $m->toString(), $memos);
         $found = [];
 
         $response = Http::withHeaders($this->authHeaders())->get("{$this->apiUrl}/getTransactions", [
@@ -179,7 +179,7 @@ final class TonBlockchainClient implements BlockchainClientInterface
      */
     private function fetchUsdtJettonTransfers(array $memos, DateTimeImmutable $since): array
     {
-        $memoSet = array_map(fn (Memo $m) => $m->toString(), $memos);
+        $memoSet = array_map(fn (Memo $m): string => $m->toString(), $memos);
         $found = [];
 
         $response = Http::withHeaders($this->authHeaders())->get("{$this->apiV3Url}/jetton/transfers", [

@@ -47,14 +47,14 @@ final class AuditLogController extends Controller
         $rows = $query->offset($offset)->limit($perPage)->get();
 
         return response()->json([
-            'data' => $rows->map(fn ($row) => [
+            'data' => $rows->map(fn ($row): array => [
                 'id' => $row->id,
                 'action' => $row->action,
                 'subject_type' => $row->subject_type,
                 'subject_id' => $row->subject_id,
                 'ip' => $row->ip,
                 'api_key_hint' => $row->api_key_hint,
-                'metadata' => $row->metadata ? json_decode($row->metadata, true) : null,
+                'metadata' => $row->metadata ? json_decode((string) $row->metadata, true) : null,
                 'created_at' => $row->created_at,
             ])->values(),
             'total' => $total,

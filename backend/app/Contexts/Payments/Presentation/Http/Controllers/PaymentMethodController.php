@@ -8,6 +8,7 @@ use App\Contexts\Payments\Application\Bus\CommandBus;
 use App\Contexts\Payments\Application\Commands\ChargeToken\ChargeTokenCommand;
 use App\Contexts\Payments\Application\Commands\DeletePaymentMethod\DeletePaymentMethodCommand;
 use App\Contexts\Payments\Application\Commands\TokenizePaymentMethod\TokenizePaymentMethodCommand;
+use App\Contexts\Payments\Domain\Aggregates\PaymentMethod;
 use App\Contexts\Payments\Domain\Contracts\PaymentMethodRepositoryInterface;
 use App\Contexts\Payments\Presentation\Http\Resources\PaymentMethodResource;
 use App\Contexts\Payments\Presentation\Http\Resources\PaymentResource;
@@ -39,7 +40,7 @@ final class PaymentMethodController extends Controller
 
         return response()->json([
             'data' => array_map(
-                fn ($m) => (new PaymentMethodResource($m))->resolve(),
+                fn (PaymentMethod $m) => new PaymentMethodResource($m)->resolve(),
                 $methods,
             ),
         ]);

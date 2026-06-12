@@ -7,8 +7,8 @@ namespace App\Contexts\CryptoPayments\Domain\Events;
 final readonly class RefundWasCompleted extends DomainEvent
 {
     public function __construct(
-        public readonly string $refundId,
-        public readonly string $txHash,
+        public string $refundId,
+        public string $txHash,
     ) {
         parent::__construct();
     }

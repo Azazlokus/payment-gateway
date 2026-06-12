@@ -138,7 +138,7 @@ class AlfaBankProviderTest extends TestCase
             idempotencyKey: 'idem-key',
         );
 
-        Http::assertSent(fn (Request $request) => $request->url() === 'https://pay.alfabank.ru/payment/rest/register.do' &&
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://pay.alfabank.ru/payment/rest/register.do' &&
             $request->isForm() &&
             $request['orderNumber'] === 'internal-pay-123' &&
             $request['amount'] === 75000 &&

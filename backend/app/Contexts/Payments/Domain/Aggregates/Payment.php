@@ -40,7 +40,7 @@ final class Payment
 
     private function __construct(
         private readonly PaymentId $id,
-        private Money $amount,
+        private readonly Money $amount,
         private PaymentStatus $status,
         private readonly string $description,
         private readonly string $provider,
@@ -164,7 +164,7 @@ final class Payment
         // Бизнес-правило: только один pending-рефанд одновременно
         $hasPending = array_any(
             $this->refundRequests,
-            fn (RefundRequest $r) => $r->isPending()
+            fn (RefundRequest $r): bool => $r->isPending()
         );
 
         if ($hasPending) {

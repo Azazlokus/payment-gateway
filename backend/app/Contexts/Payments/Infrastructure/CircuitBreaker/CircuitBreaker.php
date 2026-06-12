@@ -14,13 +14,13 @@ use Illuminate\Support\Facades\Redis;
  *   cb:{service}:state      — current state (closed|open|half_open)
  *   cb:{service}:opened_at  — timestamp when circuit opened
  */
-final class CircuitBreaker implements CircuitBreakerInterface
+final readonly class CircuitBreaker implements CircuitBreakerInterface
 {
-    private const PREFIX = 'cb:';
+    private const string PREFIX = 'cb:';
 
     public function __construct(
-        private readonly int $failureThreshold = 5,
-        private readonly int $recoveryTimeoutSeconds = 30,
+        private int $failureThreshold = 5,
+        private int $recoveryTimeoutSeconds = 30,
     ) {}
 
     // При недоступном Redis circuit breaker работает в fail-open режиме:

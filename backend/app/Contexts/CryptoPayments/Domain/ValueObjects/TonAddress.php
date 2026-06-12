@@ -6,7 +6,7 @@ namespace App\Contexts\CryptoPayments\Domain\ValueObjects;
 
 use InvalidArgumentException;
 
-final readonly class TonAddress
+final readonly class TonAddress implements \Stringable
 {
     private function __construct(private string $value) {}
 

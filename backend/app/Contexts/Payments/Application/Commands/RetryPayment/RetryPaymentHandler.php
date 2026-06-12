@@ -28,7 +28,7 @@ final readonly class RetryPaymentHandler
     {
         $original = $this->repository->findById(PaymentId::fromString($command->paymentId));
 
-        if ($original === null) {
+        if (! $original instanceof Payment) {
             throw new PaymentException("Payment not found: {$command->paymentId}", Response::HTTP_NOT_FOUND);
         }
 

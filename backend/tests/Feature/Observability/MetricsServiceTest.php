@@ -25,7 +25,7 @@ class MetricsServiceTest extends TestCase
 
         // dump() читает failed_jobs — создаём таблицу если её нет (нет миграции)
         if (! Schema::hasTable('failed_jobs')) {
-            Schema::create('failed_jobs', function ($table) {
+            Schema::create('failed_jobs', function ($table): void {
                 $table->id();
                 $table->text('uuid')->unique();
                 $table->text('connection');

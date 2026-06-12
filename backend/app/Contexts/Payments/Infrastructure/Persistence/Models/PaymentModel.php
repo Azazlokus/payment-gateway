@@ -57,6 +57,7 @@ final class PaymentModel extends Model
         'metadata',
     ];
 
+    #[\Override]
     protected static function booted(): void
     {
         if (config('payments.multi_tenant.enabled', false)) {

@@ -11,9 +11,9 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-final class ResolveTenant
+final readonly class ResolveTenant
 {
-    public function __construct(private readonly TenantContext $context) {}
+    public function __construct(private TenantContext $context) {}
 
     public function handle(Request $request, Closure $next): mixed
     {

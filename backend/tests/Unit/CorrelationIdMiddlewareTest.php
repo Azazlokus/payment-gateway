@@ -24,7 +24,7 @@ class CorrelationIdMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $request->headers->set('X-Correlation-Id', 'my-fixed-id-123');
 
-        $response = $this->middleware->handle($request, fn () => new Response);
+        $response = $this->middleware->handle($request, fn (): Response => new Response);
 
         $this->assertSame('my-fixed-id-123', $response->headers->get('X-Correlation-Id'));
     }
@@ -33,7 +33,7 @@ class CorrelationIdMiddlewareTest extends TestCase
     {
         $request = Request::create('/test', 'GET');
 
-        $response = $this->middleware->handle($request, fn () => new Response);
+        $response = $this->middleware->handle($request, fn (): Response => new Response);
 
         $correlationId = $response->headers->get('X-Correlation-Id');
         $this->assertNotEmpty($correlationId);
@@ -50,8 +50,8 @@ class CorrelationIdMiddlewareTest extends TestCase
         $request1 = Request::create('/test', 'GET');
         $request2 = Request::create('/test', 'GET');
 
-        $response1 = $this->middleware->handle($request1, fn () => new Response);
-        $response2 = $this->middleware->handle($request2, fn () => new Response);
+        $response1 = $this->middleware->handle($request1, fn (): Response => new Response);
+        $response2 = $this->middleware->handle($request2, fn (): Response => new Response);
 
         $this->assertNotSame(
             $response1->headers->get('X-Correlation-Id'),
@@ -64,7 +64,7 @@ class CorrelationIdMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $called = false;
 
-        $this->middleware->handle($request, function () use (&$called) {
+        $this->middleware->handle($request, function () use (&$called): Response {
             $called = true;
 
             return new Response('ok');
@@ -79,7 +79,7 @@ class CorrelationIdMiddlewareTest extends TestCase
 
         $response = $this->middleware->handle(
             $request,
-            fn () => new Response('hello world', 200),
+            fn (): Response => new Response('hello world', 200),
         );
 
         $this->assertSame('hello world', $response->getContent());

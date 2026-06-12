@@ -16,15 +16,15 @@ use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Http;
 
-final class TronBlockchainClient implements BlockchainClientInterface
+final readonly class TronBlockchainClient implements BlockchainClientInterface
 {
     /** @param array<string> $addressPool */
     public function __construct(
-        private readonly string $apiUrl,
-        private readonly string $apiKey,
-        private readonly string $usdtContract,
-        private readonly array $addressPool,
-        private readonly PaymentLogger $logger,
+        private string $apiUrl,
+        private string $apiKey,
+        private string $usdtContract,
+        private array $addressPool,
+        private PaymentLogger $logger,
     ) {}
 
     public function network(): string

@@ -28,7 +28,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $called = false;
 
-        $this->middleware->handle($request, function () use (&$called) {
+        $this->middleware->handle($request, function () use (&$called): Response {
             $called = true;
 
             return new Response('ok');
@@ -42,7 +42,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         config(['api.key' => null]);
 
         $request = Request::create('/test', 'GET');
-        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+        $response = $this->middleware->handle($request, fn (): Response => new Response('ok'));
 
         $this->assertSame(200, $response->getStatusCode());
     }
@@ -57,7 +57,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request->headers->set('X-Api-Key', 'secret-key-123');
 
         $called = false;
-        $response = $this->middleware->handle($request, function () use (&$called) {
+        $response = $this->middleware->handle($request, function () use (&$called): Response {
             $called = true;
 
             return new Response('ok');
@@ -76,7 +76,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $request->headers->set('X-Api-Key', 'wrong-key');
 
-        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+        $response = $this->middleware->handle($request, fn (): Response => new Response('ok'));
 
         $this->assertSame(401, $response->getStatusCode());
     }
@@ -86,7 +86,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         config(['api.key' => 'secret']);
 
         $request = Request::create('/test', 'GET');
-        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+        $response = $this->middleware->handle($request, fn (): Response => new Response('ok'));
 
         $this->assertSame(401, $response->getStatusCode());
     }
@@ -98,7 +98,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $request->headers->set('X-Api-Key', '');
 
-        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+        $response = $this->middleware->handle($request, fn (): Response => new Response('ok'));
 
         $this->assertSame(401, $response->getStatusCode());
     }
@@ -108,7 +108,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         config(['api.key' => 'secret']);
 
         $request = Request::create('/test', 'GET');
-        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+        $response = $this->middleware->handle($request, fn (): Response => new Response('ok'));
 
         $body = json_decode((string) $response->getContent(), true);
 
@@ -123,7 +123,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $called = false;
 
-        $this->middleware->handle($request, function () use (&$called) {
+        $this->middleware->handle($request, function () use (&$called): Response {
             $called = true;
 
             return new Response;
@@ -141,7 +141,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $request->headers->set('X-Api-Key', 'key-old');
 
-        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+        $response = $this->middleware->handle($request, fn (): Response => new Response('ok'));
 
         $this->assertSame(200, $response->getStatusCode());
     }
@@ -153,7 +153,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $request->headers->set('X-Api-Key', 'key-new');
 
-        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+        $response = $this->middleware->handle($request, fn (): Response => new Response('ok'));
 
         $this->assertSame(200, $response->getStatusCode());
     }
@@ -165,7 +165,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $request->headers->set('X-Api-Key', 'key-unknown');
 
-        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+        $response = $this->middleware->handle($request, fn (): Response => new Response('ok'));
 
         $this->assertSame(401, $response->getStatusCode());
     }
@@ -177,7 +177,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $request->headers->set('X-Api-Key', 'key-two');
 
-        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+        $response = $this->middleware->handle($request, fn (): Response => new Response('ok'));
 
         $this->assertSame(200, $response->getStatusCode());
     }
@@ -191,7 +191,7 @@ class RequireApiKeyMiddlewareTest extends TestCase
         $request = Request::create('/test', 'GET');
         $request->headers->set('X-Api-Key', 'secret');
 
-        $response = $this->middleware->handle($request, fn () => new Response('ok'));
+        $response = $this->middleware->handle($request, fn (): Response => new Response('ok'));
 
         $this->assertSame(401, $response->getStatusCode());
     }

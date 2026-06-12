@@ -52,7 +52,7 @@ final class EloquentDisputeRepository implements DisputeRepositoryInterface
         return DisputeModel::where('payment_id', $paymentId->toString())
             ->orderByDesc('created_at')
             ->get()
-            ->map(fn ($m) => $this->hydrate($m))
+            ->map(fn (DisputeModel $m): Dispute => $this->hydrate($m))
             ->all();
     }
 

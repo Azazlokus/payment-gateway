@@ -13,16 +13,16 @@ use App\Contexts\Payments\Domain\ValueObjects\Money;
 use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Facades\Http;
 
-final class RobokassaProvider implements PaymentProviderInterface
+final readonly class RobokassaProvider implements PaymentProviderInterface
 {
-    private const BASE_URL = 'https://auth.robokassa.ru/Merchant';
+    private const string BASE_URL = 'https://auth.robokassa.ru/Merchant';
 
     public function __construct(
-        private readonly string $login,
-        private readonly string $password1,
-        private readonly string $password2,
-        private readonly bool $isTest,
-        private readonly PaymentLogger $logger,
+        private string $login,
+        private string $password1,
+        private string $password2,
+        private bool $isTest,
+        private PaymentLogger $logger,
     ) {}
 
     public function name(): string

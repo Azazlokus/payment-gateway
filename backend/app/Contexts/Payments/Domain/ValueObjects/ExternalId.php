@@ -6,13 +6,13 @@ namespace App\Contexts\Payments\Domain\ValueObjects;
 
 use InvalidArgumentException;
 
-final readonly class ExternalId
+final readonly class ExternalId implements \Stringable
 {
     private function __construct(private string $value) {}
 
     public static function fromString(string $value): self
     {
-        if (empty(trim($value))) {
+        if (in_array(trim($value), ['', '0'], true)) {
             throw new InvalidArgumentException('ExternalId cannot be empty');
         }
 

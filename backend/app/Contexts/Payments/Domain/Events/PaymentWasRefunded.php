@@ -7,9 +7,9 @@ namespace App\Contexts\Payments\Domain\Events;
 final readonly class PaymentWasRefunded extends DomainEvent
 {
     public function __construct(
-        public readonly string $paymentId,
-        public readonly int $refundAmount,
-        public readonly string $reason = '',
+        public string $paymentId,
+        public int $refundAmount,
+        public string $reason = '',
     ) {
         parent::__construct();
     }

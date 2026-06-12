@@ -19,10 +19,7 @@ final class RobokassaWebhookController extends Controller
         private readonly PaymentLogger $logger,
     ) {}
 
-    #[OA\Post(
-        path: '/webhook/robokassa',
-        summary: 'ResultURL-вебхук от Robokassa',
-        description: <<<'TEXT'
+    #[OA\Post(path: '/webhook/robokassa', description: <<<'TEXT'
             Принимает уведомления от Robokassa об успешной оплате (ResultURL).
 
             **Особенности:**
@@ -30,34 +27,30 @@ final class RobokassaWebhookController extends Controller
             - Verifies MD5 signature: `strtoupper(md5("{OutSum}:{InvId}:{Password2}:Shp_paymentId={value}"))`
             - IP-фильтрация по CIDR: `185.26.103.0/24`, `185.60.211.0/24`
             - При успехе **обязательно** возвращать plain-text `"OK{InvId}"`, иначе Robokassa будет повторять запрос
-            TEXT,
-        tags: ['Webhook'],
-        requestBody: new OA\RequestBody(
-            required: true,
+            TEXT, summary: 'ResultURL-вебхук от Robokassa', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\MediaType(
+            mediaType: 'application/x-www-form-urlencoded',
+            schema: new OA\Schema(ref: '#/components/schemas/RobokassaWebhookPayload'),
+        )
+    ), tags: ['Webhook'], responses: [
+        new OA\Response(
+            response: 200,
+            description: 'Webhook принят. Возвращает plain-text "OK{InvId}"',
             content: new OA\MediaType(
-                mediaType: 'application/x-www-form-urlencoded',
-                schema: new OA\Schema(ref: '#/components/schemas/RobokassaWebhookPayload'),
+                mediaType: 'text/plain',
+                schema: new OA\Schema(type: 'string', example: 'OK12345'),
             )
         ),
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Webhook принят. Возвращает plain-text "OK{InvId}"',
-                content: new OA\MediaType(
-                    mediaType: 'text/plain',
-                    schema: new OA\Schema(type: 'string', example: 'OK12345'),
-                )
-            ),
-            new OA\Response(
-                response: 403,
-                description: 'Невалидная подпись или запрещённый IP',
-                content: new OA\MediaType(
-                    mediaType: 'text/plain',
-                    schema: new OA\Schema(type: 'string', example: 'Invalid signature'),
-                )
-            ),
-        ]
-    )]
+        new OA\Response(
+            response: 403,
+            description: 'Невалидная подпись или запрещённый IP',
+            content: new OA\MediaType(
+                mediaType: 'text/plain',
+                schema: new OA\Schema(type: 'string', example: 'Invalid signature'),
+            )
+        ),
+    ])]
     public function handle(Request $request): Response
     {
         $payload = $request->all();

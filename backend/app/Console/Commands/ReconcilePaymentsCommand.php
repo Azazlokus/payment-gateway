@@ -71,7 +71,7 @@ final class ReconcilePaymentsCommand extends Command
             return self::SUCCESS;
         }
 
-        $query->chunkById($batch, function ($chunk) use (&$synced, &$failed) {
+        $query->chunkById($batch, function ($chunk) use (&$synced, &$failed): void {
             foreach ($chunk as $row) {
                 try {
                     $this->bus->dispatch(new SyncPaymentCommand(paymentId: $row->id));

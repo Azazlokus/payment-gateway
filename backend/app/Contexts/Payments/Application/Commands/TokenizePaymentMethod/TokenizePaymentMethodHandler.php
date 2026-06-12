@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Contexts\Payments\Application\Commands\TokenizePaymentMethod;
 
 use App\Contexts\Payments\Application\PaymentProviderRegistry;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
 use App\Contexts\Payments\Domain\Aggregates\PaymentMethod;
 use App\Contexts\Payments\Domain\Contracts\PaymentMethodRepositoryInterface;
 use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
@@ -29,7 +30,7 @@ final readonly class TokenizePaymentMethodHandler
     {
         $payment = $this->paymentRepository->findById(PaymentId::fromString($command->paymentId));
 
-        if ($payment === null) {
+        if (! $payment instanceof Payment) {
             throw new PaymentException('Payment not found', 404);
         }
 
@@ -54,7 +55,7 @@ final readonly class TokenizePaymentMethodHandler
 
         $existing = $this->methodRepository->findByFingerprint($command->customerId, $fingerprint->toString());
 
-        if ($existing !== null) {
+        if ($existing instanceof PaymentMethod) {
             if (! $existing->isActive()) {
                 $existing->reactivate($result->token, $result->last4, $result->brand, $result->expiresAt);
                 $this->methodRepository->save($existing);

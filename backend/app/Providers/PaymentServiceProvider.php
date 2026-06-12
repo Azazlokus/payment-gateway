@@ -36,6 +36,7 @@ use Illuminate\Support\ServiceProvider;
 
 class PaymentServiceProvider extends ServiceProvider
 {
+    #[\Override]
     public function register(): void
     {
         $this->app->singleton(TenantContext::class);
@@ -46,11 +47,9 @@ class PaymentServiceProvider extends ServiceProvider
         $this->app->singleton(MetricsService::class);
         $this->app->singleton(NotificationService::class);
         $this->app->singleton(AuditLogger::class);
-        $this->app->singleton(ReplayProtector::class, function ($app) {
-            return new ReplayProtector($app->make(Repository::class));
-        });
+        $this->app->singleton(ReplayProtector::class, fn ($app) => new ReplayProtector($app->make(Repository::class)));
 
-        $this->app->singleton(VelocityChecker::class, function () {
+        $this->app->singleton(VelocityChecker::class, function (): VelocityChecker {
             $checker = new VelocityChecker(
                 logger: $this->app->make(PaymentLogger::class),
                 metrics: $this->app->make(MetricsService::class),
@@ -70,7 +69,7 @@ class PaymentServiceProvider extends ServiceProvider
             return $checker;
         });
 
-        $this->app->singleton(CircuitBreaker::class, function () {
+        $this->app->singleton(CircuitBreaker::class, function (): CircuitBreaker {
             $config = config('payments.circuit_breaker', []);
 
             return new CircuitBreaker(
@@ -81,55 +80,45 @@ class PaymentServiceProvider extends ServiceProvider
 
         // ─── Individual provider singletons ───────────────────────────────────
 
-        $this->app->singleton(YooKassaProvider::class, function () {
-            return new YooKassaProvider(
-                shopId: config('payments.yookassa.shop_id'),
-                secretKey: config('payments.yookassa.secret_key'),
-                logger: $this->app->make(PaymentLogger::class),
-            );
-        });
+        $this->app->singleton(YooKassaProvider::class, fn () => new YooKassaProvider(
+            shopId: config('payments.yookassa.shop_id'),
+            secretKey: config('payments.yookassa.secret_key'),
+            logger: $this->app->make(PaymentLogger::class),
+        ));
 
-        $this->app->singleton(RobokassaProvider::class, function () {
-            return new RobokassaProvider(
-                login: config('payments.robokassa.login'),
-                password1: config('payments.robokassa.password1'),
-                password2: config('payments.robokassa.password2'),
-                isTest: (bool) config('payments.robokassa.is_test', true),
-                logger: $this->app->make(PaymentLogger::class),
-            );
-        });
+        $this->app->singleton(RobokassaProvider::class, fn () => new RobokassaProvider(
+            login: config('payments.robokassa.login'),
+            password1: config('payments.robokassa.password1'),
+            password2: config('payments.robokassa.password2'),
+            isTest: (bool) config('payments.robokassa.is_test', true),
+            logger: $this->app->make(PaymentLogger::class),
+        ));
 
-        $this->app->singleton(SbpProvider::class, function () {
-            return new SbpProvider(
-                merchantId: config('payments.sbp.merchant_id'),
-                apiKey: config('payments.sbp.api_key'),
-                webhookSecret: config('payments.sbp.webhook_secret'),
-                baseUrl: config('payments.sbp.base_url'),
-                logger: $this->app->make(PaymentLogger::class),
-            );
-        });
+        $this->app->singleton(SbpProvider::class, fn () => new SbpProvider(
+            merchantId: config('payments.sbp.merchant_id'),
+            apiKey: config('payments.sbp.api_key'),
+            webhookSecret: config('payments.sbp.webhook_secret'),
+            baseUrl: config('payments.sbp.base_url'),
+            logger: $this->app->make(PaymentLogger::class),
+        ));
 
-        $this->app->singleton(AlfaBankProvider::class, function () {
-            return new AlfaBankProvider(
-                login: config('payments.alfabank.login'),
-                password: config('payments.alfabank.password'),
-                baseUrl: config('payments.alfabank.base_url'),
-                logger: $this->app->make(PaymentLogger::class),
-                webhookIps: config('payments.alfabank.webhook_ips', []),
-            );
-        });
+        $this->app->singleton(AlfaBankProvider::class, fn () => new AlfaBankProvider(
+            login: config('payments.alfabank.login'),
+            password: config('payments.alfabank.password'),
+            baseUrl: config('payments.alfabank.base_url'),
+            logger: $this->app->make(PaymentLogger::class),
+            webhookIps: config('payments.alfabank.webhook_ips', []),
+        ));
 
-        $this->app->singleton(CloudPaymentsProvider::class, function () {
-            return new CloudPaymentsProvider(
-                publicId: config('payments.cloudpayments.public_id'),
-                apiSecret: config('payments.cloudpayments.api_secret'),
-                logger: $this->app->make(PaymentLogger::class),
-            );
-        });
+        $this->app->singleton(CloudPaymentsProvider::class, fn () => new CloudPaymentsProvider(
+            publicId: config('payments.cloudpayments.public_id'),
+            apiSecret: config('payments.cloudpayments.api_secret'),
+            logger: $this->app->make(PaymentLogger::class),
+        ));
 
         // ─── Registry: all providers registered in one place ─────────────────
 
-        $this->app->singleton(PaymentProviderRegistry::class, function () {
+        $this->app->singleton(PaymentProviderRegistry::class, function (): PaymentProviderRegistry {
             $registry = new PaymentProviderRegistry;
 
             $providers = [

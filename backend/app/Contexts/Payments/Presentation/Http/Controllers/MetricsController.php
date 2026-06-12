@@ -15,19 +15,13 @@ final class MetricsController extends Controller
         private readonly MetricsService $metrics,
     ) {}
 
-    #[OA\Get(
-        path: '/metrics',
-        summary: 'Prometheus-метрики',
-        description: 'Возвращает метрики в формате Prometheus text exposition для scrape-а.',
-        tags: ['Observability'],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Метрики в Prometheus text format',
-                content: new OA\MediaType(mediaType: 'text/plain'),
-            ),
-        ]
-    )]
+    #[OA\Get(path: '/metrics', description: 'Возвращает метрики в формате Prometheus text exposition для scrape-а.', summary: 'Prometheus-метрики', tags: ['Observability'], responses: [
+        new OA\Response(
+            response: 200,
+            description: 'Метрики в Prometheus text format',
+            content: new OA\MediaType(mediaType: 'text/plain'),
+        ),
+    ])]
     public function __invoke(): Response
     {
         return response($this->metrics->dump(), 200, [

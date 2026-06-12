@@ -22,7 +22,7 @@ class CreatePaymentTest extends TestCase
         string $confirmationUrl = 'https://yookassa.ru/checkout/test',
         string $status = 'pending',
     ): void {
-        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) use ($externalId, $confirmationUrl, $status) {
+        $mockProvider = $this->mock(PaymentProviderInterface::class, function ($mock) use ($externalId, $confirmationUrl, $status): void {
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldReceive('createPayment')->andReturn(new ProviderResponse(
                 externalId: ExternalId::fromString($externalId),
@@ -67,7 +67,7 @@ class CreatePaymentTest extends TestCase
         $firstId = $first->json('id');
 
         // Second request with same key — should return same payment without calling provider again
-        $mockProvider2 = $this->mock(PaymentProviderInterface::class, function ($mock) {
+        $mockProvider2 = $this->mock(PaymentProviderInterface::class, function ($mock): void {
             $mock->shouldReceive('name')->andReturn('yookassa');
             $mock->shouldNotReceive('createPayment');
         });

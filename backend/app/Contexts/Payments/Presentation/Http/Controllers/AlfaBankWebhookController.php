@@ -20,10 +20,7 @@ final class AlfaBankWebhookController extends Controller
         private readonly PaymentLogger $logger,
     ) {}
 
-    #[OA\Post(
-        path: '/webhook/alfabank',
-        summary: 'Webhook от Альфа-Банка',
-        description: <<<'TEXT'
+    #[OA\Post(path: '/webhook/alfabank', description: <<<'TEXT'
             Принимает form POST уведомления от Альфа-Банка об изменении статуса заказа.
 
             **Верификация:** Альфа-Банк не присылает криптографическую подпись.
@@ -34,22 +31,18 @@ final class AlfaBankWebhookController extends Controller
             - `refunded` — возврат выполнен
             - `reversed` — платёж отменён
             - `declinedByTimeout` — истёк таймаут
-            TEXT,
-        tags: ['Webhook'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\MediaType(
-                mediaType: 'application/x-www-form-urlencoded',
-                schema: new OA\Schema(ref: '#/components/schemas/AlfaBankWebhookPayload'),
-            ),
+            TEXT, summary: 'Webhook от Альфа-Банка', requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\MediaType(
+            mediaType: 'application/x-www-form-urlencoded',
+            schema: new OA\Schema(ref: '#/components/schemas/AlfaBankWebhookPayload'),
         ),
-        responses: [
-            new OA\Response(response: 200, description: 'Webhook принят', content: new OA\JsonContent(
-                properties: [new OA\Property(property: 'message', type: 'string', example: 'ok')]
-            )),
-            new OA\Response(response: 403, description: 'Отсутствуют обязательные поля'),
-        ]
-    )]
+    ), tags: ['Webhook'], responses: [
+        new OA\Response(response: 200, description: 'Webhook принят', content: new OA\JsonContent(
+            properties: [new OA\Property(property: 'message', type: 'string', example: 'ok')]
+        )),
+        new OA\Response(response: 403, description: 'Отсутствуют обязательные поля'),
+    ])]
     public function handle(Request $request): JsonResponse
     {
         $payload = $request->all();
