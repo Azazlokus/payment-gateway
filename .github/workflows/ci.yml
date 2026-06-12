@@ -95,7 +95,63 @@ jobs:
       - name: Run Larastan
         run: ./vendor/bin/phpstan analyse --memory-limit=512M --no-progress
 
-  # ─── 4. Unit tests (no services) ────────────────────────────────────────────
+  # ─── 4. Architecture (Deptrac) ───────────────────────────────────────────────
+  architecture:
+    name: Architecture (Deptrac)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.json') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer update --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Check architecture rules
+        run: php vendor/bin/deptrac analyse --no-progress
+
+  # ─── 5. Rector (dry-run) ────────────────────────────────────────────────────
+  rector:
+    name: Rector (dry-run)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.json') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer update --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Rector dry-run
+        run: php vendor/bin/rector process --dry-run --no-progress-bar
+
+  # ─── 6. Unit tests (no services) ──────────────────────────────────────────
   test-unit:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -123,7 +179,7 @@ jobs:
       - name: Run unit tests
         run: php vendor/bin/phpunit --testsuite=Unit --colors=always
 
-  # ─── 5. Feature tests (SQLite in-memory + Redis) ────────────────────────────
+  # ─── 7. Feature tests (SQLite in-memory + Redis) ────────────────────────────
   test-feature:
     name: Feature Tests
     runs-on: ubuntu-latest
@@ -177,7 +233,7 @@ jobs:
         env:
           REDIS_HOST: 127.0.0.1
 
-  # ─── 6. Mutation testing (Infection PHP) ────────────────────────────────────
+  # ─── 8. Mutation testing (Infection PHP) ────────────────────────────────────
   mutation:
     name: Mutation Tests (Infection)
     runs-on: ubuntu-latest
@@ -209,7 +265,7 @@ jobs:
         env:
           INFECTION_BADGE_API_KEY: ${{ secrets.INFECTION_BADGE_API_KEY }}
 
-  # ─── 7. TypeScript SDK typecheck ────────────────────────────────────────────
+  # ─── 9. TypeScript SDK typecheck ────────────────────────────────────────────
   sdk-typecheck:
     name: TypeScript SDK (tsc)
     runs-on: ubuntu-latest
@@ -230,7 +286,7 @@ jobs:
       - name: Type-check SDK
         run: npx tsc --noEmit
 
-  # ─── 8. E2E tests (Playwright) ──────────────────────────────────────────────
+  # ─── 10. E2E tests (Playwright) ─────────────────────────────────────────────
   e2e:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
@@ -281,10 +337,10 @@ jobs:
           path: e2e/playwright-report/
           retention-days: 7
 
-  # ─── 9. All checks passed (branch protection gate) ──────────────────────────
+  # ─── 11. All checks passed (branch protection gate) ─────────────────────────
   ci-ok:
     name: CI OK
     runs-on: ubuntu-latest
-    needs: [lint, frontend, analyse, test-unit, test-feature, sdk-typecheck]
+    needs: [lint, frontend, analyse, architecture, rector, test-unit, test-feature, sdk-typecheck]
     steps:
       - run: echo "All required checks passed"
