@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Domain\ValueObjects\PaymentId;
-use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
+use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
+use App\Contexts\Payments\Infrastructure\Persistence\Models\PaymentModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;

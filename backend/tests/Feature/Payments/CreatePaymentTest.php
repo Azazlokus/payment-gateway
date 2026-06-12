@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
-use App\Payments\Application\PaymentProviderRegistry;
-use App\Payments\Domain\Contracts\PaymentProviderInterface;
-use App\Payments\Domain\Contracts\ProviderResponse;
-use App\Payments\Domain\ValueObjects\ExternalId;
+use App\Contexts\Payments\Application\PaymentProviderRegistry;
+use App\Contexts\Payments\Domain\Contracts\PaymentProviderInterface;
+use App\Contexts\Payments\Domain\Contracts\ProviderResponse;
+use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -143,10 +143,11 @@ class CreatePaymentTest extends TestCase
 
         $response = $this->getJson('/api/v1/payments');
 
+        // index() использует cursor-пагинацию (next_cursor/prev_cursor), не offset
         $response->assertStatus(Response::HTTP_OK)
-            ->assertJsonStructure(['data', 'total', 'per_page', 'current_page', 'last_page'])
-            ->assertJsonPath('total', 1)
-            ->assertJsonPath('current_page', 1);
+            ->assertJsonStructure(['data', 'per_page', 'next_cursor', 'prev_cursor'])
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('per_page', 15);
     }
 
     public function test_lists_payments_filtered_by_provider(): void
@@ -160,15 +161,15 @@ class CreatePaymentTest extends TestCase
             'return_url' => 'https://example.com/success',
         ]);
 
-        // Filter by matching provider
+        // Фильтр по совпадающему провайдеру
         $this->getJson('/api/v1/payments?provider=yookassa')
             ->assertStatus(200)
-            ->assertJsonPath('total', 1);
+            ->assertJsonCount(1, 'data');
 
-        // Filter by non-matching provider
+        // Фильтр по несовпадающему провайдеру — пустой результат
         $this->getJson('/api/v1/payments?provider=robokassa')
             ->assertStatus(200)
-            ->assertJsonPath('total', 0);
+            ->assertJsonCount(0, 'data');
     }
 
     public function test_health_check_returns_ok(): void

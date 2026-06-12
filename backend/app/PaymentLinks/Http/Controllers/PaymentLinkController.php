@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\PaymentLinks\Http\Controllers;
 
 use App\PaymentLinks\Models\PaymentLink;
-use App\Payments\Application\Bus\CommandBus;
-use App\Payments\Application\Commands\CreatePayment\CreatePaymentCommand;
-use App\Payments\Application\DTOs\CreatePaymentOptionsDTO;
+use App\Contexts\Payments\Application\Bus\CommandBus;
+use App\Contexts\Payments\Application\Commands\CreatePayment\CreatePaymentCommand;
+use App\Contexts\Payments\Application\DTOs\CreatePaymentOptionsDTO;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Domain;
 
-use App\Payments\Domain\Enums\Currency;
-use App\Payments\Domain\Exceptions\PaymentException;
-use App\Payments\Domain\ValueObjects\Money;
+use App\Contexts\Payments\Domain\Enums\Currency;
+use App\Contexts\Payments\Domain\Exceptions\PaymentException;
+use App\Contexts\Payments\Domain\ValueObjects\Money;
 use PHPUnit\Framework\TestCase;
 
 class MoneyTest extends TestCase

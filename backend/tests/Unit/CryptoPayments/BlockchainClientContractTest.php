@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Unit\CryptoPayments;
 
-use App\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
-use App\CryptoPayments\Domain\Enums\CryptoAsset;
-use App\CryptoPayments\Domain\Enums\DepositMode;
-use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
-use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
-use App\CryptoPayments\Infrastructure\Blockchain\BitcoinBlockchainClient;
-use App\CryptoPayments\Infrastructure\Blockchain\TonBlockchainClient;
-use App\CryptoPayments\Infrastructure\Blockchain\TronBlockchainClient;
-use App\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
+use App\Contexts\CryptoPayments\Domain\Enums\CryptoAsset;
+use App\Contexts\CryptoPayments\Domain\Enums\DepositMode;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\CryptoAddress;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
+use App\Contexts\CryptoPayments\Infrastructure\Blockchain\BitcoinBlockchainClient;
+use App\Contexts\CryptoPayments\Infrastructure\Blockchain\TonBlockchainClient;
+use App\Contexts\CryptoPayments\Infrastructure\Blockchain\TronBlockchainClient;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Mockery;
 use Tests\TestCase;
 

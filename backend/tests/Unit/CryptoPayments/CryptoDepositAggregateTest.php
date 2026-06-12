@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Tests\Unit\CryptoPayments;
 
-use App\CryptoPayments\Domain\Aggregates\CryptoDeposit;
-use App\CryptoPayments\Domain\Enums\CryptoAsset;
-use App\CryptoPayments\Domain\Enums\CryptoDepositStatus;
-use App\CryptoPayments\Domain\Events\DepositAwaitingPayment;
-use App\CryptoPayments\Domain\Events\DepositConfirmed;
-use App\CryptoPayments\Domain\Events\DepositExpired;
-use App\CryptoPayments\Domain\Events\DepositOverpaid;
-use App\CryptoPayments\Domain\Exceptions\DepositExpiredException;
-use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
-use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
-use App\CryptoPayments\Domain\ValueObjects\Memo;
-use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
-use App\CryptoPayments\Domain\ValueObjects\TxHash;
+use App\Contexts\CryptoPayments\Domain\Aggregates\CryptoDeposit;
+use App\Contexts\CryptoPayments\Domain\Enums\CryptoAsset;
+use App\Contexts\CryptoPayments\Domain\Enums\CryptoDepositStatus;
+use App\Contexts\CryptoPayments\Domain\Events\DepositAwaitingPayment;
+use App\Contexts\CryptoPayments\Domain\Events\DepositConfirmed;
+use App\Contexts\CryptoPayments\Domain\Events\DepositExpired;
+use App\Contexts\CryptoPayments\Domain\Events\DepositOverpaid;
+use App\Contexts\CryptoPayments\Domain\Exceptions\DepositExpiredException;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\CryptoAddress;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\Memo;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\TxHash;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 

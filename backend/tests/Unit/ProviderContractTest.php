@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Domain\Contracts\PaymentProviderInterface;
-use App\Payments\Domain\Contracts\ProviderResponse;
-use App\Payments\Domain\ValueObjects\ExternalId;
-use App\Payments\Infrastructure\Observability\PaymentLogger;
-use App\Payments\Infrastructure\Providers\AlfaBankProvider;
-use App\Payments\Infrastructure\Providers\CloudPaymentsProvider;
-use App\Payments\Infrastructure\Providers\RobokassaProvider;
-use App\Payments\Infrastructure\Providers\SbpProvider;
-use App\Payments\Infrastructure\Providers\YooKassaProvider;
+use App\Contexts\Payments\Domain\Contracts\PaymentProviderInterface;
+use App\Contexts\Payments\Domain\Contracts\ProviderResponse;
+use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\Payments\Infrastructure\Providers\AlfaBankProvider;
+use App\Contexts\Payments\Infrastructure\Providers\CloudPaymentsProvider;
+use App\Contexts\Payments\Infrastructure\Providers\RobokassaProvider;
+use App\Contexts\Payments\Infrastructure\Providers\SbpProvider;
+use App\Contexts\Payments\Infrastructure\Providers\YooKassaProvider;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;

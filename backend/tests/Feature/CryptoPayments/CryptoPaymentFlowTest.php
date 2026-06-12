@@ -4,27 +4,27 @@ declare(strict_types=1);
 
 namespace Tests\Feature\CryptoPayments;
 
-use App\CryptoPayments\Application\ACL\CryptoDepositToPaymentAdapter;
-use App\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
-use App\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
-use App\CryptoPayments\Domain\Contracts\CryptoRefundRepositoryInterface;
-use App\CryptoPayments\Domain\Contracts\PriceOracleInterface;
-use App\CryptoPayments\Domain\Enums\CryptoAsset;
-use App\CryptoPayments\Domain\Enums\CryptoDepositStatus;
-use App\CryptoPayments\Domain\Enums\CryptoRefundStatus;
-use App\CryptoPayments\Domain\Enums\DepositMode;
-use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
-use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
-use App\CryptoPayments\Domain\ValueObjects\CryptoRefundId;
-use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
-use App\CryptoPayments\Domain\ValueObjects\TransactionResult;
-use App\CryptoPayments\Domain\ValueObjects\TxHash;
-use App\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry;
-use App\CryptoPayments\Infrastructure\Jobs\PollCryptoDepositsJob;
-use App\CryptoPayments\Infrastructure\Jobs\ProcessCryptoRefundsJob;
-use App\CryptoPayments\Infrastructure\Observability\CryptoMetricsService;
-use App\Payments\Infrastructure\Observability\PaymentLogger;
-use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
+use App\Contexts\CryptoPayments\Application\ACL\CryptoDepositToPaymentAdapter;
+use App\Contexts\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
+use App\Contexts\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
+use App\Contexts\CryptoPayments\Domain\Contracts\CryptoRefundRepositoryInterface;
+use App\Contexts\CryptoPayments\Domain\Contracts\PriceOracleInterface;
+use App\Contexts\CryptoPayments\Domain\Enums\CryptoAsset;
+use App\Contexts\CryptoPayments\Domain\Enums\CryptoDepositStatus;
+use App\Contexts\CryptoPayments\Domain\Enums\CryptoRefundStatus;
+use App\Contexts\CryptoPayments\Domain\Enums\DepositMode;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\CryptoAddress;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\CryptoRefundId;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\TransactionResult;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\TxHash;
+use App\Contexts\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry;
+use App\Contexts\CryptoPayments\Infrastructure\Jobs\PollCryptoDepositsJob;
+use App\Contexts\CryptoPayments\Infrastructure\Jobs\ProcessCryptoRefundsJob;
+use App\Contexts\CryptoPayments\Infrastructure\Observability\CryptoMetricsService;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\Payments\Infrastructure\Persistence\Models\PaymentModel;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
@@ -58,18 +58,18 @@ class CryptoPaymentFlowTest extends TestCase
         $this->mockClient->shouldReceive('canSend')->andReturn(false)->byDefault();
         $this->mockClient->shouldReceive('findIncomingTransactionsBatch')->andReturn([])->byDefault();
 
-        $mockRegistry = $this->mock(BlockchainClientRegistry::class);
-        $mockRegistry->shouldReceive('getForAsset')->andReturn($this->mockClient)->byDefault();
-        $mockRegistry->shouldReceive('get')->andReturn($this->mockClient)->byDefault();
-        $mockRegistry->shouldReceive('all')->andReturn([$this->mockClient])->byDefault();
+        // BlockchainClientRegistry — final, мокать нельзя. Собираем реальный реестр
+        // и регистрируем в нём мок-клиент через штатный register() (network='ton').
+        $registry = new BlockchainClientRegistry;
+        $registry->register($this->mockClient);
+        $this->app->instance(BlockchainClientRegistry::class, $registry);
 
         $mockOracle = $this->mock(PriceOracleInterface::class);
         $mockOracle->shouldReceive('kopecksToCryptoUnits')->andReturn(125_000_000)->byDefault();
         $mockOracle->shouldReceive('getRateKopecks')->andReturn(40_000)->byDefault();
 
-        $mockMetrics = $this->mock(CryptoMetricsService::class);
-        $mockMetrics->shouldReceive('depositCreated', 'depositConfirmed', 'depositExpired', 'depositOverpaid')
-            ->andReturnNull()->byDefault();
+        // CryptoMetricsService — final, но это тонкая обёртка над MetricsService,
+        // который TestCase уже подменил no-op мок. Отдельный мок не нужен.
     }
 
     // ─── Flow: Create → Confirm via polling ──────────────────────────────────
@@ -82,9 +82,9 @@ class CryptoPaymentFlowTest extends TestCase
             'provider' => 'crypto',
             'amount' => 5000,
             'currency' => 'RUB',
-            'status' => 'pending',
+            'status' => 'Pending',
             'external_id' => null,
-            'idempotency_key' => null,
+            'idempotency_key' => 'idem-e2e-001',
             'description' => 'E2E test payment',
             'customer_email' => null,
             'metadata' => null,
@@ -149,7 +149,7 @@ class CryptoPaymentFlowTest extends TestCase
 
         // Show before confirmation
         $before = $this->getJson("/api/v1/crypto/deposits/{$depositId}");
-        $before->assertJsonPath('status', 'awaiting');
+        $before->assertJsonPath('status', 'Awaiting');
 
         // Confirm
         $memo = $createResp->json('memo');
@@ -172,7 +172,7 @@ class CryptoPaymentFlowTest extends TestCase
 
         // Show after confirmation
         $after = $this->getJson("/api/v1/crypto/deposits/{$depositId}");
-        $after->assertJsonPath('status', 'confirmed');
+        $after->assertJsonPath('status', 'Confirmed');
         $after->assertJsonPath('txHash', self::TX_HASH);
     }
 

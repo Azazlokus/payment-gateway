@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Infrastructure\CircuitBreaker\CircuitBreaker;
-use App\Payments\Infrastructure\CircuitBreaker\CircuitState;
+use App\Contexts\Payments\Infrastructure\CircuitBreaker\CircuitBreaker;
+use App\Contexts\Payments\Infrastructure\CircuitBreaker\CircuitState;
 use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
 

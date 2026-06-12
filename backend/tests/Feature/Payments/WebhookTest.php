@@ -4,51 +4,31 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
-use App\Payments\Domain\Contracts\PaymentProviderInterface;
-use App\Payments\Domain\Contracts\ProviderResponse;
-use App\Payments\Domain\ValueObjects\ExternalId;
-use App\Payments\Infrastructure\Jobs\ProcessYooKassaWebhookJob;
+use App\Contexts\Payments\Infrastructure\Jobs\ProcessYooKassaWebhookJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
+/**
+ * Тест HTTP-слоя вебхуков YooKassa.
+ *
+ * WebhookController инжектит final YooKassaProvider напрямую, поэтому
+ * вместо мока используем конфиг: пустой webhook_ips пропускает все IP,
+ * а CIDR 192.0.2.0/24 (RFC 5737 TEST-NET) отклоняет localhost.
+ */
 class WebhookTest extends TestCase
 {
     use RefreshDatabase;
 
     private string $externalId = '22d65900-000f-5000-a000-10d000000099';
 
-    private function mockProviderAccept(): void
-    {
-        $this->mock(PaymentProviderInterface::class, function ($mock) {
-            $mock->shouldReceive('name')->andReturn('yookassa');
-            $mock->shouldReceive('verifyWebhook')->andReturn(true);
-            $mock->shouldReceive('createPayment')->andReturn(new ProviderResponse(
-                externalId: ExternalId::fromString($this->externalId),
-                confirmationUrl: 'https://yookassa.ru/checkout/test',
-                status: 'pending',
-            ));
-            $mock->shouldReceive('parseWebhook')->andReturn(new ProviderResponse(
-                externalId: ExternalId::fromString($this->externalId),
-                confirmationUrl: '',
-                status: 'succeeded',
-            ));
-        });
-    }
-
-    private function mockProviderReject(): void
-    {
-        $this->mock(PaymentProviderInterface::class, function ($mock) {
-            $mock->shouldReceive('name')->andReturn('yookassa');
-            $mock->shouldReceive('verifyWebhook')->andReturn(false);
-        });
-    }
-
     public function test_webhook_dispatches_job_on_valid_payload(): void
     {
         Queue::fake();
-        $this->mockProviderAccept();
+
+        // Отключаем IP-фильтрацию — пропускаем любой IP
+        config(['payments.yookassa.webhook_ips' => []]);
 
         $response = $this->postJson('/api/webhook/yookassa', [
             'event' => 'payment.succeeded',
@@ -66,7 +46,8 @@ class WebhookTest extends TestCase
 
     public function test_webhook_returns_403_for_rejected_ip(): void
     {
-        $this->mockProviderReject();
+        // Разрешаем только TEST-NET CIDR — localhost не пройдёт
+        config(['payments.yookassa.webhook_ips' => ['192.0.2.0/24']]);
 
         $response = $this->postJson('/api/webhook/yookassa', [
             'event' => 'payment.succeeded',
@@ -79,7 +60,9 @@ class WebhookTest extends TestCase
     public function test_webhook_does_not_dispatch_job_when_rejected(): void
     {
         Queue::fake();
-        $this->mockProviderReject();
+
+        // Разрешаем только TEST-NET CIDR — localhost не пройдёт
+        config(['payments.yookassa.webhook_ips' => ['192.0.2.0/24']]);
 
         $this->postJson('/api/webhook/yookassa', [
             'event' => 'payment.succeeded',

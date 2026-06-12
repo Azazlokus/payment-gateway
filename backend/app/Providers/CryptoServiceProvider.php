@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\CryptoPayments\Application\ACL\CryptoDepositToPaymentAdapter;
-use App\CryptoPayments\Application\Commands\CreateCryptoRefund\CreateCryptoRefundHandler;
-use App\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
-use App\CryptoPayments\Domain\Contracts\CryptoRefundRepositoryInterface;
-use App\CryptoPayments\Domain\Contracts\PriceOracleInterface;
-use App\CryptoPayments\Infrastructure\Blockchain\BitcoinBlockchainClient;
-use App\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry;
-use App\CryptoPayments\Infrastructure\Blockchain\TonBlockchainClient;
-use App\CryptoPayments\Infrastructure\Blockchain\TronBlockchainClient;
-use App\CryptoPayments\Infrastructure\Observability\CryptoMetricsService;
-use App\CryptoPayments\Infrastructure\Persistence\EloquentCryptoDepositRepository;
-use App\CryptoPayments\Infrastructure\Persistence\EloquentCryptoRefundRepository;
-use App\CryptoPayments\Infrastructure\Pricing\CoinGeckoPriceOracle;
-use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
-use App\Payments\Infrastructure\Observability\MetricsService;
-use App\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\CryptoPayments\Application\ACL\CryptoDepositToPaymentAdapter;
+use App\Contexts\CryptoPayments\Application\Commands\CreateCryptoRefund\CreateCryptoRefundHandler;
+use App\Contexts\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
+use App\Contexts\CryptoPayments\Domain\Contracts\CryptoRefundRepositoryInterface;
+use App\Contexts\CryptoPayments\Domain\Contracts\PriceOracleInterface;
+use App\Contexts\CryptoPayments\Infrastructure\Blockchain\BitcoinBlockchainClient;
+use App\Contexts\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry;
+use App\Contexts\CryptoPayments\Infrastructure\Blockchain\TonBlockchainClient;
+use App\Contexts\CryptoPayments\Infrastructure\Blockchain\TronBlockchainClient;
+use App\Contexts\CryptoPayments\Infrastructure\Observability\CryptoMetricsService;
+use App\Contexts\CryptoPayments\Infrastructure\Persistence\EloquentCryptoDepositRepository;
+use App\Contexts\CryptoPayments\Infrastructure\Persistence\EloquentCryptoRefundRepository;
+use App\Contexts\CryptoPayments\Infrastructure\Pricing\CoinGeckoPriceOracle;
+use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
+use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\ServiceProvider;
 
 class CryptoServiceProvider extends ServiceProvider

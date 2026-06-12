@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Payments\Application\Bus\CommandBus;
-use App\Payments\Application\Commands\SyncPayment\SyncPaymentCommand;
-use App\Payments\Domain\Enums\PaymentStatus;
+use App\Contexts\Payments\Application\Bus\CommandBus;
+use App\Contexts\Payments\Application\Commands\SyncPayment\SyncPaymentCommand;
+use App\Contexts\Payments\Domain\Enums\PaymentStatus;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;

@@ -13,7 +13,7 @@ return new class extends Migration
         Schema::create('audit_logs', static function (Blueprint $table): void {
             $table->id();
             $table->string('action');              // payment.created, payment.cancelled, etc.
-            $table->string('subject_type')->nullable();  // App\Payments\...Payment
+            $table->string('subject_type')->nullable();  // App\Contexts\Payments\...Payment
             $table->string('subject_id')->nullable();    // payment UUID
             $table->ipAddress('ip')->nullable();
             $table->string('api_key_hint')->nullable();  // last 4 chars of used key

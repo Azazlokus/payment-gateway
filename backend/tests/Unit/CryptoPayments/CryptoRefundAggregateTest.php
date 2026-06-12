@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Unit\CryptoPayments;
 
-use App\CryptoPayments\Domain\Aggregates\CryptoRefundRequest;
-use App\CryptoPayments\Domain\Enums\CryptoAsset;
-use App\CryptoPayments\Domain\Enums\CryptoRefundStatus;
-use App\CryptoPayments\Domain\Events\RefundHasFailed;
-use App\CryptoPayments\Domain\Events\RefundWasCompleted;
-use App\CryptoPayments\Domain\Events\RefundWasRequested;
-use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
-use App\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
-use App\CryptoPayments\Domain\ValueObjects\TxHash;
+use App\Contexts\CryptoPayments\Domain\Aggregates\CryptoRefundRequest;
+use App\Contexts\CryptoPayments\Domain\Enums\CryptoAsset;
+use App\Contexts\CryptoPayments\Domain\Enums\CryptoRefundStatus;
+use App\Contexts\CryptoPayments\Domain\Events\RefundHasFailed;
+use App\Contexts\CryptoPayments\Domain\Events\RefundWasCompleted;
+use App\Contexts\CryptoPayments\Domain\Events\RefundWasRequested;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\CryptoAddress;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\NativeCryptoAmount;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\TxHash;
 use PHPUnit\Framework\TestCase;
 
 class CryptoRefundAggregateTest extends TestCase

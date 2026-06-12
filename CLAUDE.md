@@ -11,6 +11,10 @@ php vendor/bin/phpunit                        # все тесты
 # Статический анализ
 ./vendor/bin/phpstan analyse --memory-limit=512M
 
+# Архитектурные зависимости (DDD layers)
+php vendor/bin/deptrac analyse                # проверить
+php vendor/bin/deptrac analyse --formatter=json  # JSON для CI
+
 # Стиль кода
 ./vendor/bin/pint                             # исправить
 ./vendor/bin/pint --test                      # только проверить
@@ -26,25 +30,40 @@ npm run build                                 # production build
 
 ## Архитектура
 
-Проект построен по **Clean Architecture + DDD**:
+Проект построен по **Clean Architecture + DDD**.
+Bounded contexts вынесены в `app/Contexts/`, отделены от фреймворка:
 
 ```
-app/Payments/
-├── Domain/          # Чистая бизнес-логика, без зависимостей от фреймворка
-│   ├── Aggregates/Payment.php          # Главный агрегат (final class)
-│   ├── Contracts/PaymentProviderInterface.php
-│   ├── ValueObjects/Money.php          # Сумма всегда в копейках (int)
-│   └── Events/                         # Доменные события (чистый PHP)
-├── Application/     # Use cases, командный bus, DTO
-│   ├── Bus/CommandBus.php              # Pipeline: Validate → Idempotency → Handle
-│   └── Commands/                       # CreatePayment, RefundPayment, CancelPayment, SyncPayment
-├── Infrastructure/  # Адаптеры к внешним системам
-│   ├── Providers/                      # YooKassa, Robokassa, CloudPayments, SBP, AlfaBank
-│   ├── Jobs/                           # ProcessXxxWebhookJob (ShouldQueue, 5 попыток)
-│   ├── Observability/                  # PaymentLogger, MetricsService, NotificationService
-│   └── Persistence/                   # Eloquent модели + Repository
-└── Presentation/    # HTTP-слой (controllers, requests, resources)
+app/
+├── Contexts/                              # ← DDD bounded contexts
+│   ├── Payments/
+│   │   ├── Domain/                        # Чистая бизнес-логика, без зависимостей от фреймворка
+│   │   │   ├── Aggregates/Payment.php     # Главный агрегат (final class)
+│   │   │   ├── Contracts/                 # PaymentProviderInterface и др.
+│   │   │   ├── ValueObjects/Money.php     # Сумма всегда в копейках (int)
+│   │   │   └── Events/                    # Доменные события (чистый PHP)
+│   │   ├── Application/                   # Use cases, командный bus, DTO
+│   │   │   ├── Bus/CommandBus.php         # Pipeline: Validate → Idempotency → Handle
+│   │   │   └── Commands/                  # CreatePayment, RefundPayment, CancelPayment, SyncPayment
+│   │   ├── Infrastructure/                # Адаптеры к внешним системам
+│   │   │   ├── Providers/                 # YooKassa, Robokassa, CloudPayments, SBP, AlfaBank
+│   │   │   ├── Jobs/                      # ProcessXxxWebhookJob (ShouldQueue, 5 попыток)
+│   │   │   ├── Observability/             # PaymentLogger, MetricsService, NotificationService
+│   │   │   └── Persistence/               # Eloquent модели + Repository
+│   │   └── Presentation/                  # HTTP-слой (controllers, requests, resources)
+│   └── CryptoPayments/                    # Крипто-платежи (аналогичная структура)
+│       ├── Domain/
+│       ├── Application/
+│       ├── Infrastructure/
+│       └── Presentation/
+├── Console/                               # Laravel artisan-команды
+├── Providers/                             # Service providers
+├── PaymentLinks/                          # Legacy модуль
+└── Http/                                  # Framework middleware
 ```
+
+Архитектурные зависимости проверяются **deptrac** (`deptrac.yaml`).
+Правило: Domain ← Application ← Infrastructure/Presentation. Новый код должен проходить `deptrac analyse` без violations.
 
 ## Провайдеры
 

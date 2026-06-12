@@ -1,0 +1,176 @@
+deptrac:
+  paths:
+    - app/
+
+  layers:
+    # ────────────────────────────────────────────────────────
+    # Payments bounded context
+    # ────────────────────────────────────────────────────────
+    - name: Payments.Domain
+      collectors:
+        - type: directory
+          value: app/Contexts/Payments/Domain/.*
+
+    - name: Payments.Application
+      collectors:
+        - type: directory
+          value: app/Contexts/Payments/Application/.*
+
+    - name: Payments.Infrastructure
+      collectors:
+        - type: directory
+          value: app/Contexts/Payments/Infrastructure/.*
+
+    - name: Payments.Presentation
+      collectors:
+        - type: directory
+          value: app/Contexts/Payments/Presentation/.*
+
+    # ────────────────────────────────────────────────────────
+    # CryptoPayments bounded context
+    # ────────────────────────────────────────────────────────
+    - name: Crypto.Domain
+      collectors:
+        - type: directory
+          value: app/Contexts/CryptoPayments/Domain/.*
+
+    - name: Crypto.Application
+      collectors:
+        - type: directory
+          value: app/Contexts/CryptoPayments/Application/.*
+
+    - name: Crypto.Infrastructure
+      collectors:
+        - type: directory
+          value: app/Contexts/CryptoPayments/Infrastructure/.*
+
+    - name: Crypto.Presentation
+      collectors:
+        - type: directory
+          value: app/Contexts/CryptoPayments/Presentation/.*
+
+    # ────────────────────────────────────────────────────────
+    # Shared / framework
+    # ────────────────────────────────────────────────────────
+    - name: Providers
+      collectors:
+        - type: directory
+          value: app/Providers/.*
+
+    - name: Console
+      collectors:
+        - type: directory
+          value: app/Console/.*
+
+    - name: PaymentLinks
+      collectors:
+        - type: directory
+          value: app/PaymentLinks/.*
+
+  ruleset:
+    # ── Payments DDD rules ───────────────────────────────────
+    # Domain — чистый слой, без зависимостей на Application/Infrastructure/Presentation
+    Payments.Domain: ~
+
+    # Application — зависит только от Domain
+    Payments.Application:
+      - Payments.Domain
+
+    # Infrastructure — зависит от Domain + Application (реализует контракты)
+    Payments.Infrastructure:
+      - Payments.Domain
+      - Payments.Application
+
+    # Presentation — зависит от Application + Domain (HTTP → use cases)
+    Payments.Presentation:
+      - Payments.Domain
+      - Payments.Application
+      - Payments.Infrastructure  # DI: контроллеры инжектят конкретные провайдеры
+
+    # ── CryptoPayments DDD rules ─────────────────────────────
+    Crypto.Domain: ~
+
+    Crypto.Application:
+      - Crypto.Domain
+      - Payments.Domain          # ACL: крипто использует доменные объекты Payments
+
+    Crypto.Infrastructure:
+      - Crypto.Domain
+      - Crypto.Application
+      - Payments.Infrastructure   # переиспользует MetricsService, PaymentLogger
+
+    Crypto.Presentation:
+      - Crypto.Domain
+      - Crypto.Application
+      - Crypto.Infrastructure
+
+    # ── Framework-level layers ───────────────────────────────
+    Providers:
+      - Payments.Domain
+      - Payments.Application
+      - Payments.Infrastructure
+      - Payments.Presentation
+      - Crypto.Domain
+      - Crypto.Application
+      - Crypto.Infrastructure
+      - Crypto.Presentation
+      - PaymentLinks
+
+    Console:
+      - Payments.Domain
+      - Payments.Application
+      - Payments.Infrastructure
+
+    PaymentLinks:
+      - Payments.Domain
+      - Payments.Application
+
+  skip_violations:
+    # ── Baseline: 29 нарушений (2026-06-12) ──────────────────────
+    # TODO: вынести интерфейсы логгера/метрик в Domain\Contracts,
+    #       а CreatePaymentOptionsDTO перенести в Domain\ValueObjects.
+
+    # Domain → Application (самое критичное: DTO в сигнатуре доменного контракта)
+    App\Contexts\Payments\Domain\Contracts\PaymentProviderInterface:
+      - App\Contexts\Payments\Application\DTOs\CreatePaymentOptionsDTO
+    App\Contexts\Payments\Domain\Contracts\SupportsSplitPayments:
+      - App\Contexts\Payments\Application\DTOs\CreatePaymentOptionsDTO
+    App\Contexts\Payments\Domain\Contracts\SupportsTwoPhasePayments:
+      - App\Contexts\Payments\Application\DTOs\CreatePaymentOptionsDTO
+
+    # Application → Infrastructure (логгер, метрики, антифрод — нет интерфейсов в Domain)
+    App\Contexts\Payments\Application\Commands\CreatePayment\CreatePaymentHandler:
+      - App\Contexts\Payments\Infrastructure\Antifraud\VelocityChecker
+      - App\Contexts\Payments\Infrastructure\Observability\MetricsService
+      - App\Contexts\Payments\Infrastructure\Observability\PaymentLogger
+      - App\Contexts\Payments\Infrastructure\Tenant\TenantContext
+    App\Contexts\Payments\Application\Commands\CancelPayment\CancelPaymentHandler:
+      - App\Contexts\Payments\Infrastructure\Observability\PaymentLogger
+    App\Contexts\Payments\Application\Commands\CapturePayment\CapturePaymentHandler:
+      - App\Contexts\Payments\Infrastructure\Observability\MetricsService
+      - App\Contexts\Payments\Infrastructure\Observability\NotificationService
+      - App\Contexts\Payments\Infrastructure\Observability\PaymentLogger
+    App\Contexts\Payments\Application\Commands\RefundPayment\RefundPaymentHandler:
+      - App\Contexts\Payments\Infrastructure\Jobs\ProcessRefundJob
+      - App\Contexts\Payments\Infrastructure\Observability\PaymentLogger
+      - App\Contexts\Payments\Infrastructure\Persistence\Models\Refund
+    App\Contexts\Payments\Application\Commands\RetryPayment\RetryPaymentHandler:
+      - App\Contexts\Payments\Infrastructure\Observability\MetricsService
+      - App\Contexts\Payments\Infrastructure\Observability\PaymentLogger
+    App\Contexts\Payments\Application\Commands\SyncPayment\SyncPaymentHandler:
+      - App\Contexts\Payments\Infrastructure\Observability\PaymentLogger
+    App\Contexts\Payments\Application\Commands\ChargeToken\ChargeTokenHandler:
+      - App\Contexts\Payments\Infrastructure\Observability\MetricsService
+      - App\Contexts\Payments\Infrastructure\Observability\PaymentLogger
+      - App\Contexts\Payments\Infrastructure\Tenant\TenantContext
+    App\Contexts\Payments\Application\Commands\TokenizePaymentMethod\TokenizePaymentMethodHandler:
+      - App\Contexts\Payments\Infrastructure\Tenant\TenantContext
+
+    # Crypto Application → Infrastructure
+    App\Contexts\CryptoPayments\Application\ACL\CryptoDepositToPaymentAdapter:
+      - App\Contexts\Payments\Infrastructure\Observability\MetricsService
+      - App\Contexts\Payments\Infrastructure\Observability\PaymentLogger
+    App\Contexts\CryptoPayments\Application\Commands\CreateCryptoDeposit\CreateCryptoDepositHandler:
+      - App\Contexts\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry
+      - App\Contexts\CryptoPayments\Infrastructure\Observability\CryptoMetricsService
+      - App\Contexts\Payments\Infrastructure\Observability\PaymentLogger

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 

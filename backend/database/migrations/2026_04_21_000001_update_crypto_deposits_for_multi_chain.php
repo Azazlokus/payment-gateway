@@ -11,8 +11,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('crypto_deposits', function (Blueprint $table) {
-            // memo is not used for address-based chains (BTC, TRX, USDT_TRC20)
-            $table->string('memo', 20)->nullable()->unique()->change();
+            // memo is not used for address-based chains (BTC, TRX, USDT_TRC20).
+            // Уникальный индекс crypto_deposits_memo_unique уже создан в исходной
+            // миграции — повторный ->unique() здесь ломает SQLite (index already exists),
+            // поэтому меняем только nullability, индекс остаётся прежним.
+            $table->string('memo', 20)->nullable()->change();
             // BTC/TRON addresses can be up to 62 chars; give headroom
             $table->string('deposit_address', 128)->change();
         });

@@ -4,8 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
-use App\Payments\Domain\ValueObjects\PaymentId;
-use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
+use App\Contexts\Payments\Application\PaymentProviderRegistry;
+use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
+use App\Contexts\Payments\Infrastructure\Persistence\Models\PaymentModel;
+use App\Contexts\Payments\Infrastructure\Providers\AlfaBankProvider;
+use App\Contexts\Payments\Infrastructure\Providers\CloudPaymentsProvider;
+use App\Contexts\Payments\Infrastructure\Providers\RobokassaProvider;
+use App\Contexts\Payments\Infrastructure\Providers\SbpProvider;
+use App\Contexts\Payments\Infrastructure\Providers\YooKassaProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -23,6 +29,19 @@ use Tests\TestCase;
 class WebhookContractTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Контрактные тесты проверяют формат payload, а не безопасность (IP/подписи).
+        // Отключаем IP-фильтрацию, чтобы 127.0.0.1 не давал 403.
+        config([
+            'payments.yookassa.webhook_ips' => [],
+            'payments.robokassa.webhook_ips' => [],
+            'payments.alfabank.webhook_ips' => [],
+        ]);
+    }
 
     private function createPayment(string $externalId): PaymentModel
     {
@@ -95,8 +114,8 @@ class WebhookContractTest extends TestCase
             'object' => ['id' => Str::uuid(), 'status' => 'succeeded'],
         ]);
 
-        // 400 или 422 — зависит от реализации, главное не 500
-        $this->assertContains($response->status(), [400, 422, 200]);
+        // 403 — verifyWebhook отклоняет: нет поля event. Главное — не 500.
+        $this->assertContains($response->status(), [400, 403, 422]);
     }
 
     // ─── Robokassa ────────────────────────────────────────────────────────────
@@ -114,7 +133,8 @@ class WebhookContractTest extends TestCase
         $response = $this->call('POST', '/api/webhook/robokassa', [
             'OutSum' => '500.00',
             'InvId' => '12345',
-            'SignatureValue' => md5('shop:500.00:12345:password2:Shp_paymentId='.$payment->id),
+            // Формат подписи: md5("{OutSum}:{InvId}:{password2}:Shp_paymentId={id}")
+            'SignatureValue' => md5('500.00:12345:'.config('payments.robokassa.password2').':Shp_paymentId='.$payment->id),
             'Shp_paymentId' => $payment->id,
         ]);
 
@@ -142,7 +162,8 @@ class WebhookContractTest extends TestCase
             'AccountId' => 'user@example.com',
         ]) ?: '';
 
-        $hmac = base64_encode(hash_hmac('sha256', $body, config('services.cloudpayments.api_secret', 'test'), true));
+        // Секрет берём из того же конфига, что и провайдер
+        $hmac = base64_encode(hash_hmac('sha256', $body, config('payments.cloudpayments.api_secret'), true));
 
         $response = $this->call(
             'POST',
@@ -167,16 +188,17 @@ class WebhookContractTest extends TestCase
         Queue::fake();
         $this->createPayment('SBP-'.Str::uuid());
 
+        // Формат СБП: qrId (обязательное), status, amount
         $response = $this->postJson(
             '/api/webhook/sbp',
             [
-                'event' => 'PAYMENT_SUCCEEDED',
-                'paymentId' => 'SBP-'.Str::uuid(),
+                'qrId' => 'SBP-'.Str::uuid(),
+                'status' => 'PAID',
                 'amount' => 50000,
                 'currency' => 'RUB',
-                'status' => 'SUCCESS',
             ],
-            ['X-Api-Key' => config('services.sbp.api_key', 'test-key')]
+            // Ключ должен совпадать с SBP_WEBHOOK_SECRET из phpunit.xml
+            ['X-Api-Key' => config('payments.sbp.webhook_secret')]
         );
 
         $this->assertContains($response->status(), [200, 400, 404]);
@@ -191,9 +213,10 @@ class WebhookContractTest extends TestCase
     {
         Queue::fake();
 
+        // Поля по контракту Альфа-Банка: mdOrder (id заказа), operation (тип события)
         $response = $this->call('POST', '/api/webhook/alfabank', [
-            'orderNumber' => (string) Str::uuid(),
-            'orderStatus' => '2',  // 2 = успешно оплачен
+            'mdOrder' => (string) Str::uuid(),
+            'operation' => 'deposited',
             'amount' => '50000',
             'currency' => '810',
         ]);

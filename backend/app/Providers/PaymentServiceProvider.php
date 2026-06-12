@@ -4,27 +4,31 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Payments\Application\PaymentProviderRegistry;
-use App\Payments\Domain\Contracts\DisputeRepositoryInterface;
-use App\Payments\Domain\Contracts\PaymentProviderInterface;
-use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
-use App\Payments\Infrastructure\Antifraud\VelocityChecker;
-use App\Payments\Infrastructure\Antifraud\VelocityRule;
-use App\Payments\Infrastructure\CircuitBreaker\CircuitBreaker;
-use App\Payments\Infrastructure\CircuitBreaker\CircuitBreakerProviderProxy;
-use App\Payments\Infrastructure\Observability\AuditLogger;
-use App\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
-use App\Payments\Infrastructure\Observability\MetricsService;
-use App\Payments\Infrastructure\Observability\NotificationService;
-use App\Payments\Infrastructure\Observability\PaymentLogger;
-use App\Payments\Infrastructure\Persistence\EloquentDisputeRepository;
-use App\Payments\Infrastructure\Persistence\EloquentPaymentRepository;
-use App\Payments\Infrastructure\Providers\AlfaBankProvider;
-use App\Payments\Infrastructure\Providers\CloudPaymentsProvider;
-use App\Payments\Infrastructure\Providers\RobokassaProvider;
-use App\Payments\Infrastructure\Providers\SbpProvider;
-use App\Payments\Infrastructure\Providers\YooKassaProvider;
-use App\Payments\Infrastructure\Webhook\ReplayProtector;
+use App\Contexts\Payments\Application\PaymentProviderRegistry;
+use App\Contexts\Payments\Domain\Contracts\DisputeRepositoryInterface;
+use App\Contexts\Payments\Domain\Contracts\PaymentMethodRepositoryInterface;
+use App\Contexts\Payments\Domain\Contracts\PaymentProviderInterface;
+use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
+use App\Contexts\Payments\Infrastructure\Antifraud\VelocityChecker;
+use App\Contexts\Payments\Infrastructure\Antifraud\VelocityRule;
+use App\Contexts\Payments\Infrastructure\CircuitBreaker\CircuitBreaker;
+use App\Contexts\Payments\Infrastructure\CircuitBreaker\CircuitBreakerProviderProxy;
+use App\Contexts\Payments\Infrastructure\Observability\AuditLogger;
+use App\Contexts\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
+use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
+use App\Contexts\Payments\Infrastructure\Observability\NotificationService;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\Payments\Infrastructure\Persistence\EloquentDisputeRepository;
+use App\Contexts\Payments\Infrastructure\Persistence\EloquentPaymentMethodRepository;
+use App\Contexts\Payments\Infrastructure\Persistence\EloquentPaymentRepository;
+use App\Contexts\Payments\Infrastructure\Providers\AlfaBankProvider;
+use App\Contexts\Payments\Infrastructure\Providers\CloudPaymentsProvider;
+use App\Contexts\Payments\Infrastructure\Providers\RobokassaProvider;
+use App\Contexts\Payments\Infrastructure\Providers\SbpProvider;
+use App\Contexts\Payments\Infrastructure\Providers\YooKassaProvider;
+use App\Contexts\Payments\Infrastructure\Tenant\TenantContext;
+use App\Contexts\Payments\Infrastructure\Webhook\ReplayProtector;
+use App\Contexts\Payments\Presentation\Http\Middleware\ResolveTenant;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\RateLimiter;
@@ -34,8 +38,10 @@ class PaymentServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(TenantContext::class);
         $this->app->singleton(PaymentRepositoryInterface::class, EloquentPaymentRepository::class);
         $this->app->singleton(DisputeRepositoryInterface::class, EloquentDisputeRepository::class);
+        $this->app->singleton(PaymentMethodRepositoryInterface::class, EloquentPaymentMethodRepository::class);
         $this->app->singleton(PaymentLogger::class);
         $this->app->singleton(MetricsService::class);
         $this->app->singleton(NotificationService::class);
@@ -159,6 +165,7 @@ class PaymentServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->app->make('router')->aliasMiddleware('correlation', CorrelationIdMiddleware::class);
+        $this->app->make('router')->aliasMiddleware('resolve.tenant', ResolveTenant::class);
 
         RateLimiter::for('webhook.yookassa', fn () => Limit::perMinute(300));
         RateLimiter::for('webhook.robokassa', fn () => Limit::perMinute(200));

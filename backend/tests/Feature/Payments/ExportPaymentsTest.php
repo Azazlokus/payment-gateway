@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
-use App\Payments\Domain\ValueObjects\PaymentId;
-use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
+use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
+use App\Contexts\Payments\Infrastructure\Persistence\Models\PaymentModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -112,10 +112,10 @@ class ExportPaymentsTest extends TestCase
         $this->assertStringContainsString('.csv', $contentDisposition);
     }
 
-    public function test_export_filters_by_date_from(): void
+    /** Создаёт платёж с принудительно выставленной датой (created_at не в fillable) */
+    private function createPaymentAt(\DateTimeInterface $date, string $description = 'Backdated payment'): void
     {
-        // Платёж с датой в прошлом
-        PaymentModel::create([
+        $model = PaymentModel::create([
             'id' => PaymentId::generate()->toString(),
             'external_id' => (string) Str::uuid(),
             'provider' => 'yookassa',
@@ -123,15 +123,21 @@ class ExportPaymentsTest extends TestCase
             'refunded_amount' => 0,
             'currency' => 'RUB',
             'status' => 'Succeeded',
-            'description' => 'Old payment',
+            'description' => $description,
             'idempotency_key' => (string) Str::uuid(),
             'metadata' => [],
-            'created_at' => now()->subDays(10),
-            'updated_at' => now()->subDays(10),
         ]);
 
-        // Платёж сегодня
-        $this->createPayment();
+        // created_at не в fillable — ставим вручную
+        $model->created_at = $date;
+        $model->updated_at = $date;
+        $model->saveQuietly();
+    }
+
+    public function test_export_filters_by_date_from(): void
+    {
+        $this->createPaymentAt(now()->subDays(10), 'Old payment');
+        $this->createPayment(); // платёж сегодня
 
         $fromDate = now()->subDays(1)->format('Y-m-d');
         $content = $this->get("/api/v1/payments/export?from_date={$fromDate}")->streamedContent();
@@ -142,24 +148,8 @@ class ExportPaymentsTest extends TestCase
 
     public function test_export_filters_by_date_to(): void
     {
-        // Платёж с датой в прошлом
-        PaymentModel::create([
-            'id' => PaymentId::generate()->toString(),
-            'external_id' => (string) Str::uuid(),
-            'provider' => 'yookassa',
-            'amount' => 50000,
-            'refunded_amount' => 0,
-            'currency' => 'RUB',
-            'status' => 'Succeeded',
-            'description' => 'Old payment',
-            'idempotency_key' => (string) Str::uuid(),
-            'metadata' => [],
-            'created_at' => now()->subDays(10),
-            'updated_at' => now()->subDays(10),
-        ]);
-
-        // Платёж сегодня
-        $this->createPayment();
+        $this->createPaymentAt(now()->subDays(10), 'Old payment');
+        $this->createPayment(); // платёж сегодня
 
         $toDate = now()->subDays(5)->format('Y-m-d');
         $content = $this->get("/api/v1/payments/export?to_date={$toDate}")->streamedContent();

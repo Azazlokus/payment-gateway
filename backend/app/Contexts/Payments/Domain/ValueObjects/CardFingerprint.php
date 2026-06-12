@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Contexts\Payments\Domain\ValueObjects;
+
+use InvalidArgumentException;
+
+final readonly class CardFingerprint
+{
+    private function __construct(private string $value) {}
+
+    public static function fromString(string $value): self
+    {
+        if ($value === '') {
+            throw new InvalidArgumentException('CardFingerprint cannot be empty');
+        }
+
+        return new self($value);
+    }
+
+    public static function compute(string $last4, string $brand, string $expiresMonth, string $expiresYear): self
+    {
+        return new self(hash('sha256', "{$brand}:{$last4}:{$expiresMonth}/{$expiresYear}"));
+    }
+
+    public function toString(): string
+    {
+        return $this->value;
+    }
+
+    public function equals(self $other): bool
+    {
+        return $this->value === $other->value;
+    }
+}

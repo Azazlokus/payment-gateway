@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use App\Payments\Domain\Exceptions\IdempotencyViolationException;
-use App\Payments\Domain\Exceptions\InvalidPaymentStateException;
-use App\Payments\Domain\Exceptions\PaymentException;
-use App\Payments\Domain\Exceptions\WebhookVerificationFailedException;
-use App\Payments\Infrastructure\Antifraud\VelocityLimitExceededException;
-use App\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
-use App\Payments\Infrastructure\Observability\MetricsService;
-use App\Payments\Presentation\Http\Middleware\RequireApiKey;
-use App\Payments\Presentation\Http\Middleware\SecurityHeaders;
+use App\Contexts\Payments\Domain\Exceptions\IdempotencyViolationException;
+use App\Contexts\Payments\Domain\Exceptions\InvalidPaymentStateException;
+use App\Contexts\Payments\Domain\Exceptions\PaymentException;
+use App\Contexts\Payments\Domain\Exceptions\WebhookVerificationFailedException;
+use App\Contexts\Payments\Infrastructure\Antifraud\VelocityLimitExceededException;
+use App\Contexts\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
+use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
+use App\Contexts\Payments\Presentation\Http\Middleware\RequireApiKey;
+use App\Contexts\Payments\Presentation\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;

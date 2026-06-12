@@ -3,6 +3,10 @@
 return [
     'default' => env('PAYMENT_PROVIDER', 'yookassa'),
 
+    'multi_tenant' => [
+        'enabled' => env('MULTI_TENANT_ENABLED', false),
+    ],
+
     'antifraud' => [
         'enabled' => env('ANTIFRAUD_ENABLED', true),
         'rules' => [

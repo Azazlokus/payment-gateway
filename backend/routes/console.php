@@ -1,8 +1,8 @@
 <?php
 
-use App\CryptoPayments\Infrastructure\Jobs\ExpireCryptoDepositsJob;
-use App\CryptoPayments\Infrastructure\Jobs\PollCryptoDepositsJob;
-use App\CryptoPayments\Infrastructure\Jobs\ProcessCryptoRefundsJob;
+use App\Contexts\CryptoPayments\Infrastructure\Jobs\ExpireCryptoDepositsJob;
+use App\Contexts\CryptoPayments\Infrastructure\Jobs\PollCryptoDepositsJob;
+use App\Contexts\CryptoPayments\Infrastructure\Jobs\ProcessCryptoRefundsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
-use App\Payments\Application\PaymentProviderRegistry;
-use App\Payments\Domain\Contracts\PaymentProviderInterface;
-use App\Payments\Domain\Contracts\ProviderResponse;
-use App\Payments\Domain\ValueObjects\ExternalId;
-use App\Payments\Domain\ValueObjects\PaymentId;
-use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
+use App\Contexts\Payments\Application\PaymentProviderRegistry;
+use App\Contexts\Payments\Domain\Contracts\PaymentProviderInterface;
+use App\Contexts\Payments\Domain\Contracts\ProviderResponse;
+use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
+use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
+use App\Contexts\Payments\Infrastructure\Persistence\Models\PaymentModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;

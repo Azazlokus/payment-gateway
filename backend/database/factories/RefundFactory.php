@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Payments\Domain\Enums\RefundStatus;
-use App\Payments\Infrastructure\Persistence\Models\Refund;
+use App\Contexts\Payments\Domain\Enums\RefundStatus;
+use App\Contexts\Payments\Infrastructure\Persistence\Models\Refund;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 

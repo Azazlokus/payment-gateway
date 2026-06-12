@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Application\DTOs\PaymentResultDTO;
-use App\Payments\Infrastructure\Observability\MetricsService;
-use App\Payments\Infrastructure\Observability\NotificationService;
-use App\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\Payments\Application\DTOs\PaymentResultDTO;
+use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
+use App\Contexts\Payments\Infrastructure\Observability\NotificationService;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Mockery;

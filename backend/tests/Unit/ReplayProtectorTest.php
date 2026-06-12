@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Domain\Exceptions\WebhookVerificationFailedException;
-use App\Payments\Infrastructure\Webhook\ReplayProtector;
+use App\Contexts\Payments\Domain\Exceptions\WebhookVerificationFailedException;
+use App\Contexts\Payments\Infrastructure\Webhook\ReplayProtector;
 use Illuminate\Contracts\Cache\Repository;
 use Mockery;
 use Mockery\MockInterface;

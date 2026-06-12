@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
+use App\Contexts\Payments\Infrastructure\Observability\CorrelationIdMiddleware;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Tests\TestCase;

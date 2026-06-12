@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit\CryptoPayments;
 
-use App\CryptoPayments\Domain\Enums\CryptoAsset;
-use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
-use App\CryptoPayments\Infrastructure\Blockchain\TronBlockchainClient;
-use App\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\CryptoPayments\Domain\Enums\CryptoAsset;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\CryptoAddress;
+use App\Contexts\CryptoPayments\Infrastructure\Blockchain\TronBlockchainClient;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Http;
 use Mockery;

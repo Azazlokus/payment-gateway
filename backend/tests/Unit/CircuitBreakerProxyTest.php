@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Domain\Contracts\PaymentProviderInterface;
-use App\Payments\Domain\Contracts\ProviderResponse;
-use App\Payments\Domain\Exceptions\PaymentException;
-use App\Payments\Domain\ValueObjects\ExternalId;
-use App\Payments\Domain\ValueObjects\Money;
-use App\Payments\Infrastructure\CircuitBreaker\CircuitBreakerInterface;
-use App\Payments\Infrastructure\CircuitBreaker\CircuitBreakerProviderProxy;
-use App\Payments\Infrastructure\CircuitBreaker\CircuitOpenException;
-use App\Payments\Infrastructure\CircuitBreaker\CircuitState;
-use App\Payments\Infrastructure\Observability\MetricsService;
-use App\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\Payments\Domain\Contracts\PaymentProviderInterface;
+use App\Contexts\Payments\Domain\Contracts\ProviderResponse;
+use App\Contexts\Payments\Domain\Exceptions\PaymentException;
+use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
+use App\Contexts\Payments\Domain\ValueObjects\Money;
+use App\Contexts\Payments\Infrastructure\CircuitBreaker\CircuitBreakerInterface;
+use App\Contexts\Payments\Infrastructure\CircuitBreaker\CircuitBreakerProviderProxy;
+use App\Contexts\Payments\Infrastructure\CircuitBreaker\CircuitOpenException;
+use App\Contexts\Payments\Infrastructure\CircuitBreaker\CircuitState;
+use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Mockery;
 use PHPUnit\Framework\TestCase;
 

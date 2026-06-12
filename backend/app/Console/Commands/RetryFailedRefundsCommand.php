@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Payments\Domain\Enums\RefundStatus;
-use App\Payments\Infrastructure\Jobs\ProcessRefundJob;
-use App\Payments\Infrastructure\Persistence\Models\Refund;
+use App\Contexts\Payments\Domain\Enums\RefundStatus;
+use App\Contexts\Payments\Infrastructure\Jobs\ProcessRefundJob;
+use App\Contexts\Payments\Infrastructure\Persistence\Models\Refund;
 use Illuminate\Console\Command;
 
 final class RetryFailedRefundsCommand extends Command

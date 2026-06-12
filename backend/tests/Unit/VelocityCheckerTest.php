@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Infrastructure\Antifraud\VelocityChecker;
-use App\Payments\Infrastructure\Antifraud\VelocityLimitExceededException;
-use App\Payments\Infrastructure\Antifraud\VelocityRule;
-use App\Payments\Infrastructure\Observability\MetricsService;
-use App\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\Payments\Infrastructure\Antifraud\VelocityChecker;
+use App\Contexts\Payments\Infrastructure\Antifraud\VelocityLimitExceededException;
+use App\Contexts\Payments\Infrastructure\Antifraud\VelocityRule;
+use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
 use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
 

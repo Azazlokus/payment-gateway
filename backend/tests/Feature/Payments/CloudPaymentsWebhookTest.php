@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
-use App\Payments\Domain\Contracts\PaymentRepositoryInterface;
-use App\Payments\Domain\ValueObjects\PaymentId;
-use App\Payments\Infrastructure\Jobs\ProcessCloudPaymentsWebhookJob;
-use App\Payments\Infrastructure\Observability\MetricsService;
-use App\Payments\Infrastructure\Observability\PaymentLogger;
-use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
+use App\Contexts\Payments\Domain\Contracts\PaymentRepositoryInterface;
+use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
+use App\Contexts\Payments\Infrastructure\Jobs\ProcessCloudPaymentsWebhookJob;
+use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
+use App\Contexts\Payments\Infrastructure\Observability\PaymentLogger;
+use App\Contexts\Payments\Infrastructure\Persistence\Models\PaymentModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;

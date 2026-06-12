@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\CryptoPayments;
 
-use App\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
-use App\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
-use App\CryptoPayments\Domain\Contracts\PriceOracleInterface;
-use App\CryptoPayments\Domain\Enums\CryptoAsset;
-use App\CryptoPayments\Domain\Enums\DepositMode;
-use App\CryptoPayments\Domain\ValueObjects\CryptoAddress;
-use App\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
-use App\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry;
-use App\CryptoPayments\Infrastructure\Observability\CryptoMetricsService;
+use App\Contexts\CryptoPayments\Domain\Contracts\BlockchainClientInterface;
+use App\Contexts\CryptoPayments\Domain\Contracts\CryptoDepositRepositoryInterface;
+use App\Contexts\CryptoPayments\Domain\Contracts\PriceOracleInterface;
+use App\Contexts\CryptoPayments\Domain\Enums\CryptoAsset;
+use App\Contexts\CryptoPayments\Domain\Enums\DepositMode;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\CryptoAddress;
+use App\Contexts\CryptoPayments\Domain\ValueObjects\CryptoDepositId;
+use App\Contexts\CryptoPayments\Infrastructure\Blockchain\BlockchainClientRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
@@ -34,15 +33,20 @@ class CryptoDepositTest extends TestCase
         $mockClient->shouldReceive('masterDepositAddress')
             ->andReturn(CryptoAddress::fromString(self::MASTER_ADDRESS));
 
-        $mockRegistry = $this->mock(BlockchainClientRegistry::class);
-        $mockRegistry->shouldReceive('getForAsset')->andReturn($mockClient);
+        // BlockchainClientRegistry — final (как и Payment), мокать его нельзя.
+        // Вместо этого собираем реальный реестр и регистрируем в нём мок-клиент:
+        // register() — штатный шов для подмены клиентов в тестах.
+        $registry = new BlockchainClientRegistry;
+        $registry->register($mockClient);
+        $this->app->instance(BlockchainClientRegistry::class, $registry);
 
         $mockOracle = $this->mock(PriceOracleInterface::class);
         $mockOracle->shouldReceive('kopecksToCryptoUnits')->andReturn(125_000_000);
         $mockOracle->shouldReceive('getRateKopecks')->andReturn(40_000);
 
-        $mockMetrics = $this->mock(CryptoMetricsService::class);
-        $mockMetrics->shouldReceive('depositCreated')->andReturnNull();
+        // CryptoMetricsService — final, но это лишь тонкая обёртка над MetricsService,
+        // который TestCase уже подменил no-op мок. Поэтому мокать её не нужно —
+        // реальная обёртка просто делегирует в no-op метрики.
     }
 
     public function test_create_crypto_deposit_returns_201(): void

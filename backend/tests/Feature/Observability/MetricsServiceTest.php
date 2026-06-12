@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Observability;
 
-use App\Payments\Infrastructure\Observability\MetricsService;
+use App\Contexts\Payments\Infrastructure\Observability\MetricsService;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class MetricsServiceTest extends TestCase
@@ -20,6 +21,19 @@ class MetricsServiceTest extends TestCase
             Redis::ping();
         } catch (\Throwable) {
             $this->markTestSkipped('Redis is not available in this environment.');
+        }
+
+        // dump() читает failed_jobs — создаём таблицу если её нет (нет миграции)
+        if (! Schema::hasTable('failed_jobs')) {
+            Schema::create('failed_jobs', function ($table) {
+                $table->id();
+                $table->text('uuid')->unique();
+                $table->text('connection');
+                $table->text('queue');
+                $table->longText('payload');
+                $table->longText('exception');
+                $table->timestamp('failed_at')->useCurrent();
+            });
         }
 
         $this->metrics = new MetricsService;

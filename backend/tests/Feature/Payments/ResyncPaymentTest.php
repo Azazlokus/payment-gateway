@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payments;
 
-use App\Payments\Domain\ValueObjects\PaymentId;
-use App\Payments\Infrastructure\Observability\NotificationService;
-use App\Payments\Infrastructure\Persistence\Models\PaymentModel;
+use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
+use App\Contexts\Payments\Infrastructure\Observability\NotificationService;
+use App\Contexts\Payments\Infrastructure\Persistence\Models\PaymentModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;

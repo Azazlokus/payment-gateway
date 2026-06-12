@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Domain;
 
-use App\Payments\Domain\Aggregates\Payment;
-use App\Payments\Domain\Enums\PaymentStatus;
-use App\Payments\Domain\Events\PaymentWasAuthorized;
-use App\Payments\Domain\Events\PaymentWasCancelled;
-use App\Payments\Domain\Events\PaymentWasCaptured;
-use App\Payments\Domain\Events\PaymentWasCreated;
-use App\Payments\Domain\Events\PaymentWasRefunded;
-use App\Payments\Domain\Events\PaymentWasSucceeded;
-use App\Payments\Domain\Exceptions\InvalidPaymentStateException;
-use App\Payments\Domain\Exceptions\PaymentException;
-use App\Payments\Domain\ValueObjects\ExternalId;
-use App\Payments\Domain\ValueObjects\Money;
-use App\Payments\Domain\ValueObjects\PaymentId;
-use App\Payments\Domain\ValueObjects\SplitRule;
+use App\Contexts\Payments\Domain\Aggregates\Payment;
+use App\Contexts\Payments\Domain\Enums\PaymentStatus;
+use App\Contexts\Payments\Domain\Events\PaymentWasAuthorized;
+use App\Contexts\Payments\Domain\Events\PaymentWasCancelled;
+use App\Contexts\Payments\Domain\Events\PaymentWasCaptured;
+use App\Contexts\Payments\Domain\Events\PaymentWasCreated;
+use App\Contexts\Payments\Domain\Events\PaymentWasRefunded;
+use App\Contexts\Payments\Domain\Events\PaymentWasSucceeded;
+use App\Contexts\Payments\Domain\Exceptions\InvalidPaymentStateException;
+use App\Contexts\Payments\Domain\Exceptions\PaymentException;
+use App\Contexts\Payments\Domain\ValueObjects\ExternalId;
+use App\Contexts\Payments\Domain\ValueObjects\Money;
+use App\Contexts\Payments\Domain\ValueObjects\PaymentId;
+use App\Contexts\Payments\Domain\ValueObjects\SplitRule;
 use PHPUnit\Framework\TestCase;
 
 class PaymentAggregateTest extends TestCase  // Pure PHPUnit — no Laravel bootstrap needed

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Payments\Presentation\Http\Middleware\RequireApiKey;
+use App\Contexts\Payments\Presentation\Http\Middleware\RequireApiKey;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Tests\TestCase;

@@ -2,24 +2,25 @@
 
 declare(strict_types=1);
 
-use App\CryptoPayments\Presentation\Http\Controllers\CryptoDepositController;
+use App\Contexts\CryptoPayments\Presentation\Http\Controllers\CryptoDepositController;
 use App\PaymentLinks\Http\Controllers\PaymentLinkController;
-use App\Payments\Presentation\Http\Controllers\AlfaBankWebhookController;
-use App\Payments\Presentation\Http\Controllers\AnalyticsController;
-use App\Payments\Presentation\Http\Controllers\AuditLogController;
-use App\Payments\Presentation\Http\Controllers\CloudPaymentsWebhookController;
-use App\Payments\Presentation\Http\Controllers\DisputeController;
-use App\Payments\Presentation\Http\Controllers\HealthController;
-use App\Payments\Presentation\Http\Controllers\InvoiceController;
-use App\Payments\Presentation\Http\Controllers\MetricsController;
-use App\Payments\Presentation\Http\Controllers\PaymentController;
-use App\Payments\Presentation\Http\Controllers\PaymentStatusStreamController;
-use App\Payments\Presentation\Http\Controllers\RecurringController;
-use App\Payments\Presentation\Http\Controllers\RefundHistoryController;
-use App\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
-use App\Payments\Presentation\Http\Controllers\SbpWebhookController;
-use App\Payments\Presentation\Http\Controllers\WebhookController;
-use App\Payments\Presentation\Http\Controllers\WebhookLogController;
+use App\Contexts\Payments\Presentation\Http\Controllers\AlfaBankWebhookController;
+use App\Contexts\Payments\Presentation\Http\Controllers\AnalyticsController;
+use App\Contexts\Payments\Presentation\Http\Controllers\AuditLogController;
+use App\Contexts\Payments\Presentation\Http\Controllers\CloudPaymentsWebhookController;
+use App\Contexts\Payments\Presentation\Http\Controllers\DisputeController;
+use App\Contexts\Payments\Presentation\Http\Controllers\HealthController;
+use App\Contexts\Payments\Presentation\Http\Controllers\InvoiceController;
+use App\Contexts\Payments\Presentation\Http\Controllers\MetricsController;
+use App\Contexts\Payments\Presentation\Http\Controllers\PaymentController;
+use App\Contexts\Payments\Presentation\Http\Controllers\PaymentMethodController;
+use App\Contexts\Payments\Presentation\Http\Controllers\PaymentStatusStreamController;
+use App\Contexts\Payments\Presentation\Http\Controllers\RecurringController;
+use App\Contexts\Payments\Presentation\Http\Controllers\RefundHistoryController;
+use App\Contexts\Payments\Presentation\Http\Controllers\RobokassaWebhookController;
+use App\Contexts\Payments\Presentation\Http\Controllers\SbpWebhookController;
+use App\Contexts\Payments\Presentation\Http\Controllers\WebhookController;
+use App\Contexts\Payments\Presentation\Http\Controllers\WebhookLogController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Unversioned infrastructure endpoints ─────────────────────────────────────
@@ -57,7 +58,7 @@ Route::post('/webhook/cloudpayments', [CloudPaymentsWebhookController::class, 'h
 
 // ─── API v1 ───────────────────────────────────────────────────────────────────
 
-Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group(function () {
+Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api', 'resolve.tenant'])->group(function () {
 
     // ── Payments ────────────────────────────────────────────────────────────
 
@@ -130,6 +131,24 @@ Route::prefix('v1')->name('v1.')->middleware(['correlation', 'auth.api'])->group
             ->middleware('throttle:10,1')
             ->name('disputes.store');
     });
+
+    // ── Payment Methods (Tokenization) ────────────────────────────────────
+
+    Route::get('/payment-methods', [PaymentMethodController::class, 'index'])
+        ->middleware('throttle:60,1')
+        ->name('payment-methods.index');
+
+    Route::post('/payment-methods', [PaymentMethodController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('payment-methods.store');
+
+    Route::post('/payment-methods/{id}/charge', [PaymentMethodController::class, 'charge'])
+        ->middleware('throttle:30,1')
+        ->name('payment-methods.charge');
+
+    Route::delete('/payment-methods/{id}', [PaymentMethodController::class, 'destroy'])
+        ->middleware('throttle:30,1')
+        ->name('payment-methods.destroy');
 
     // ── Disputes ────────────────────────────────────────────────────────────
 
